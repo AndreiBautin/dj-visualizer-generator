@@ -1,0 +1,28 @@
+# .NET
+backend/**/bin/
+backend/**/obj/
+*.user
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
+frontend/blob-report/
+
+# Env
+.env
+
+# Local dev job storage (see run.bat)
+/jobs-data/
+
+# Local dev logs
+*.log
+
+# Editor / OS
+.vs/
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db

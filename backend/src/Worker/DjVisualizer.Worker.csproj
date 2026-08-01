@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-DjVisualizer.Worker-d541d747-06f7-43b8-96d5-3ae85dc13260</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.18" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Infrastructure\DjVisualizer.Infrastructure.csproj" />
+    <ProjectReference Include="..\Application\DjVisualizer.Application.csproj" />
+    <ProjectReference Include="..\Domain\DjVisualizer.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DjVisualizer.Worker.Tests" />
+  </ItemGroup>
+</Project>

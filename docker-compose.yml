@@ -1,0 +1,48 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      - Jobs__RootPath=/data/jobs
+      - Jobs__MaxAudioBytes=${MAX_AUDIO_BYTES:-2147483648}
+      - Jobs__MaxImageBytes=${MAX_IMAGE_BYTES:-26214400}
+      - Jobs__MaxDurationSeconds=${MAX_DURATION_SECONDS:-21600}
+      - Jobs__MinFreeDiskBytes=${MIN_FREE_DISK_BYTES:-3221225472}
+    volumes:
+      - jobs-data:/data/jobs
+    ports:
+      - "5080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    environment:
+      - DOTNET_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      - Jobs__RootPath=/data/jobs
+      - Jobs__MinFreeDiskBytes=${MIN_FREE_DISK_BYTES:-3221225472}
+    volumes:
+      - jobs-data:/data/jobs
+    depends_on:
+      - api
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+      args:
+        VITE_API_BASE_URL: /api
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+volumes:
+  jobs-data:

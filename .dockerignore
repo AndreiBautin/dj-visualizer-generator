@@ -1,0 +1,23 @@
+# .NET
+backend/**/bin/
+backend/**/obj/
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
+frontend/blob-report/
+
+# Local dev artifacts
+/jobs-data/
+*.log
+
+# Env / VCS / editor
+.env
+.git/
+.github/
+.vs/
+.vscode/
+.idea/
+.claude/

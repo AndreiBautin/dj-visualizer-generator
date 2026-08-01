@@ -1,0 +1,144 @@
+using DjVisualizer.Application.Abstractions;
+using DjVisualizer.Application.Jobs;
+using DjVisualizer.Domain.Jobs;
+using FluentAssertions;
+using NSubstitute;
+
+namespace DjVisualizer.Application.Tests.Jobs;
+
+public class ProcessRenderJobUseCaseTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 7, 31, 12, 0, 0, TimeSpan.Zero);
+    private static readonly JobInputFiles InputFiles = new("/data/jobs/x/input/audio.mp3", "/data/jobs/x/input/artwork.png");
+    private const string OutputPath = "/data/jobs/x/output/video.mp4";
+
+    private readonly IJobInputFileLocator _inputFileLocator = Substitute.For<IJobInputFileLocator>();
+    private readonly IAudioProbe _audioProbe = Substitute.For<IAudioProbe>();
+    private readonly IJobFileStorage _fileStorage = Substitute.For<IJobFileStorage>();
+    private readonly IVideoRenderer _videoRenderer = Substitute.For<IVideoRenderer>();
+    private readonly IJobRepository _jobRepository = Substitute.For<IJobRepository>();
+    private readonly IClock _clock = Substitute.For<IClock>();
+
+    public ProcessRenderJobUseCaseTests()
+    {
+        _clock.UtcNow.Returns(Now);
+        _fileStorage.PrepareOutputFilePathAsync(Arg.Any<JobId>(), Arg.Any<CancellationToken>()).Returns(OutputPath);
+    }
+
+    private ProcessRenderJobUseCase CreateSut() =>
+        new(_inputFileLocator, _audioProbe, _fileStorage, _videoRenderer, _jobRepository, _clock);
+
+    private static Job CreateProcessingJob()
+    {
+        var job = Job.Create(JobTitle.Create("Friday Night Set"), VideoPreset.FullHd1080p, RotationSpeed.Create(4.5), CaptionFont.SerifBold, Now);
+        job.Start(Now);
+        return job;
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Renders_Reports_Progress_And_Completes_The_Job_On_The_Happy_Path()
+    {
+        var job = CreateProcessingJob();
+        var observedProgressAtEachSave = new List<int>();
+        _jobRepository.SaveAsync(Arg.Do<Job>(j => observedProgressAtEachSave.Add(j.Progress)), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+        _inputFileLocator.LocateAsync(job.Id, Arg.Any<CancellationToken>()).Returns(InputFiles);
+        _audioProbe.GetDurationAsync(InputFiles.AudioFilePath, Arg.Any<CancellationToken>()).Returns(TimeSpan.FromMinutes(45));
+        _videoRenderer
+            .RenderAsync(Arg.Any<RenderRequest>(), Arg.Any<RenderProgressCallback>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => ReportProgress(callInfo.Arg<RenderProgressCallback>()!, 50, 100));
+
+        await CreateSut().ExecuteAsync(job, CancellationToken.None);
+
+        job.Status.Should().Be(JobStatus.Completed);
+        job.Progress.Should().Be(100);
+        await _videoRenderer.Received(1).RenderAsync(
+            Arg.Is<RenderRequest>(r =>
+                r!.AudioFilePath == InputFiles.AudioFilePath &&
+                r.ArtworkFilePath == InputFiles.ArtworkFilePath &&
+                r.OutputFilePath == OutputPath &&
+                r.Preset == VideoPreset.FullHd1080p &&
+                r.Title == "Friday Night Set" &&
+                r.Duration == TimeSpan.FromMinutes(45) &&
+                r.RotationPeriodSeconds == 4.5 &&
+                r.CaptionFont == CaptionFont.SerifBold),
+            Arg.Any<RenderProgressCallback>(),
+            Arg.Any<CancellationToken>());
+        // Progress is reported at 50, then 100 during rendering, then the job is saved once more as Completed (still 100).
+        observedProgressAtEachSave.Should().Equal(50, 100, 100);
+    }
+
+    private static async Task ReportProgress(RenderProgressCallback onProgress, params int[] percentages)
+    {
+        foreach (var percent in percentages)
+        {
+            await onProgress(percent, CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Fails_The_Job_When_Input_Files_Are_Missing()
+    {
+        var job = CreateProcessingJob();
+        _inputFileLocator.LocateAsync(job.Id, Arg.Any<CancellationToken>()).Returns((JobInputFiles?)null);
+
+        await CreateSut().ExecuteAsync(job, CancellationToken.None);
+
+        job.Status.Should().Be(JobStatus.Failed);
+        await _videoRenderer.DidNotReceiveWithAnyArgs().RenderAsync(default!, default!, default);
+        await _jobRepository.Received(1).SaveAsync(Arg.Is<Job>(j => j!.Status == JobStatus.Failed), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Fails_The_Job_When_The_Audio_Cannot_Be_Probed()
+    {
+        var job = CreateProcessingJob();
+        _inputFileLocator.LocateAsync(job.Id, Arg.Any<CancellationToken>()).Returns(InputFiles);
+        _audioProbe.GetDurationAsync(InputFiles.AudioFilePath, Arg.Any<CancellationToken>())
+            .Returns<TimeSpan>(_ => throw new AudioProbeException("ffprobe failed"));
+
+        await CreateSut().ExecuteAsync(job, CancellationToken.None);
+
+        job.Status.Should().Be(JobStatus.Failed);
+        job.ErrorMessage.Should().Be("ffprobe failed");
+        await _videoRenderer.DidNotReceiveWithAnyArgs().RenderAsync(default!, default!, default);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Fails_The_Job_When_Rendering_Throws_A_RenderException()
+    {
+        var job = CreateProcessingJob();
+        _inputFileLocator.LocateAsync(job.Id, Arg.Any<CancellationToken>()).Returns(InputFiles);
+        _audioProbe.GetDurationAsync(InputFiles.AudioFilePath, Arg.Any<CancellationToken>()).Returns(TimeSpan.FromMinutes(45));
+        _videoRenderer
+            .RenderAsync(Arg.Any<RenderRequest>(), Arg.Any<RenderProgressCallback>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(_ => throw new RenderException("ffmpeg exited with code 1"));
+
+        await CreateSut().ExecuteAsync(job, CancellationToken.None);
+
+        job.Status.Should().Be(JobStatus.Failed);
+        job.ErrorMessage.Should().Be("ffmpeg exited with code 1");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Leaves_The_Job_Processing_And_Rethrows_On_Graceful_Cancellation()
+    {
+        var job = CreateProcessingJob();
+        using var cts = new CancellationTokenSource();
+        _inputFileLocator.LocateAsync(job.Id, Arg.Any<CancellationToken>()).Returns(InputFiles);
+        _audioProbe.GetDurationAsync(InputFiles.AudioFilePath, Arg.Any<CancellationToken>()).Returns(TimeSpan.FromMinutes(45));
+        _videoRenderer
+            .RenderAsync(Arg.Any<RenderRequest>(), Arg.Any<RenderProgressCallback>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(_ =>
+            {
+                cts.Cancel();
+                throw new OperationCanceledException(cts.Token);
+            });
+
+        var act = () => CreateSut().ExecuteAsync(job, cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        job.Status.Should().Be(JobStatus.Processing);
+        await _jobRepository.DidNotReceiveWithAnyArgs().SaveAsync(default!, default);
+    }
+}
