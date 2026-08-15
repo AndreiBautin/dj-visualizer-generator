@@ -39,7 +39,7 @@ describe('renderSettingsSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  it.each([0.5, 8.5])('rejects a rotation speed outside the allowed range (%s)', (value) => {
+  it.each([0.5, 15.5])('rejects a rotation speed outside the allowed range (%s)', (value) => {
     const result = renderSettingsSchema.safeParse({ title: 'Set', preset: '1080p', rotationSpeedSeconds: value })
 
     expect(result.success).toBe(false)

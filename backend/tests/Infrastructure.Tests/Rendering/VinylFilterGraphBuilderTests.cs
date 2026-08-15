@@ -14,7 +14,7 @@ public class VinylFilterGraphBuilderTests
         var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.FullHd1080p);
 
         graph.Should().Contain("[0:v]scale=799:799:force_original_aspect_ratio=increase,crop=799:799");
-        graph.Should().Contain("s=815x815"); // ring: diameter (799) + 2 * border (8)
+        graph.Should().Contain("s=825x825"); // ring: diameter (799) + 2 * border (13)
         graph.Should().EndWith("[vinyl_static]");
     }
 
@@ -24,7 +24,7 @@ public class VinylFilterGraphBuilderTests
         var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.Hd720p);
 
         graph.Should().Contain("[0:v]scale=533:533:force_original_aspect_ratio=increase,crop=533:533");
-        graph.Should().Contain("s=543x543"); // ring: diameter (533) + 2 * border (5)
+        graph.Should().Contain("s=551x551"); // ring: diameter (533) + 2 * border (9)
         graph.Should().EndWith("[vinyl_static]");
     }
 
@@ -62,7 +62,7 @@ public class VinylFilterGraphBuilderTests
         var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.FullHd1080p, "Title", FontFilePath, rotationPeriodSeconds: 2.0);
 
         graph.Should().Contain("s=1920x1080"); // full-frame black background
-        graph.Should().Contain("ow=815:oh=815"); // rotate canvas matches the ring diameter
+        graph.Should().Contain("ow=825:oh=825"); // rotate canvas matches the ring diameter
         graph.Should().Contain("fontsize=48");
         graph.Should().Contain("y=h-97");
     }
@@ -73,9 +73,22 @@ public class VinylFilterGraphBuilderTests
         var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.Hd720p, "Title", FontFilePath, rotationPeriodSeconds: 2.0);
 
         graph.Should().Contain("s=1280x720");
-        graph.Should().Contain("ow=543:oh=543");
+        graph.Should().Contain("ow=551:oh=551");
         graph.Should().Contain("fontsize=32");
         graph.Should().Contain("y=h-65");
+    }
+
+    [Fact]
+    public void BuildRotatingCompositeGraph_Draws_A_Soft_Shadow_Behind_The_Disc_Without_Recomputing_The_Rotation()
+    {
+        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.Hd720p, "Title", FontFilePath, rotationPeriodSeconds: 2.0);
+
+        // split reuses the already-rotated frame for the shadow copy instead of rotating twice.
+        graph.Should().Contain("[vinyl_rotating]split=2[vinyl_main][vinyl_shadow_src]");
+        graph.Should().Contain("boxblur=");
+        graph.Should().Contain("colorchannelmixer=");
+        // The shadow layer must be composited before (underneath) the disc itself.
+        graph.Should().MatchRegex(@"\[vinyl_shadow\].*overlay=.*\[with_shadow\].*\[with_shadow\]\[vinyl_main\]overlay=");
     }
 
     [Fact]

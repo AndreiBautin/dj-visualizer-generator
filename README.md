@@ -8,7 +8,7 @@ subscriptions, no duration caps, no account required.
 - **Output:** 1920x1080 or 1280x720 MP4, H.264/30fps, artwork cropped to a circle with a white
   border, rotating continuously, centered on black, with the track title overlaid bottom-center.
   Video duration exactly matches the input audio.
-- **Customizable, with sane defaults:** rotation speed (1-8s per spin, default 3s) and caption
+- **Customizable, with sane defaults:** rotation speed (1-15s per spin, default 3s) and caption
   font (Sans/Serif/Mono) are optional per-render choices in the upload form.
 - **No database, no accounts.** Job state lives on disk next to the files themselves; files are
   deleted automatically after a short retention window.
@@ -172,7 +172,7 @@ form — not server config. Everything below is server/worker-level configuratio
 | `Worker__FontFilePathMonoBold` | DejaVu Sans Mono Bold (Linux path) | Worker |
 
 **Rotation speed** is user-selectable between `RotationSpeed.MinSecondsPerRotation` (1s) and
-`MaxSecondsPerRotation` (8s) per rotation, defaulting to 3s. Whatever value is requested is snapped
+`MaxSecondsPerRotation` (15s) per rotation, defaulting to 3s. Whatever value is requested is snapped
 to the nearest whole video frame (`FfmpegArgumentsBuilder.SnapRotationPeriodToFrames`) so the
 looped render always wraps seamlessly, with no visible jump.
 

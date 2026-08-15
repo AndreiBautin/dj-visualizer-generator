@@ -95,4 +95,18 @@ public class FfmpegArgumentsBuilderTests
         args.Should().Contain("-shortest");
         args.Last().Should().Be(Request.OutputFilePath);
     }
+
+    [Fact]
+    public void BuildMuxArguments_Caps_Output_Duration_Explicitly_At_The_Requests_Real_Duration()
+    {
+        // -shortest alone is not reliable here: -stream_loop -1 combined with -c:v copy can leave
+        // ffmpeg's shortest-stream bookkeeping confused about how much video time it has actually
+        // written per loop, letting it overshoot the audio's real end by (empirically observed)
+        // roughly a minute or more, regardless of the audio's length. An explicit -t using the
+        // duration already known from probing the audio makes the cutoff exact and deterministic
+        // instead of depending on that inference.
+        var args = FfmpegArgumentsBuilder.BuildMuxArguments("/jobs/x/.loop.mp4", Request);
+
+        args.Should().ContainInConsecutiveOrder("-t", "2700");
+    }
 }

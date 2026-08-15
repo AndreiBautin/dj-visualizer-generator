@@ -75,6 +75,16 @@ describe('RenderSettings', () => {
     expect(screen.getByText(/3(\.0)?s per spin/i)).toBeInTheDocument()
   })
 
+  it('labels the rotation speed slider ends so direction is unambiguous', () => {
+    render(<TestForm onSubmit={() => {}} />)
+
+    // The field's underlying value is a *period* (seconds per spin) - bigger number, slower
+    // spin - which is the inverse of what "speed" intuitively suggests. Explicit endpoint labels
+    // remove the ambiguity regardless of which way a user expects the slider to run.
+    expect(screen.getByText('Fast')).toBeInTheDocument()
+    expect(screen.getByText('Slow')).toBeInTheDocument()
+  })
+
   it('updates the displayed rotation speed as the slider moves', async () => {
     render(<TestForm onSubmit={() => {}} />)
 

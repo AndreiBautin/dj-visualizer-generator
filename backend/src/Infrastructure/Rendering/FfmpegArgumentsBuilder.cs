@@ -79,6 +79,12 @@ internal static class FfmpegArgumentsBuilder
     /// are just repackaged, not re-encoded, so this step's cost is bounded by I/O rather than by
     /// the output's duration.
     /// </summary>
+    /// <remarks><c>-shortest</c> alone is not reliable when combined with <c>-stream_loop -1</c>
+    /// and <c>-c:v copy</c>: ffmpeg's shortest-stream bookkeeping can lose track of how much video
+    /// time it has actually written per loop and overshoot the audio's real end by a large,
+    /// non-proportional amount. <c>-t</c>, using the duration already known from probing the
+    /// audio at upload time, makes the cutoff exact instead of depending on that inference -
+    /// <c>-shortest</c> is kept only as a harmless secondary bound.</remarks>
     public static IReadOnlyList<string> BuildMuxArguments(string loopSegmentPath, RenderRequest request) =>
     [
         "-y",
@@ -90,6 +96,7 @@ internal static class FfmpegArgumentsBuilder
         "-c:v", "copy",
         "-c:a", "aac",
         "-b:a", "320k",
+        "-t", request.Duration.TotalSeconds.ToString(CultureInfo.InvariantCulture),
         "-shortest",
         "-progress", "pipe:1",
         "-nostats",

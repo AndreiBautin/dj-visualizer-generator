@@ -62,15 +62,19 @@ export function RenderSettings() {
         <label htmlFor="rotationSpeedSeconds" className="block text-sm font-semibold text-white">
           Rotation speed
         </label>
-        <input
-          id="rotationSpeedSeconds"
-          type="range"
-          min={MIN_ROTATION_SPEED_SECONDS}
-          max={MAX_ROTATION_SPEED_SECONDS}
-          step={0.5}
-          className="mt-1 w-full"
-          {...register('rotationSpeedSeconds', { valueAsNumber: true })}
-        />
+        <div className="mt-1 flex items-center gap-2">
+          <span className="text-xs text-white/50">Fast</span>
+          <input
+            id="rotationSpeedSeconds"
+            type="range"
+            min={MIN_ROTATION_SPEED_SECONDS}
+            max={MAX_ROTATION_SPEED_SECONDS}
+            step={0.5}
+            className="w-full"
+            {...register('rotationSpeedSeconds', { valueAsNumber: true })}
+          />
+          <span className="text-xs text-white/50">Slow</span>
+        </div>
         <p className="mt-1 text-xs text-white/60">
           {(rotationSpeedSeconds ?? DEFAULT_ROTATION_SPEED_SECONDS).toFixed(1)}s per spin
         </p>

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const MIN_ROTATION_SPEED_SECONDS = 1
-export const MAX_ROTATION_SPEED_SECONDS = 8
+export const MAX_ROTATION_SPEED_SECONDS = 15
 export const DEFAULT_ROTATION_SPEED_SECONDS = 3
 
 export const CAPTION_FONTS = ['sans-bold', 'serif-bold', 'mono-bold'] as const

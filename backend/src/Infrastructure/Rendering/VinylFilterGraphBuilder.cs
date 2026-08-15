@@ -22,12 +22,27 @@ namespace DjVisualizer.Infrastructure.Rendering;
 internal static class VinylFilterGraphBuilder
 {
     private const double DiameterRatio = 0.74;
-    private const double BorderRatio = 0.01;
-    private const int MinBorderWidth = 4;
+    private const double BorderRatio = 0.016;
+    private const int MinBorderWidth = 6;
     private const double FontSizeRatio = 0.044;
     private const double BottomMarginRatio = 0.09;
 
-    private readonly record struct Geometry(int Diameter, int RingDiameter, int FontSize, int BottomMargin);
+    // Shadow proportions are relative to the ring diameter so the "floating disc" effect looks
+    // consistent across presets rather than a fixed pixel offset looking oversized on 720p or
+    // negligible on 1080p.
+    private const double ShadowOffsetXRatio = 0.026;
+    private const double ShadowOffsetYRatio = 0.033;
+    private const double ShadowBlurRadiusRatio = 0.018;
+    private const int MinShadowBlurRadius = 4;
+
+    private readonly record struct Geometry(
+        int Diameter,
+        int RingDiameter,
+        int FontSize,
+        int BottomMargin,
+        int ShadowOffsetX,
+        int ShadowOffsetY,
+        int ShadowBlurRadius);
 
     public static string BuildStaticVinylGraph(VideoPreset preset)
     {
@@ -58,8 +73,16 @@ internal static class VinylFilterGraphBuilder
         var stages = new[]
         {
             $"[0:v]rotate={angularVelocity}*t:c=black@0.0:ow={g.RingDiameter}:oh={g.RingDiameter}[vinyl_rotating]",
+            // A soft shadow gives the disc a sense of depth instead of looking pasted flat onto
+            // the background. `split` reuses the frame already rotated above instead of paying
+            // for a second rotate pass; lutrgb forces a uniform dark-gray fill (a pure black
+            // shadow would be invisible against the black background) and boxblur (a cheap
+            // separable blur, unlike geq) softens its edge.
+            "[vinyl_rotating]split=2[vinyl_main][vinyl_shadow_src]",
+            $"[vinyl_shadow_src]format=rgba,lutrgb=r=30:g=30:b=30,colorchannelmixer=aa=0.55,boxblur=luma_radius={g.ShadowBlurRadius}:luma_power=2:chroma_radius={g.ShadowBlurRadius}:chroma_power=2:alpha_radius={g.ShadowBlurRadius}:alpha_power=2[vinyl_shadow]",
             $"color=c=black:s={preset.Width}x{preset.Height}[bg]",
-            "[bg][vinyl_rotating]overlay=(W-w)/2:(H-h)/2:shortest=1[with_vinyl]",
+            $"[bg][vinyl_shadow]overlay=(W-w)/2+{g.ShadowOffsetX}:(H-h)/2+{g.ShadowOffsetY}[with_shadow]",
+            "[with_shadow][vinyl_main]overlay=(W-w)/2:(H-h)/2:shortest=1[with_vinyl]",
             $"[with_vinyl]drawtext=fontfile='{escapedFontFile}':text='{escapedTitle}':fontcolor=white:fontsize={g.FontSize}:x=(w-text_w)/2:y=h-{g.BottomMargin}:shadowcolor=black@0.5:shadowx=2:shadowy=2[final]",
         };
 
@@ -73,7 +96,10 @@ internal static class VinylFilterGraphBuilder
         var ringDiameter = diameter + (2 * borderWidth);
         var fontSize = (int)Math.Round(preset.Height * FontSizeRatio);
         var bottomMargin = (int)Math.Round(preset.Height * BottomMarginRatio);
-        return new Geometry(diameter, ringDiameter, fontSize, bottomMargin);
+        var shadowOffsetX = (int)Math.Round(ringDiameter * ShadowOffsetXRatio);
+        var shadowOffsetY = (int)Math.Round(ringDiameter * ShadowOffsetYRatio);
+        var shadowBlurRadius = Math.Max(MinShadowBlurRadius, (int)Math.Round(ringDiameter * ShadowBlurRadiusRatio));
+        return new Geometry(diameter, ringDiameter, fontSize, bottomMargin, shadowOffsetX, shadowOffsetY, shadowBlurRadius);
     }
 
     /// <summary>Escapes a value for use inside a single-quoted ffmpeg filter option, per
