@@ -27,6 +27,17 @@ public class FfmpegArgumentsBuilderTests
         args.Last().Should().Be("/jobs/x/.vinyl.png");
     }
 
+    [Fact]
+    public void BuildAmbientBackgroundArguments_Outputs_A_Single_Frame_To_The_Background_Image_Path()
+    {
+        var args = FfmpegArgumentsBuilder.BuildAmbientBackgroundArguments(Request, "filtergraph", "/jobs/x/.background.png");
+
+        args.Should().ContainInConsecutiveOrder("-i", "/jobs/x/input/artwork.png");
+        args.Should().ContainInConsecutiveOrder("-map", "[background]");
+        args.Should().ContainInConsecutiveOrder("-frames:v", "1");
+        args.Last().Should().Be("/jobs/x/.background.png");
+    }
+
     [Theory]
     [InlineData(2.0, 30, 2.0)] // already frame-aligned (60 frames)
     [InlineData(3.0, 30, 3.0)] // already frame-aligned (90 frames)
@@ -52,9 +63,10 @@ public class FfmpegArgumentsBuilderTests
     public void BuildLoopSegmentArguments_Renders_Exactly_The_Given_Loop_Duration_From_The_Vinyl_Image()
     {
         var args = FfmpegArgumentsBuilder.BuildLoopSegmentArguments(
-            "/jobs/x/.vinyl.png", "filtergraph", "libx264", "veryfast", loopDurationSeconds: 3.0, "/jobs/x/.loop.mp4");
+            "/jobs/x/.vinyl.png", "/jobs/x/.background.png", "filtergraph", "libx264", "veryfast", 3.0, "/jobs/x/.loop.mp4");
 
         args.Should().ContainInConsecutiveOrder("-loop", "1", "-i", "/jobs/x/.vinyl.png");
+        args.Should().ContainInConsecutiveOrder("-loop", "1", "-i", "/jobs/x/.background.png");
         args.Should().ContainInConsecutiveOrder("-t", "3");
         args.Last().Should().Be("/jobs/x/.loop.mp4");
     }
@@ -63,7 +75,7 @@ public class FfmpegArgumentsBuilderTests
     public void BuildLoopSegmentArguments_Uses_Libx264_With_The_Configured_Preset_By_Default()
     {
         var args = FfmpegArgumentsBuilder.BuildLoopSegmentArguments(
-            "/jobs/x/.vinyl.png", "filtergraph", "libx264", "veryfast", loopDurationSeconds: 3.0, "/jobs/x/.loop.mp4");
+            "/jobs/x/.vinyl.png", "/jobs/x/.background.png", "filtergraph", "libx264", "veryfast", 3.0, "/jobs/x/.loop.mp4");
 
         args.Should().ContainInConsecutiveOrder("-c:v", "libx264");
         args.Should().ContainInConsecutiveOrder("-preset", "veryfast");
@@ -73,7 +85,7 @@ public class FfmpegArgumentsBuilderTests
     public void BuildLoopSegmentArguments_Uses_Nvenc_When_Selected()
     {
         var args = FfmpegArgumentsBuilder.BuildLoopSegmentArguments(
-            "/jobs/x/.vinyl.png", "filtergraph", "h264_nvenc", "veryfast", loopDurationSeconds: 3.0, "/jobs/x/.loop.mp4");
+            "/jobs/x/.vinyl.png", "/jobs/x/.background.png", "filtergraph", "h264_nvenc", "veryfast", 3.0, "/jobs/x/.loop.mp4");
 
         args.Should().ContainInConsecutiveOrder("-c:v", "h264_nvenc");
         args.Should().NotContain("libx264");

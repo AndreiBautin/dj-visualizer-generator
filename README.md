@@ -6,9 +6,10 @@ subscriptions, no duration caps, no account required.
 
 - **Upload:** MP3, WAV, FLAC, or M4A audio (up to 2 GB) + JPG or PNG artwork (up to 25 MB).
 - **Output:** 1920x1080 or 1280x720 MP4, H.264/30fps, artwork cropped to a circle with a white
-  border, rotating continuously, centered on black, with the track title overlaid bottom-center.
+  border with a soft drop shadow, rotating continuously over an ambient blurred glow of the
+  artwork's own colors, with the track title overlaid bottom-center.
   Video duration exactly matches the input audio.
-- **Customizable, with sane defaults:** rotation speed (1-15s per spin, default 3s) and caption
+- **Customizable, with sane defaults:** rotation speed (2-15s per spin, default 3s) and caption
   font (Sans/Serif/Mono) are optional per-render choices in the upload form.
 - **No database, no accounts.** Job state lives on disk next to the files themselves; files are
   deleted automatically after a short retention window.
@@ -28,7 +29,7 @@ Shared filesystem (Docker volume; a local folder in dev)
    ▲
    │  polls the same folder for status=Queued every few seconds
 Worker (.NET Worker Service — reuses Domain/Application/Infrastructure)
-   │  runs ffmpeg (circular crop, border, rotation, drawtext, H.264 encode)
+   │  runs ffmpeg (circular crop, border+shadow, ambient background, rotation, drawtext, H.264 encode)
    │  writes output/video.mp4, updates status.json progress 0-100
    ▼
 output/video.mp4 — served by the API, deleted by the Worker's cleanup sweep after retention
@@ -58,14 +59,16 @@ frontend/
     schemas/            Zod validation
     lib/                 pure helpers (file validation, formatting)
   e2e/                  Playwright happy-path test
+assets/fonts/           bundled OFL-licensed caption fonts (see the *-OFL.txt files)
 docker/                 Dockerfiles for api, worker, frontend (+ nginx config)
 ```
 
 ## Local setup (without Docker)
 
 **Windows: just run [`run.bat`](run.bat)** from the repo root. It starts the API, Worker, and
-frontend each in their own window, points them at a shared job storage folder, sets a real Windows
-font for ffmpeg's title overlay, and opens your browser. Requires .NET 9 SDK, Node.js 24+, and
+frontend each in their own window, points them at a shared job storage folder, points ffmpeg's
+title overlay at the bundled fonts in `assets/fonts/`, and opens your browser. Requires .NET 9
+SDK, Node.js 24+, and
 `ffmpeg`/`ffprobe` on PATH (install via `winget install Gyan.FFmpeg` if you don't have them —
 actual rendering needs them; the rest of the app works without them, failing renders with a clear
 error instead).
@@ -78,8 +81,8 @@ Jobs__RootPath=/path/to/shared/jobs-data dotnet run --project backend/src/Api --
 
 # Worker (separate terminal — MUST use the same Jobs__RootPath as the API, or it never sees
 # jobs the API creates; on Windows also set Worker__FontFilePathSansBold/SerifBold/MonoBold to
-# real fonts, e.g. C:\Windows\Fonts\segoeuib.ttf, since the production defaults are Linux
-# container paths - run.bat does this automatically)
+# the bundled fonts in assets/fonts/, since the production defaults are Linux container paths
+# copied in by Dockerfile.worker - run.bat does this automatically)
 Jobs__RootPath=/path/to/shared/jobs-data dotnet run --project backend/src/Worker
 
 # Frontend (http://localhost:5173, proxies /api to the API above)
@@ -101,9 +104,9 @@ docker compose up --build
 - API: http://localhost:5080 (health check at `/health`)
 
 `docker-compose.yml` wires api + worker + frontend together with a shared `jobs-data` volume; the
-frontend's nginx config proxies `/api/*` to the API container. `ffmpeg` and the DejaVu font are
-installed in both the API image (needed for `ffprobe` duration checks at upload time) and the
-Worker image (needed for the actual render).
+frontend's nginx config proxies `/api/*` to the API container. `ffmpeg` is installed in both the
+API image (needed for `ffprobe` duration checks at upload time) and the Worker image (needed for
+the actual render); the Worker image also bundles the caption fonts from `assets/fonts/`.
 
 ## Testing
 
@@ -113,7 +116,7 @@ Worker image (needed for the actual render).
 dotnet test
 ```
 
-184 tests across Domain, Application, Infrastructure, Worker, and Api.IntegrationTests. A handful
+197 tests across Domain, Application, Infrastructure, Worker, and Api.IntegrationTests. A handful
 of Infrastructure tests that actually invoke `ffmpeg`/`ffprobe` are tagged with a custom
 `[RequiresFfmpegFact]` attribute and auto-skip on machines without ffmpeg installed — they run for
 real in CI (which installs `ffmpeg` + `fonts-dejavu-core` via apt).
@@ -126,7 +129,7 @@ npm run lint     # oxlint
 npm run build    # tsc + production build
 ```
 
-52 tests across schemas, components, the API client, and `App`.
+53 tests across schemas, components, the API client, and `App`.
 
 **End-to-end** (from `frontend/`, requires the full stack running — see `docker-compose.yml` or
 the local setup above, and Playwright browsers installed via `npx playwright install`):
@@ -167,11 +170,11 @@ form — not server config. Everything below is server/worker-level configuratio
 | `Worker__StaleProcessingMinutes` | 60 | Worker |
 | `Worker__VideoCodec` | `libx264` (`h264_nvenc` opt-in for a compatible NVIDIA GPU) | Worker |
 | `Worker__X264Preset` | `veryfast` (only used when `VideoCodec` is `libx264`) | Worker |
-| `Worker__FontFilePathSansBold` | DejaVu Sans Bold (Linux path) | Worker |
-| `Worker__FontFilePathSerifBold` | DejaVu Serif Bold (Linux path) | Worker |
-| `Worker__FontFilePathMonoBold` | DejaVu Sans Mono Bold (Linux path) | Worker |
+| `Worker__FontFilePathSansBold` | Poppins ExtraBold (`assets/fonts/`) | Worker |
+| `Worker__FontFilePathSerifBold` | Abril Fatface (`assets/fonts/`) | Worker |
+| `Worker__FontFilePathMonoBold` | Space Mono Bold (`assets/fonts/`) | Worker |
 
-**Rotation speed** is user-selectable between `RotationSpeed.MinSecondsPerRotation` (1s) and
+**Rotation speed** is user-selectable between `RotationSpeed.MinSecondsPerRotation` (2s) and
 `MaxSecondsPerRotation` (15s) per rotation, defaulting to 3s. Whatever value is requested is snapped
 to the nearest whole video frame (`FfmpegArgumentsBuilder.SnapRotationPeriodToFrames`) so the
 looped render always wraps seamlessly, with no visible jump.

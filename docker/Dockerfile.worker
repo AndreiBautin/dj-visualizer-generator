@@ -5,8 +5,9 @@ RUN dotnet publish src/Worker/DjVisualizer.Worker.csproj -c Release -o /app --no
 
 FROM mcr.microsoft.com/dotnet/runtime:9.0
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core \
+    && apt-get install -y --no-install-recommends ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app .
+COPY assets/fonts/*.ttf fonts/
 ENTRYPOINT ["dotnet", "DjVisualizer.Worker.dll"]

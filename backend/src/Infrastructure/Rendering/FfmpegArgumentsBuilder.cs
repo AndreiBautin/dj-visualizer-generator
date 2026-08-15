@@ -22,6 +22,18 @@ internal static class FfmpegArgumentsBuilder
         vinylImagePath,
     ];
 
+    public static IReadOnlyList<string> BuildAmbientBackgroundArguments(RenderRequest request, string filterGraph, string backgroundImagePath) =>
+    [
+        "-y",
+        "-i", request.ArtworkFilePath,
+        "-filter_complex", filterGraph,
+        "-map", "[background]",
+        "-frames:v", "1",
+        "-update", "1",
+        "-loglevel", "error",
+        backgroundImagePath,
+    ];
+
     /// <summary>
     /// Rounds a requested rotation period to the nearest whole number of frames at
     /// <paramref name="frameRate"/> (minimum one frame), so a looped render never has a visible
@@ -47,6 +59,7 @@ internal static class FfmpegArgumentsBuilder
     /// uses its own preset scheme and gets a fixed balanced preset instead.</param>
     public static IReadOnlyList<string> BuildLoopSegmentArguments(
         string vinylImagePath,
+        string backgroundImagePath,
         string filterGraph,
         string videoCodec,
         string x264Preset,
@@ -62,6 +75,8 @@ internal static class FfmpegArgumentsBuilder
             "-y",
             "-loop", "1",
             "-i", vinylImagePath,
+            "-loop", "1",
+            "-i", backgroundImagePath,
             "-filter_complex", filterGraph,
             "-map", "[final]",
             "-t", loopDurationSeconds.ToString(CultureInfo.InvariantCulture),

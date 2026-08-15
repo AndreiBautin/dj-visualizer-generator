@@ -7,21 +7,24 @@ using DjVisualizer.Domain.Jobs;
 namespace DjVisualizer.Infrastructure.Rendering;
 
 /// <summary>
-/// Renders in three ffmpeg passes rather than one continuous encode, because most of the work a
+/// Renders in four ffmpeg passes rather than one continuous encode, because most of the work a
 /// naive single-pass render would do is redundant:
 ///
 /// 1. Crop the artwork to a circle with a white border - a single static image (the expensive
 ///    per-pixel <c>geq</c> mask math runs exactly once, not per frame).
-/// 2. Render exactly one rotation period of that image spinning on the black background with the
-///    title overlaid - the rotation is perfectly periodic, so these are the *only* visually
-///    unique frames that ever need generating, regardless of how long the final video is. The
-///    requested period is snapped to a whole number of frames so the loop wraps seamlessly.
-/// 3. Loop that short clip to match the audio's real duration and mux the audio in, using
+/// 2. Render a soft, blurred, darkened full-frame version of the same artwork as an ambient
+///    background - also a single static image, so the blur costs nothing per output frame.
+/// 3. Render exactly one rotation period of the disc (with its shadow) spinning over that
+///    background, with the title overlaid - the rotation is perfectly periodic, so these are the
+///    *only* visually unique frames that ever need generating, regardless of how long the final
+///    video is. The requested period is snapped to a whole number of frames so the loop wraps
+///    seamlessly.
+/// 4. Loop that short clip to match the audio's real duration and mux the audio in, using
 ///    <c>-c:v copy</c> so the already-encoded video bytes are just repackaged rather than
 ///    re-encoded - this step's cost is bounded by I/O, not by the output's duration.
 ///
-/// A long DJ set no longer costs proportionally more to render than a short one: steps 1-2 are
-/// duration-independent, and step 3 does no video encoding at all.
+/// A long DJ set no longer costs proportionally more to render than a short one: steps 1-3 are
+/// duration-independent, and step 4 does no video encoding at all.
 /// </summary>
 public sealed class FfmpegVideoRenderer(
     IReadOnlyDictionary<CaptionFont, string> fontFilePaths,
@@ -37,17 +40,19 @@ public sealed class FfmpegVideoRenderer(
 
         var workingDirectory = Path.GetDirectoryName(request.OutputFilePath) ?? ".";
         var vinylImagePath = Path.Combine(workingDirectory, $".vinyl-static-{Guid.NewGuid():N}.png");
+        var backgroundImagePath = Path.Combine(workingDirectory, $".vinyl-background-{Guid.NewGuid():N}.png");
         var loopSegmentPath = Path.Combine(workingDirectory, $".vinyl-loop-{Guid.NewGuid():N}.mp4");
 
         try
         {
             await RenderStaticVinylAsync(request, vinylImagePath, cancellationToken);
-            await RenderLoopSegmentAsync(request, fontFilePath, vinylImagePath, loopSegmentPath, cancellationToken);
+            await RenderAmbientBackgroundAsync(request, backgroundImagePath, cancellationToken);
+            await RenderLoopSegmentAsync(request, fontFilePath, vinylImagePath, backgroundImagePath, loopSegmentPath, cancellationToken);
             await MuxFinalVideoAsync(request, loopSegmentPath, onProgress, cancellationToken);
         }
         finally
         {
-            foreach (var intermediateFile in new[] { vinylImagePath, loopSegmentPath })
+            foreach (var intermediateFile in new[] { vinylImagePath, backgroundImagePath, loopSegmentPath })
             {
                 if (File.Exists(intermediateFile))
                 {
@@ -64,17 +69,25 @@ public sealed class FfmpegVideoRenderer(
         await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: false), cancellationToken, onOutputLine: null);
     }
 
+    private async Task RenderAmbientBackgroundAsync(RenderRequest request, string backgroundImagePath, CancellationToken cancellationToken)
+    {
+        var filterGraph = VinylFilterGraphBuilder.BuildAmbientBackgroundGraph(request.Preset);
+        var arguments = FfmpegArgumentsBuilder.BuildAmbientBackgroundArguments(request, filterGraph, backgroundImagePath);
+        await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: false), cancellationToken, onOutputLine: null);
+    }
+
     private async Task RenderLoopSegmentAsync(
         RenderRequest request,
         string fontFilePath,
         string vinylImagePath,
+        string backgroundImagePath,
         string loopSegmentPath,
         CancellationToken cancellationToken)
     {
         var loopDurationSeconds = FfmpegArgumentsBuilder.SnapRotationPeriodToFrames(request.RotationPeriodSeconds, FfmpegArgumentsBuilder.FrameRate);
         var filterGraph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(request.Preset, request.Title, fontFilePath, loopDurationSeconds);
         var arguments = FfmpegArgumentsBuilder.BuildLoopSegmentArguments(
-            vinylImagePath, filterGraph, videoCodec, x264Preset, loopDurationSeconds, loopSegmentPath);
+            vinylImagePath, backgroundImagePath, filterGraph, videoCodec, x264Preset, loopDurationSeconds, loopSegmentPath);
         await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: false), cancellationToken, onOutputLine: null);
     }
 

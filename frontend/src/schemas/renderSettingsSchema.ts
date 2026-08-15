@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const MIN_ROTATION_SPEED_SECONDS = 1
+export const MIN_ROTATION_SPEED_SECONDS = 2
 export const MAX_ROTATION_SPEED_SECONDS = 15
 export const DEFAULT_ROTATION_SPEED_SECONDS = 3
 

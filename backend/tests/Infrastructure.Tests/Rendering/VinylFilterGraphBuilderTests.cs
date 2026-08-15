@@ -57,25 +57,63 @@ public class VinylFilterGraphBuilderTests
     }
 
     [Fact]
-    public void BuildRotatingCompositeGraph_Sizes_The_Background_And_Text_For_1080p()
+    public void BuildRotatingCompositeGraph_Sizes_The_Rotation_Canvas_And_Text_For_1080p()
     {
         var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.FullHd1080p, "Title", FontFilePath, rotationPeriodSeconds: 2.0);
 
-        graph.Should().Contain("s=1920x1080"); // full-frame black background
         graph.Should().Contain("ow=825:oh=825"); // rotate canvas matches the ring diameter
         graph.Should().Contain("fontsize=48");
         graph.Should().Contain("y=h-97");
     }
 
     [Fact]
-    public void BuildRotatingCompositeGraph_Sizes_The_Background_And_Text_For_720p()
+    public void BuildRotatingCompositeGraph_Sizes_The_Rotation_Canvas_And_Text_For_720p()
     {
         var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.Hd720p, "Title", FontFilePath, rotationPeriodSeconds: 2.0);
 
-        graph.Should().Contain("s=1280x720");
         graph.Should().Contain("ow=551:oh=551");
         graph.Should().Contain("fontsize=32");
         graph.Should().Contain("y=h-65");
+    }
+
+    [Fact]
+    public void BuildRotatingCompositeGraph_Composites_Onto_The_Second_Input_As_The_Background()
+    {
+        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.Hd720p, "Title", FontFilePath, rotationPeriodSeconds: 2.0);
+
+        // Input 1 is the pre-rendered ambient background image (see BuildAmbientBackgroundGraph) -
+        // no live color=black generator here, and no per-frame background computation.
+        graph.Should().Contain("[1:v][vinyl_shadow]overlay=");
+        graph.Should().NotContain("color=c=black");
+    }
+
+    [Fact]
+    public void BuildAmbientBackgroundGraph_Fills_The_Frame_For_1080p()
+    {
+        var graph = VinylFilterGraphBuilder.BuildAmbientBackgroundGraph(VideoPreset.FullHd1080p);
+
+        graph.Should().Contain("[0:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080");
+        graph.Should().Contain("gblur=");
+        graph.Should().EndWith("[background]");
+    }
+
+    [Fact]
+    public void BuildAmbientBackgroundGraph_Fills_The_Frame_For_720p()
+    {
+        var graph = VinylFilterGraphBuilder.BuildAmbientBackgroundGraph(VideoPreset.Hd720p);
+
+        graph.Should().Contain("[0:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720");
+        graph.Should().Contain("gblur=");
+        graph.Should().EndWith("[background]");
+    }
+
+    [Fact]
+    public void BuildAmbientBackgroundGraph_Darkens_And_Desaturates_So_It_Does_Not_Compete_With_The_Disc()
+    {
+        var graph = VinylFilterGraphBuilder.BuildAmbientBackgroundGraph(VideoPreset.Hd720p);
+
+        graph.Should().Contain("eq=");
+        graph.Should().MatchRegex(@"brightness=-0\.\d");
     }
 
     [Fact]

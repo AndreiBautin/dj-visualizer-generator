@@ -4,20 +4,24 @@ using DjVisualizer.Domain.Jobs;
 namespace DjVisualizer.Infrastructure.Rendering;
 
 /// <summary>
-/// Builds the ffmpeg filter_complex graphs for the spinning-record visual, split into two passes
-/// so the expensive per-pixel <c>geq</c> circular-mask/border math runs exactly once instead of on
-/// every output frame:
+/// Builds the ffmpeg filter_complex graphs for the spinning-record visual, split into passes so
+/// the expensive per-pixel <c>geq</c>/blur math runs exactly once instead of on every output
+/// frame:
 ///
 /// Pass 1 (<see cref="BuildStaticVinylGraph"/>): crops the artwork to a circle with a white
 /// border and renders it as a single static image.
 ///
-/// Pass 2 (<see cref="BuildRotatingCompositeGraph"/>): loops that static image, applying only the
-/// (much cheaper) continuous rotation, composites it centered on a black background, and overlays
-/// the title bottom-center.
+/// Pass 2 (<see cref="BuildAmbientBackgroundGraph"/>): a separate static image - the same artwork
+/// scaled to fill the frame, heavily blurred and darkened into an ambient glow, replacing a flat
+/// black background.
+///
+/// Pass 3 (<see cref="BuildRotatingCompositeGraph"/>): loops the vinyl image, applying only the
+/// (much cheaper) continuous rotation and a soft drop shadow, composites it over the ambient
+/// background (input 1), and overlays the title bottom-center.
 ///
 /// The geometry and the rotate filter's angle sign follow ffmpeg's documented behavior and have
-/// been visually verified against a real render (a still frame extracted and inspected showed the
-/// expected circular crop, border, and centering).
+/// been visually verified against real renders (still frames extracted and inspected showed the
+/// expected circular crop, border, shadow, ambient background, and centering).
 /// </summary>
 internal static class VinylFilterGraphBuilder
 {
@@ -35,6 +39,10 @@ internal static class VinylFilterGraphBuilder
     private const double ShadowBlurRadiusRatio = 0.018;
     private const int MinShadowBlurRadius = 4;
 
+    private const int AmbientBlurSigma = 40;
+    private const double AmbientBrightness = -0.15;
+    private const double AmbientSaturation = 0.6;
+
     private readonly record struct Geometry(
         int Diameter,
         int RingDiameter,
@@ -43,6 +51,24 @@ internal static class VinylFilterGraphBuilder
         int ShadowOffsetX,
         int ShadowOffsetY,
         int ShadowBlurRadius);
+
+    /// <summary>
+    /// A soft, blurred, darkened full-frame version of the artwork itself, replacing a flat black
+    /// background with an ambient glow of the artwork's own colors (in the style of Spotify
+    /// Canvas / Apple Music's "now playing" background) - rendered once as a static image, just
+    /// like <see cref="BuildStaticVinylGraph"/>, so it costs nothing per output frame.
+    /// </summary>
+    public static string BuildAmbientBackgroundGraph(VideoPreset preset)
+    {
+        var stages = new[]
+        {
+            $"[0:v]scale={preset.Width}:{preset.Height}:force_original_aspect_ratio=increase,crop={preset.Width}:{preset.Height}",
+            $"gblur=sigma={AmbientBlurSigma}",
+            $"eq=brightness={AmbientBrightness.ToString(CultureInfo.InvariantCulture)}:saturation={AmbientSaturation.ToString(CultureInfo.InvariantCulture)}[background]",
+        };
+
+        return string.Join(",", stages);
+    }
 
     public static string BuildStaticVinylGraph(VideoPreset preset)
     {
@@ -80,8 +106,9 @@ internal static class VinylFilterGraphBuilder
             // separable blur, unlike geq) softens its edge.
             "[vinyl_rotating]split=2[vinyl_main][vinyl_shadow_src]",
             $"[vinyl_shadow_src]format=rgba,lutrgb=r=30:g=30:b=30,colorchannelmixer=aa=0.55,boxblur=luma_radius={g.ShadowBlurRadius}:luma_power=2:chroma_radius={g.ShadowBlurRadius}:chroma_power=2:alpha_radius={g.ShadowBlurRadius}:alpha_power=2[vinyl_shadow]",
-            $"color=c=black:s={preset.Width}x{preset.Height}[bg]",
-            $"[bg][vinyl_shadow]overlay=(W-w)/2+{g.ShadowOffsetX}:(H-h)/2+{g.ShadowOffsetY}[with_shadow]",
+            // Input 1 is the pre-rendered ambient background (see BuildAmbientBackgroundGraph) -
+            // already sized to the full frame, so this is a cheap overlay, not a live generator.
+            $"[1:v][vinyl_shadow]overlay=(W-w)/2+{g.ShadowOffsetX}:(H-h)/2+{g.ShadowOffsetY}[with_shadow]",
             "[with_shadow][vinyl_main]overlay=(W-w)/2:(H-h)/2:shortest=1[with_vinyl]",
             $"[with_vinyl]drawtext=fontfile='{escapedFontFile}':text='{escapedTitle}':fontcolor=white:fontsize={g.FontSize}:x=(w-text_w)/2:y=h-{g.BottomMargin}:shadowcolor=black@0.5:shadowx=2:shadowy=2[final]",
         };

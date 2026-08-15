@@ -15,7 +15,7 @@ public class RotationSpeedTests
     }
 
     [Theory]
-    [InlineData(0.99)]
+    [InlineData(1.99)]
     [InlineData(0)]
     [InlineData(-1)]
     [InlineData(15.01)]
@@ -44,5 +44,11 @@ public class RotationSpeedTests
     public void The_Maximum_Allows_A_Dramatically_Slow_Spin()
     {
         RotationSpeed.MaxSecondsPerRotation.Should().Be(15.0);
+    }
+
+    [Fact]
+    public void The_Minimum_Is_Not_Faster_Than_Two_Seconds_Per_Spin()
+    {
+        RotationSpeed.MinSecondsPerRotation.Should().Be(2.0);
     }
 }

@@ -4,11 +4,12 @@ public sealed class WorkerOptions
 {
     public const string SectionName = "Worker";
 
-    // All three ship in the same fonts-dejavu-core apt package already installed in the Docker
-    // images, so no extra assets or packages are needed to offer a choice of caption fonts.
-    public string FontFilePathSansBold { get; set; } = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
-    public string FontFilePathSerifBold { get; set; } = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf";
-    public string FontFilePathMonoBold { get; set; } = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf";
+    // Bundled from assets/fonts/ (OFL-licensed, see the accompanying *-OFL.txt files) and copied
+    // into the Worker image at this path by Dockerfile.worker - chosen to actually look good as a
+    // bold title caption over video, rather than a generic system font.
+    public string FontFilePathSansBold { get; set; } = "/app/fonts/Poppins-ExtraBold.ttf";
+    public string FontFilePathSerifBold { get; set; } = "/app/fonts/AbrilFatface-Regular.ttf";
+    public string FontFilePathMonoBold { get; set; } = "/app/fonts/SpaceMono-Bold.ttf";
 
     /// <summary>libx264 encoding preset - trades compression efficiency for encode speed. "veryfast"
     /// renders long DJ sets in a practical amount of time; "medium" (ffmpeg's own default) is

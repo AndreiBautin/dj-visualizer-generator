@@ -4,7 +4,7 @@ namespace DjVisualizer.Domain.Jobs;
 
 public sealed class RotationSpeed
 {
-    public const double MinSecondsPerRotation = 1.0;
+    public const double MinSecondsPerRotation = 2.0;
     public const double MaxSecondsPerRotation = 15.0;
     public const double DefaultSecondsPerRotation = 3.0;
 

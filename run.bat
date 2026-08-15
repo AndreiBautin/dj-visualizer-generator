@@ -28,13 +28,12 @@ rem Worker never sees jobs the API creates.
 set "DJVISUALIZER_JOBS_ROOT=%~dp0jobs-data"
 
 rem ffmpeg's drawtext filter needs real font files. The production defaults are Linux container
-rem paths (installed via apt in Docker); on Windows they fail with a Fontconfig error, so point
-rem at real Windows fonts instead - one per caption font choice offered in the UI.
-set "DJVISUALIZER_FONT_SANS=C:\Windows\Fonts\segoeuib.ttf"
-if not exist "%DJVISUALIZER_FONT_SANS%" set "DJVISUALIZER_FONT_SANS=C:\Windows\Fonts\arialbd.ttf"
-set "DJVISUALIZER_FONT_SERIF=C:\Windows\Fonts\georgiab.ttf"
-if not exist "%DJVISUALIZER_FONT_SERIF%" set "DJVISUALIZER_FONT_SERIF=C:\Windows\Fonts\timesbd.ttf"
-set "DJVISUALIZER_FONT_MONO=C:\Windows\Fonts\consolab.ttf"
+rem paths (copied into the Worker image by Dockerfile.worker); on Windows those don't exist, so
+rem point at the same bundled fonts from assets\fonts\ instead - keeps dev and prod looking
+rem identical rather than falling back to generic Windows system fonts.
+set "DJVISUALIZER_FONT_SANS=%~dp0assets\fonts\Poppins-ExtraBold.ttf"
+set "DJVISUALIZER_FONT_SERIF=%~dp0assets\fonts\AbrilFatface-Regular.ttf"
+set "DJVISUALIZER_FONT_MONO=%~dp0assets\fonts\SpaceMono-Bold.ttf"
 
 start "DJ Visualizer - API"    cmd /k "cd /d %~dp0 && set Jobs__RootPath=%DJVISUALIZER_JOBS_ROOT% && dotnet run --project backend\src\Api --urls http://localhost:5080"
 start "DJ Visualizer - Worker" cmd /k "cd /d %~dp0 && set Jobs__RootPath=%DJVISUALIZER_JOBS_ROOT% && set Worker__FontFilePathSansBold=%DJVISUALIZER_FONT_SANS% && set Worker__FontFilePathSerifBold=%DJVISUALIZER_FONT_SERIF% && set Worker__FontFilePathMonoBold=%DJVISUALIZER_FONT_MONO% && dotnet run --project backend\src\Worker"
