@@ -188,7 +188,20 @@ judgement, an unmentioned one reads as an oversight.
 
 ## Testing
 
-303 tests, up from 250. The ones worth naming:
+311 tests, up from 250 — **and CI is green, which it had never been.** Every run before this work
+failed, for three separate reasons that all passed locally. That's worth volunteering:
+
+> The suite was green on my machine and red in CI the whole time. Three causes.
+> `Path.GetInvalidFileNameChars()` returns forty-odd characters on Windows and two on Linux, so
+> download filenames differed between my machine and the container it deploys to — and the
+> deployed behaviour was the untested one. The drawtext escaping bug. And a Playwright test that
+> could never pass, because clicking a range input moves the thumb to where you clicked, so the
+> assertion about the value afterwards was checking a number that was never going to be there.
+>
+> The common thread is that all three tests asserted what my code did rather than what the system
+> actually accepted.
+
+The ones worth naming:
 
 - Six hostile captions rendered with real ffmpeg (the F-1 fix).
 - The error message must contain no server path and not even the word "ffmpeg".

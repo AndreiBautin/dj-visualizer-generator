@@ -102,7 +102,7 @@ Threat model, both findings in detail, and the risks that remain:
 
 ## Testing
 
-**303 tests** — 243 backend (xUnit), 60 frontend (Vitest) — plus Playwright against the full
+**311 tests** — 251 backend (xUnit), 60 frontend (Vitest) — plus Playwright against the full
 docker-compose stack in CI. ffmpeg-dependent tests run for real rather than skipping.
 
 What's prioritised, and what's deliberately left untested:

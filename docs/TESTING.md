@@ -5,18 +5,38 @@
 | Suite | Before | After |
 |---|---|---|
 | Domain.Tests | 52 | 52 |
-| Application.Tests | 29 | 31 |
+| Application.Tests | 29 | 39 |
 | Infrastructure.Tests | 89 | 95 |
 | Api.IntegrationTests | 17 | 55 |
 | Worker.Tests | 10 | 10 |
-| **Backend total** | **197** | **243** |
+| **Backend total** | **197** | **251** |
 | Frontend (vitest) | 53 | 60 |
-| **Total** | **250** | **303** |
+| **Total** | **250** | **311** |
 
 All passing, zero skipped. ffmpeg is installed locally and in CI, so the `[RequiresFfmpegFact]` /
 `[RequiresFfmpegTheory]` tests run for real rather than auto-skipping.
 
 Playwright covers the browser happy path against the full docker-compose stack in CI.
+
+## The suite was green locally and red in CI
+
+Worth stating plainly, because it is the most useful thing this repository's test history shows:
+**every CI run before this work failed**, while the same tests passed on the development machine.
+Three separate causes, and none of them would have been found by reading code.
+
+1. **`Path.GetInvalidFileNameChars()` is platform-dependent** — about forty characters on Windows,
+   two on Linux. Two tests asserted the Windows result. They passed locally and failed in CI, and
+   the *deployed* behaviour was the one nobody had tested. Now covered by a theory over characters
+   that are legal on Linux and illegal on Windows, so a Linux run fails if it ever comes back.
+2. **The drawtext escaping was wrong**, underneath two unit tests that asserted escaping was
+   applied without asking ffmpeg whether it was accepted.
+3. **The e2e slider interaction was impossible to satisfy** — Playwright's `click()` on a range
+   input moves the thumb to the clicked point, so a centre click on the 2–15s slider landed near
+   8.5s and the assertion for 4.0s could never hold. Fixed by focusing instead of clicking, and by
+   asserting the starting value so a future change to the default or step fails loudly.
+
+The pattern in all three: a test that asserts *what the code did* rather than *what the system
+accepted* will hold a bug in place indefinitely.
 
 ## Strategy per layer
 
