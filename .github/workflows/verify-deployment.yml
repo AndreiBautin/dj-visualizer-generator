@@ -19,6 +19,13 @@ on:
     - cron: "0 7 * * *"
   workflow_dispatch:
 
+# Only ever verify the newest deploy. Without this, a push landing while an earlier run is mid-
+# render restarts the instance underneath it - and because the disk is ephemeral, the in-flight
+# job disappears and the older run reports a failure that says nothing about the app's health.
+concurrency:
+  group: verify-deployment
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest

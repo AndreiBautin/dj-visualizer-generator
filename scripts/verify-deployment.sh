@@ -89,13 +89,28 @@ else
   ok "sample job created: $JOB"
   RENDER_START=$(date +%s)
   STATUS=""
+  VANISHED=0
   # Generous: a free instance is roughly a tenth of a CPU.
   for _ in $(seq 1 150); do
-    STATUS=$(curl -fsS --max-time 15 "$BASE/jobs/$JOB" | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+    CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$BASE/jobs/$JOB")
+    # A job that existed and now 404s did not fail - the instance restarted underneath it and
+    # took the ephemeral disk with it, which is a deploy racing this check rather than a broken
+    # app. Distinguishing the two matters, and polling on for ten more minutes helps nobody.
+    if [ "$CODE" = "404" ]; then
+      VANISHED=1
+      break
+    fi
+    STATUS=$(curl -fsS --max-time 15 "$BASE/jobs/$JOB" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
     case "$STATUS" in Completed|Failed) break;; esac
     sleep 4
   done
   ELAPSED=$(( $(date +%s) - RENDER_START ))
+
+  if [ "$VANISHED" = "1" ]; then
+    bad "the job disappeared after ${ELAPSED}s - the instance restarted mid-render (its disk is ephemeral)"
+    echo "       Almost always a deploy landing while this ran. Re-run once it has settled." >&2
+    STATUS="vanished"
+  fi
 
   if [ "$STATUS" = "Completed" ]; then
     ok "rendered in ${ELAPSED}s"
@@ -110,7 +125,7 @@ else
     else
       bad "download request failed"
     fi
-  else
+  elif [ "$VANISHED" != "1" ]; then
     bad "render ended as '${STATUS:-no status}' after ${ELAPSED}s"
     curl -fsS --max-time 15 "$BASE/jobs/$JOB" 2>/dev/null | sed 's/^/       /'
   fi
