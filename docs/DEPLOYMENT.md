@@ -82,8 +82,35 @@ Measured on the free instance, for calibration against the numbers elsewhere in 
 | | Free instance | Development machine |
 |---|---|---|
 | 24 s sample, 720p | **67 s** | 8 s |
-| Output size | 12.5 MB | 3.6 MB (`veryfast` rather than `ultrafast`) |
+| 24 s sample, 1080p | **94 s** | 9 s |
+| Output size (720p) | 12.5 MB | 3.6 MB (`veryfast` rather than `ultrafast`) |
 | Cold start after 15 min idle | up to ~60 s | n/a |
+
+1080p renders comfortably within 512 MB — the memory headroom concern this document previously
+raised turned out to be unfounded, and is recorded here as measured rather than assumed.
+
+### What the progress bar does here
+
+Worth knowing because it is the one place the free tier's slowness is user-visible. Measured on
+the 1080p render above:
+
+```
+  0s    0%   render starts
+  7s    5%   circular artwork still done
+ 10s   10%   ambient background still done
+ 24s   11%  ┐
+ ...         │ rotation pass, ~34 updates from inside itself
+ 68s   45%  ┘
+ 70s   49%  ┐
+ ...         │ mux
+ 94s  100%  ┘
+```
+
+The bar previously sat at **0% for 64 of those 94 seconds**, because only the mux pass reported
+progress — which on a machine where the earlier passes take two seconds is invisible, and here read
+as a hung page. See `RenderProgressScale`. The longest remaining flat stretch is the 14 seconds at
+10% before the rotation pass emits its first line; the two single-frame passes have nothing
+granular to report, which is the floor rather than something left undone.
 
 `plan: free` was accepted for a Docker web service, which Render's own documentation does not state
 either way — worth knowing, since the free-tier page lists only language runtimes.
