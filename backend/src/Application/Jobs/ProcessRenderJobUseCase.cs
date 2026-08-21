@@ -1,5 +1,6 @@
 using DjVisualizer.Application.Abstractions;
 using DjVisualizer.Domain.Jobs;
+using Microsoft.Extensions.Logging;
 
 namespace DjVisualizer.Application.Jobs;
 
@@ -9,8 +10,19 @@ public sealed class ProcessRenderJobUseCase(
     IJobFileStorage fileStorage,
     IVideoRenderer videoRenderer,
     IJobRepository jobRepository,
-    IClock clock) : IProcessRenderJobUseCase
+    IClock clock,
+    ILogger<ProcessRenderJobUseCase> logger) : IProcessRenderJobUseCase
 {
+    // A job's ErrorMessage is served verbatim to whoever polls GET /jobs/{id}, so it must stay
+    // free of diagnostic detail: ffmpeg and ffprobe report failures with the full command line,
+    // which embeds absolute server paths and the internal filter graph. The underlying exception
+    // is logged instead, where operators can see it and end users cannot.
+    public const string AudioUnreadableMessage =
+        "The audio file could not be read. It may be corrupt or in an unsupported format.";
+
+    public const string RenderFailedMessage =
+        "Rendering failed. The uploaded audio or artwork may be corrupt or in an unsupported format.";
+
     public async Task ExecuteAsync(Job job, CancellationToken cancellationToken)
     {
         var inputFiles = await inputFileLocator.LocateAsync(job.Id, cancellationToken);
@@ -27,7 +39,8 @@ public sealed class ProcessRenderJobUseCase(
         }
         catch (AudioProbeException ex)
         {
-            await FailAsync(job, ex.Message);
+            logger.LogError(ex, "Probing audio failed for job {JobId}.", job.Id);
+            await FailAsync(job, AudioUnreadableMessage);
             return;
         }
 
@@ -61,7 +74,8 @@ public sealed class ProcessRenderJobUseCase(
         }
         catch (RenderException ex)
         {
-            await FailAsync(job, ex.Message);
+            logger.LogError(ex, "Rendering failed for job {JobId}.", job.Id);
+            await FailAsync(job, RenderFailedMessage);
             return;
         }
 

@@ -1,8 +1,11 @@
+using DjVisualizer.Api.Configuration;
 using DjVisualizer.Api.Contracts;
 using DjVisualizer.Application.Common;
 using DjVisualizer.Application.Jobs;
+using DjVisualizer.Domain.Jobs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 
 namespace DjVisualizer.Api.Controllers;
 
@@ -51,6 +54,75 @@ public sealed class JobsController(
         var response = new CreateJobResponse(result.Value!.JobId.ToString());
         return CreatedAtAction(nameof(GetStatus), new { jobId = response.JobId }, response);
     }
+
+    /// <summary>
+    /// Creates a job from the bundled sample mix and artwork, so a visitor can see the render
+    /// pipeline run without supplying their own files. Goes through exactly the same use case,
+    /// validation and queue as an uploaded job - the only difference is where the two streams
+    /// come from, which is what makes it worth demonstrating rather than a separate shortcut.
+    /// </summary>
+    [HttpPost("sample")]
+    [EnableRateLimiting("job-creation")]
+    public async Task<IActionResult> CreateFromSample(
+        [FromBody] CreateSampleJobRequest? request,
+        [FromServices] IOptions<DemoOptions> demoOptions,
+        [FromServices] IHostEnvironment environment,
+        CancellationToken cancellationToken)
+    {
+        var demo = demoOptions.Value;
+        if (!demo.Enabled)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Not Found",
+                Status = StatusCodes.Status404NotFound,
+                Detail = "The sample mix is not enabled on this instance.",
+            });
+        }
+
+        var audioPath = ResolveContentPath(environment, demo.AudioFilePath);
+        var artworkPath = ResolveContentPath(environment, demo.ArtworkFilePath);
+        if (!System.IO.File.Exists(audioPath) || !System.IO.File.Exists(artworkPath))
+        {
+            // A deployment misconfiguration, not a caller error - and the caller must not be told
+            // which server paths were probed.
+            return new ObjectResult(new ProblemDetails
+            {
+                Title = "Service Unavailable",
+                Status = StatusCodes.Status503ServiceUnavailable,
+                Detail = "The sample mix is unavailable on this instance.",
+            })
+            { StatusCode = StatusCodes.Status503ServiceUnavailable };
+        }
+
+        await using var audioStream = System.IO.File.OpenRead(audioPath);
+        await using var artworkStream = System.IO.File.OpenRead(artworkPath);
+
+        var result = await createJobUseCase.ExecuteAsync(
+            new CreateJobRequest(
+                string.IsNullOrWhiteSpace(request?.Title) ? demo.Title : request.Title,
+                request?.Preset ?? VideoPreset.Hd720p.Name,
+                audioStream,
+                Path.GetFileName(audioPath),
+                artworkStream,
+                Path.GetFileName(artworkPath),
+                request?.RotationSpeedSeconds,
+                request?.CaptionFont),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return MapError(result.Error!);
+        }
+
+        var response = new CreateJobResponse(result.Value!.JobId.ToString());
+        return CreatedAtAction(nameof(GetStatus), new { jobId = response.JobId }, response);
+    }
+
+    private static string ResolveContentPath(IHostEnvironment environment, string configuredPath) =>
+        Path.IsPathRooted(configuredPath)
+            ? configuredPath
+            : Path.Combine(environment.ContentRootPath, configuredPath);
 
     [HttpGet("{jobId}")]
     public async Task<IActionResult> GetStatus(string jobId, CancellationToken cancellationToken)

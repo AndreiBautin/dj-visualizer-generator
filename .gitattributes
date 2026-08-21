@@ -1,0 +1,11 @@
+# The author develops on Windows; CI and the container images are Linux. Normalising to LF in the
+# repository keeps a formatting or diff check from passing in one place and failing in the other.
+* text=auto eol=lf
+
+# Binary assets must never be line-ending normalised.
+*.png binary
+*.jpg binary
+*.mp3 binary
+*.mp4 binary
+*.ttf binary
+*.ico binary

@@ -4,6 +4,12 @@
     <ProjectReference Include="..\Domain\DjVisualizer.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Abstractions only - no logging implementation is referenced here, so the Application
+         layer still depends on nothing but contracts and the Domain. -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

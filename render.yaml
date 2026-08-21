@@ -1,0 +1,43 @@
+# Render Blueprint - see docs/DEPLOYMENT.md for why Render, and what was rejected.
+#
+# One free web service running the single-container image: the API process serves the SPA and
+# hosts the render worker in-process. Free instances have no persistent disk and no background
+# worker type, which is precisely why this shape exists.
+services:
+  - type: web
+    name: dj-visualizer
+    runtime: docker
+    plan: free
+    dockerfilePath: ./docker/Dockerfile.singlecontainer
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # --- Limits tuned for a 512 MB / 0.1 CPU instance with an ephemeral disk ---------------
+      # The self-hosted defaults (2 GB audio, 6 hours, 3 GB free-disk floor) are impossible here:
+      # the free instance would refuse every job on the disk check alone. These are the demo's
+      # limits, not the application's - docker-compose still runs the full-size defaults.
+      - key: Jobs__MaxAudioBytes
+        value: "62914560" # 60 MB
+      - key: Jobs__MaxImageBytes
+        value: "10485760" # 10 MB
+      - key: Jobs__MaxDurationSeconds
+        value: "900" # 15 minutes
+      - key: Jobs__MinFreeDiskBytes
+        value: "104857600" # 100 MB
+
+      # --- Render worker ---------------------------------------------------------------------
+      # ultrafast, not the self-hosted veryfast: at roughly a tenth of a core, encode speed
+      # matters more than the bitrate it costs. Only ~60 frames are ever encoded (the rest of the
+      # video is a stream-copy of that loop), so the quality difference is confined to one
+      # rotation period.
+      - key: Worker__X264Preset
+        value: ultrafast
+      - key: Worker__PollingIntervalSeconds
+        value: "2"
+      # Shorter than the 60-minute default: the disk is ephemeral and small, and a demo visitor
+      # downloads their video within a minute or two of it finishing.
+      - key: Worker__RetentionMinutes
+        value: "30"
+      - key: Worker__StaleProcessingMinutes
+        value: "15"

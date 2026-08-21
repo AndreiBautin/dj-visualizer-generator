@@ -2,6 +2,7 @@ using DjVisualizer.Application.Abstractions;
 using DjVisualizer.Application.Jobs;
 using DjVisualizer.Domain.Jobs;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 namespace DjVisualizer.Application.Tests.Jobs;
@@ -26,7 +27,7 @@ public class ProcessRenderJobUseCaseTests
     }
 
     private ProcessRenderJobUseCase CreateSut() =>
-        new(_inputFileLocator, _audioProbe, _fileStorage, _videoRenderer, _jobRepository, _clock);
+        new(_inputFileLocator, _audioProbe, _fileStorage, _videoRenderer, _jobRepository, _clock, NullLogger<ProcessRenderJobUseCase>.Instance);
 
     private static Job CreateProcessingJob()
     {
@@ -100,7 +101,7 @@ public class ProcessRenderJobUseCaseTests
         await CreateSut().ExecuteAsync(job, CancellationToken.None);
 
         job.Status.Should().Be(JobStatus.Failed);
-        job.ErrorMessage.Should().Be("ffprobe failed");
+        job.ErrorMessage.Should().Be(ProcessRenderJobUseCase.AudioUnreadableMessage);
         await _videoRenderer.DidNotReceiveWithAnyArgs().RenderAsync(default!, default!, default);
     }
 
@@ -117,7 +118,31 @@ public class ProcessRenderJobUseCaseTests
         await CreateSut().ExecuteAsync(job, CancellationToken.None);
 
         job.Status.Should().Be(JobStatus.Failed);
-        job.ErrorMessage.Should().Be("ffmpeg exited with code 1");
+        job.ErrorMessage.Should().Be(ProcessRenderJobUseCase.RenderFailedMessage);
+    }
+
+    /// <summary>
+    /// A job's ErrorMessage is served verbatim by GET /jobs/{id}, so it is a trust boundary on
+    /// the way out. ffmpeg reports failures with the full command line, which embeds absolute
+    /// server paths and the internal filter graph - none of that may reach a caller.
+    /// </summary>
+    [Theory]
+    [InlineData(@"ffmpeg exited with code 1: Error opening C:\Users\dj\jobs\a1\input\audio.mp3")]
+    [InlineData("ffprobe failed: /data/jobs/9f2/input/audio.mp3: Invalid data found")]
+    public async Task ExecuteAsync_Does_Not_Leak_Renderer_Diagnostics_Into_The_Job_Error_Message(string diagnosticDetail)
+    {
+        var job = CreateProcessingJob();
+        _inputFileLocator.LocateAsync(job.Id, Arg.Any<CancellationToken>()).Returns(InputFiles);
+        _audioProbe.GetDurationAsync(InputFiles.AudioFilePath, Arg.Any<CancellationToken>()).Returns(TimeSpan.FromMinutes(45));
+        _videoRenderer
+            .RenderAsync(Arg.Any<RenderRequest>(), Arg.Any<RenderProgressCallback>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(_ => throw new RenderException(diagnosticDetail));
+
+        await CreateSut().ExecuteAsync(job, CancellationToken.None);
+
+        job.Status.Should().Be(JobStatus.Failed);
+        job.ErrorMessage.Should().NotContain(diagnosticDetail);
+        job.ErrorMessage.Should().NotContainAny("/data/jobs", @"C:\Users", "ffmpeg", "ffprobe");
     }
 
     [Fact]

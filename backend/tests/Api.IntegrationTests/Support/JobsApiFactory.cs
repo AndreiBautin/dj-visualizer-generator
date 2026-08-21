@@ -14,6 +14,17 @@ public sealed class JobsApiFactory : WebApplicationFactory<Program>
 
     public TimeSpan StubAudioDuration { get; set; } = TimeSpan.FromMinutes(45);
 
+    /// <summary>Mirrors the <c>Demo:Enabled</c> switch. Left off by default so the default-off
+    /// behaviour is what most tests exercise.</summary>
+    public bool DemoEnabled { get; init; }
+
+    /// <summary>Absolute paths to stand in for the bundled sample assets. Left null to simulate
+    /// a deployment where <c>Demo:Enabled</c> is on but the assets never made it into the image.
+    /// </summary>
+    public string? DemoAudioFilePath { get; init; }
+
+    public string? DemoArtworkFilePath { get; init; }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -26,6 +37,9 @@ public sealed class JobsApiFactory : WebApplicationFactory<Program>
                 ["Jobs:MaxAudioBytes"] = "10000000",
                 ["Jobs:MaxImageBytes"] = "5000000",
                 ["Jobs:MaxDurationSeconds"] = "21600",
+                ["Demo:Enabled"] = DemoEnabled ? "true" : "false",
+                ["Demo:AudioFilePath"] = DemoAudioFilePath ?? "demo/missing-sample.mp3",
+                ["Demo:ArtworkFilePath"] = DemoArtworkFilePath ?? "demo/missing-sample.png",
             });
         });
 

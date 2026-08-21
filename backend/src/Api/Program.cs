@@ -9,6 +9,7 @@ using DjVisualizer.Infrastructure.Audio;
 using DjVisualizer.Infrastructure.Jobs;
 using DjVisualizer.Infrastructure.Time;
 using DjVisualizer.Infrastructure.Uploads;
+using DjVisualizer.Worker;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
@@ -20,7 +21,21 @@ builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks().AddCheck<DiskSpaceHealthCheck>("disk-space");
 builder.Services.AddProblemDetails();
 
-builder.Services.Configure<JobsOptions>(builder.Configuration.GetSection(JobsOptions.SectionName));
+// Parsed through JobsOptionsFactory rather than the default binder: on a deployed instance every
+// one of these arrives as an environment variable, and the binder aborts host construction on the
+// first malformed value. Parsing is deferred into this delegate (see the note below) so it reads
+// the fully merged configuration.
+builder.Services.AddOptions<JobsOptions>().Configure<IConfiguration>((options, configuration) =>
+{
+    var parsed = JobsOptionsFactory.Create(configuration, out _);
+    options.RootPath = parsed.RootPath;
+    options.SingleContainer = parsed.SingleContainer;
+    options.MaxAudioBytes = parsed.MaxAudioBytes;
+    options.MaxImageBytes = parsed.MaxImageBytes;
+    options.MaxDurationSeconds = parsed.MaxDurationSeconds;
+    options.MinFreeDiskBytes = parsed.MinFreeDiskBytes;
+});
+builder.Services.Configure<DemoOptions>(builder.Configuration.GetSection(DemoOptions.SectionName));
 
 // All configuration reads below are deferred into factory delegates (rather than read eagerly
 // into local variables here) so they run after the host is fully built, when every configuration
@@ -32,12 +47,12 @@ string ResolveJobsRootPath(JobsOptions options) =>
 
 builder.Services.Configure<FormOptions>(options =>
 {
-    var jobsOptions = builder.Configuration.GetSection(JobsOptions.SectionName).Get<JobsOptions>() ?? new JobsOptions();
+    var jobsOptions = JobsOptionsFactory.Create(builder.Configuration, out _);
     options.MultipartBodyLengthLimit = jobsOptions.MaxAudioBytes + jobsOptions.MaxImageBytes + 1_048_576;
 });
 builder.WebHost.ConfigureKestrel(options =>
 {
-    var jobsOptions = builder.Configuration.GetSection(JobsOptions.SectionName).Get<JobsOptions>() ?? new JobsOptions();
+    var jobsOptions = JobsOptionsFactory.Create(builder.Configuration, out _);
     options.Limits.MaxRequestBodySize = jobsOptions.MaxAudioBytes + jobsOptions.MaxImageBytes + 1_048_576;
 
     // Multi-GB audio uploads can legitimately take a while to transfer (large file + disk-write
@@ -98,7 +113,31 @@ builder.Services.AddScoped<ICreateJobUseCase, CreateJobUseCase>();
 builder.Services.AddScoped<IGetJobStatusUseCase, GetJobStatusUseCase>();
 builder.Services.AddScoped<IGetJobDownloadUseCase, GetJobDownloadUseCase>();
 
+// Single-container hosting: the render worker's background services run in this process rather
+// than in a separate container. Identical services either way - see WorkerServiceRegistration.
+//
+// This is the one value that genuinely cannot be deferred: it decides which services get
+// registered, so it must be known before the container is built. Every other read above happens
+// inside a delegate instead, so it sees configuration sources layered on after this point - which
+// is what lets the integration tests override the jobs root.
+var singleContainer = JobsOptionsFactory.Create(builder.Configuration, out _).SingleContainer;
+if (singleContainer)
+{
+    builder.Services.AddRenderWorker(
+        builder.Configuration,
+        () => ResolveJobsRootPath(JobsOptionsFactory.Create(builder.Configuration, out _)));
+}
+
 var app = builder.Build();
+
+// Re-parsed against the built host's configuration, which is the fully merged one, and reported
+// now because logging does not exist until this point. Parsing is pure, so doing it twice costs
+// nothing. A malformed variable is a warning and a documented fallback, never a failed startup.
+JobsOptionsFactory.Create(app.Services.GetRequiredService<IConfiguration>(), out var configurationWarnings);
+foreach (var warning in configurationWarnings)
+{
+    app.Logger.LogWarning("Ignoring malformed configuration value. {Warning}", warning);
+}
 
 app.UseExceptionHandler();
 
@@ -113,6 +152,18 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
+
+if (singleContainer)
+{
+    // Serves the built SPA from wwwroot. In docker-compose this is nginx's job instead, so the
+    // static-file middleware is not even registered - the API stays a pure JSON API there.
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+
+    // Client-side routes (and a refresh on one) must return the SPA document rather than a 404.
+    // Registered after MapControllers so it can never shadow a real API route.
+    app.MapFallbackToFile("index.html");
+}
 
 app.Run();
 

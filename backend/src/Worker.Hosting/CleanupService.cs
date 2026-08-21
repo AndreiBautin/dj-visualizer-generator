@@ -1,6 +1,8 @@
 using DjVisualizer.Application.Abstractions;
 using DjVisualizer.Domain.Jobs;
 using DjVisualizer.Worker.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace DjVisualizer.Worker;

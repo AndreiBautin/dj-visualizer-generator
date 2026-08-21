@@ -1,0 +1,53 @@
+# Single-container build: the API process serves the SPA and hosts the render worker in-process.
+#
+# This exists because genuinely free hosting gives you ONE web service and no persistent disk -
+# not three containers sharing a volume. docker-compose.yml remains the real architecture; this
+# image runs the identical services from a different composition root (Jobs__SingleContainer=true).
+# See docs/DEPLOYMENT.md.
+
+# --- Stage 1: the SPA ------------------------------------------------------------------------
+FROM node:24-alpine AS frontend
+WORKDIR /src
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ .
+# Empty base URL (not the compose default of "/api"): the API serves this bundle from its own
+# origin and its routes are at /jobs, so requests must not be prefixed.
+ARG VITE_API_BASE_URL=""
+ARG VITE_SAMPLE_ENABLED="true"
+ARG VITE_BUILD_SHA="unknown"
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
+    VITE_SAMPLE_ENABLED=$VITE_SAMPLE_ENABLED \
+    VITE_BUILD_SHA=$VITE_BUILD_SHA
+RUN npm run build
+
+# --- Stage 2: the .NET publish ---------------------------------------------------------------
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS backend
+WORKDIR /src
+COPY backend/ .
+# Publishing the Api brings the Worker assembly with it - the Api references it so that
+# AddRenderWorker can register the render services in-process.
+RUN dotnet publish src/Api/DjVisualizer.Api.csproj -c Release -o /app --no-self-contained
+
+# --- Stage 3: runtime ------------------------------------------------------------------------
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg curl \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=backend /app .
+COPY --from=frontend /src/dist ./wwwroot
+COPY assets/fonts/*.ttf fonts/
+COPY assets/demo/ demo/
+
+ENV Jobs__SingleContainer=true \
+    Jobs__RootPath=/tmp/djvisualizer-jobs \
+    Demo__Enabled=true \
+    ASPNETCORE_ENVIRONMENT=Production \
+    DOTNET_gcServer=0
+
+# Render (and most free hosts) inject the port to listen on at runtime, so it cannot be baked
+# into ENV - exec-form ENTRYPOINT does no variable expansion. `exec` keeps dotnet as PID 1 so it
+# still receives SIGTERM and shuts the hosted services down gracefully.
+EXPOSE 8080
+ENTRYPOINT ["sh", "-c", "exec dotnet DjVisualizer.Api.dll --urls http://+:${PORT:-8080}"]

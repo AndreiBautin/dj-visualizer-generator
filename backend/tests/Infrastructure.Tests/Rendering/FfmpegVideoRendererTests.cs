@@ -117,6 +117,40 @@ public class FfmpegVideoRendererTests : IDisposable
         await act.Should().ThrowAsync<RenderException>();
     }
 
+    /// <summary>
+    /// The job title is caller-controlled text that ends up inside a single-quoted ffmpeg
+    /// drawtext option, which ffmpeg's filtergraph parser then re-parses - so a stray quote or
+    /// backslash is a filter-graph injection risk, not just a cosmetic bug. This renders for
+    /// real rather than asserting on the graph string, because only ffmpeg itself decides
+    /// whether the escaping is actually correct.
+    /// </summary>
+    [RequiresFfmpegTheory]
+    [InlineData("It's a Mix")]
+    [InlineData(@"Back\slash")]
+    [InlineData("Drum:Bass 100%")]
+    [InlineData(@"Quote'Colon:Percent%Back\slash")]
+    [InlineData("':drawtext=text=pwned:x=0:y=0:'")]
+    [InlineData("[0:v]split[a][b];[a]nullsink[c]")]
+    public async Task RenderAsync_Handles_Titles_Containing_Filtergraph_Metacharacters(string hostileTitle)
+    {
+        var audioPath = Path.Combine(_workDir, "audio.wav");
+        var artworkPath = Path.Combine(_workDir, "artwork.png");
+        var outputPath = Path.Combine(_workDir, $"video-{Guid.NewGuid():N}.mp4");
+        var duration = TimeSpan.FromSeconds(1);
+        File.WriteAllBytes(audioPath, SilentWavBuilder.Build(duration, sampleRate: 8000));
+        await RunFfmpegAsync("-y", "-f", "lavfi", "-i", "color=c=red:s=64x64", "-frames:v", "1", artworkPath);
+
+        var sut = new FfmpegVideoRenderer(FontFilePaths);
+        var request = new RenderRequest(
+            audioPath, artworkPath, outputPath, VideoPreset.Hd720p, hostileTitle, duration,
+            RotationPeriodSeconds: 1.0, CaptionFont: CaptionFont.SansBold);
+
+        var render = async () => await sut.RenderAsync(request, (_, _) => Task.CompletedTask, CancellationToken.None);
+
+        await render.Should().NotThrowAsync();
+        File.Exists(outputPath).Should().BeTrue();
+    }
+
     private static async Task RunFfmpegAsync(params string[] arguments)
     {
         var startInfo = new ProcessStartInfo("ffmpeg") { UseShellExecute = false };

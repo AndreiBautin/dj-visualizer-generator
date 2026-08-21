@@ -13,8 +13,10 @@ frontend/blob-report/
 # Env
 .env
 
-# Local dev job storage (see run.bat)
-/jobs-data/
+# Local dev job storage. Unanchored on purpose: the Api and Worker each fall back to a
+# jobs-data directory beside their own content root when Jobs__RootPath is unset, so uploaded
+# audio and artwork can land in more than one place in the tree.
+jobs-data/
 
 # Local dev logs
 *.log

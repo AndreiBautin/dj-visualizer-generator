@@ -89,12 +89,19 @@ internal static class VinylFilterGraphBuilder
     /// for passing a value already snapped to a whole number of output frames (see
     /// <see cref="FfmpegArgumentsBuilder.SnapRotationPeriodToFrames"/>) - otherwise the looped
     /// render will have a visible jump where it wraps back to frame 0.</param>
-    public static string BuildRotatingCompositeGraph(VideoPreset preset, string title, string fontFilePath, double rotationPeriodSeconds)
+    /// <param name="titleFilePath">Path to a UTF-8 file holding the caption text. The title is
+    /// passed to drawtext by <c>textfile=</c> rather than inlined with <c>text=</c> because a
+    /// title is caller-controlled and ffmpeg's filtergraph parser re-parses option values: inside
+    /// a single-quoted option, ffmpeg does <em>not</em> honour <c>\'</c> as an escaped quote, so
+    /// any title containing an apostrophe terminated the option early and injected the remainder
+    /// into the graph. Reading the text from a file keeps caller-controlled bytes out of the
+    /// graph string entirely, so there is no escaping rule left to get wrong.</param>
+    public static string BuildRotatingCompositeGraph(VideoPreset preset, string titleFilePath, string fontFilePath, double rotationPeriodSeconds)
     {
         var g = ComputeGeometry(preset);
         var angularVelocity = (2 * Math.PI / rotationPeriodSeconds).ToString("G17", CultureInfo.InvariantCulture);
-        var escapedTitle = EscapeDrawTextValue(title);
-        var escapedFontFile = EscapeDrawTextValue(fontFilePath);
+        var escapedTitleFile = EscapeFilterPath(titleFilePath);
+        var escapedFontFile = EscapeFilterPath(fontFilePath);
 
         var stages = new[]
         {
@@ -110,7 +117,9 @@ internal static class VinylFilterGraphBuilder
             // already sized to the full frame, so this is a cheap overlay, not a live generator.
             $"[1:v][vinyl_shadow]overlay=(W-w)/2+{g.ShadowOffsetX}:(H-h)/2+{g.ShadowOffsetY}[with_shadow]",
             "[with_shadow][vinyl_main]overlay=(W-w)/2:(H-h)/2:shortest=1[with_vinyl]",
-            $"[with_vinyl]drawtext=fontfile='{escapedFontFile}':text='{escapedTitle}':fontcolor=white:fontsize={g.FontSize}:x=(w-text_w)/2:y=h-{g.BottomMargin}:shadowcolor=black@0.5:shadowx=2:shadowy=2[final]",
+            // expansion=none disables drawtext's %{...} text-expansion pass, so a title is drawn
+            // literally instead of being interpreted (e.g. "%{gmtime}" stays as typed).
+            $"[with_vinyl]drawtext=fontfile='{escapedFontFile}':textfile='{escapedTitleFile}':expansion=none:fontcolor=white:fontsize={g.FontSize}:x=(w-text_w)/2:y=h-{g.BottomMargin}:shadowcolor=black@0.5:shadowx=2:shadowy=2[final]",
         };
 
         return string.Join(";", stages);
@@ -129,10 +138,20 @@ internal static class VinylFilterGraphBuilder
         return new Geometry(diameter, ringDiameter, fontSize, bottomMargin, shadowOffsetX, shadowOffsetY, shadowBlurRadius);
     }
 
-    /// <summary>Escapes a value for use inside a single-quoted ffmpeg filter option, per
-    /// ffmpeg's filtergraph + drawtext double-escaping rules. Order matters: backslashes must be
-    /// escaped first so the escaping added for the other characters isn't itself re-escaped.</summary>
-    private static string EscapeDrawTextValue(string value) => value
+    /// <summary>
+    /// Escapes an <em>application-controlled</em> filesystem path for use inside a single-quoted
+    /// ffmpeg filter option - specifically to survive Windows paths, whose drive colon and
+    /// separators the filtergraph parser would otherwise treat as syntax. Order matters:
+    /// backslashes are escaped first so the escaping added for the colon isn't itself re-escaped.
+    /// </summary>
+    /// <remarks>
+    /// This is deliberately not used for caller-supplied text. ffmpeg does not honour <c>\'</c>
+    /// inside a single-quoted option, so no amount of escaping makes an arbitrary string safe to
+    /// inline; text reaches drawtext through <c>textfile=</c> instead. The paths passed here are
+    /// built by the renderer (a temp file name it generated, or a configured font path), never
+    /// from request data.
+    /// </remarks>
+    private static string EscapeFilterPath(string value) => value
         .Replace("\\", "\\\\")
         .Replace(":", "\\:")
         .Replace("'", "\\'")

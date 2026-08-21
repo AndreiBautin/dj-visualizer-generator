@@ -42,17 +42,23 @@ public sealed class FfmpegVideoRenderer(
         var vinylImagePath = Path.Combine(workingDirectory, $".vinyl-static-{Guid.NewGuid():N}.png");
         var backgroundImagePath = Path.Combine(workingDirectory, $".vinyl-background-{Guid.NewGuid():N}.png");
         var loopSegmentPath = Path.Combine(workingDirectory, $".vinyl-loop-{Guid.NewGuid():N}.mp4");
+        var titleFilePath = Path.Combine(workingDirectory, $".vinyl-title-{Guid.NewGuid():N}.txt");
 
         try
         {
+            // The caption is handed to drawtext as a file rather than inlined into the filter
+            // graph - see VinylFilterGraphBuilder.BuildRotatingCompositeGraph for why. UTF-8
+            // without a BOM: drawtext would otherwise render the BOM as a visible glyph.
+            await File.WriteAllTextAsync(titleFilePath, request.Title, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), cancellationToken);
+
             await RenderStaticVinylAsync(request, vinylImagePath, cancellationToken);
             await RenderAmbientBackgroundAsync(request, backgroundImagePath, cancellationToken);
-            await RenderLoopSegmentAsync(request, fontFilePath, vinylImagePath, backgroundImagePath, loopSegmentPath, cancellationToken);
+            await RenderLoopSegmentAsync(request, fontFilePath, titleFilePath, vinylImagePath, backgroundImagePath, loopSegmentPath, cancellationToken);
             await MuxFinalVideoAsync(request, loopSegmentPath, onProgress, cancellationToken);
         }
         finally
         {
-            foreach (var intermediateFile in new[] { vinylImagePath, backgroundImagePath, loopSegmentPath })
+            foreach (var intermediateFile in new[] { vinylImagePath, backgroundImagePath, loopSegmentPath, titleFilePath })
             {
                 if (File.Exists(intermediateFile))
                 {
@@ -79,13 +85,14 @@ public sealed class FfmpegVideoRenderer(
     private async Task RenderLoopSegmentAsync(
         RenderRequest request,
         string fontFilePath,
+        string titleFilePath,
         string vinylImagePath,
         string backgroundImagePath,
         string loopSegmentPath,
         CancellationToken cancellationToken)
     {
         var loopDurationSeconds = FfmpegArgumentsBuilder.SnapRotationPeriodToFrames(request.RotationPeriodSeconds, FfmpegArgumentsBuilder.FrameRate);
-        var filterGraph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(request.Preset, request.Title, fontFilePath, loopDurationSeconds);
+        var filterGraph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(request.Preset, titleFilePath, fontFilePath, loopDurationSeconds);
         var arguments = FfmpegArgumentsBuilder.BuildLoopSegmentArguments(
             vinylImagePath, backgroundImagePath, filterGraph, videoCodec, x264Preset, loopDurationSeconds, loopSegmentPath);
         await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: false), cancellationToken, onOutputLine: null);

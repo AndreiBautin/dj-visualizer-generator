@@ -138,21 +138,34 @@ public class VinylFilterGraphBuilderTests
         graph.Should().EndWith("[final]");
     }
 
+    /// <summary>
+    /// The caption must reach drawtext as a file reference, never as inline <c>text=</c>. An
+    /// earlier version inlined it with escaping, which looked correct in a unit test but was
+    /// rejected by ffmpeg for any title containing an apostrophe - ffmpeg does not honour
+    /// <c>\'</c> inside a single-quoted option, so the title escaped its own option and injected
+    /// into the graph. Asserting the absence of <c>text=</c> pins the structural fix in place;
+    /// FfmpegVideoRendererTests proves the behaviour against real ffmpeg.
+    /// </summary>
     [Fact]
-    public void BuildRotatingCompositeGraph_Escapes_Colons_Quotes_And_Percent_Signs_In_The_Title()
+    public void BuildRotatingCompositeGraph_Passes_The_Caption_By_File_Rather_Than_Inline_Text()
     {
         var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(
-            VideoPreset.FullHd1080p, "Deep:House B's Anthem 100%", FontFilePath, rotationPeriodSeconds: 2.0);
+            VideoPreset.FullHd1080p, "/tmp/jobs/title.txt", FontFilePath, rotationPeriodSeconds: 2.0);
 
-        graph.Should().Contain(@"text='Deep\:House B\'s Anthem 100\%'");
+        graph.Should().Contain("textfile='/tmp/jobs/title.txt'");
+        graph.Should().Contain("expansion=none");
+        // ":text=" is the inline-caption option; matching on the bare "text=" would also hit the
+        // "drawtext=" filter name itself.
+        graph.Should().NotContain(":text=");
     }
 
     [Fact]
-    public void BuildRotatingCompositeGraph_Escapes_Backslashes_Before_Other_Characters()
+    public void BuildRotatingCompositeGraph_Escapes_Windows_Style_Paths_Backslashes_First()
     {
         var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(
-            VideoPreset.FullHd1080p, @"back\slash", FontFilePath, rotationPeriodSeconds: 2.0);
+            VideoPreset.FullHd1080p, @"C:\jobs\title.txt", @"C:\Windows\Fonts\arialbd.ttf", rotationPeriodSeconds: 2.0);
 
-        graph.Should().Contain(@"text='back\\slash'");
+        graph.Should().Contain(@"textfile='C\:\\jobs\\title.txt'");
+        graph.Should().Contain(@"fontfile='C\:\\Windows\\Fonts\\arialbd.ttf'");
     }
 }

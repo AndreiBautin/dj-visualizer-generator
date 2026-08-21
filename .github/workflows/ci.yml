@@ -18,14 +18,23 @@ jobs:
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
 
+      # --locked-mode fails on any drift between the lock file and the project files, rather than
+      # silently resolving a different version than the one that was tested.
       - name: Restore
-        run: dotnet restore backend/DjVisualizer.sln
+        run: dotnet restore backend/DjVisualizer.sln --locked-mode
 
       - name: Build
         run: dotnet build backend/DjVisualizer.sln --no-restore -c Release
 
       - name: Test
         run: dotnet test backend/DjVisualizer.sln --no-build -c Release
+
+      - name: Audit NuGet dependencies
+        run: |
+          dotnet list backend/DjVisualizer.sln package --vulnerable --include-transitive 2>&1 | tee audit.txt
+          if grep -qiE '\|\s+(High|Critical)\s+\|' audit.txt; then
+            echo "::error::High or critical severity NuGet vulnerabilities found"; exit 1
+          fi
 
   frontend:
     runs-on: ubuntu-latest
@@ -47,11 +56,44 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Typecheck
+        run: npx tsc -b
+
       - name: Unit tests
         run: npm run test
 
-      - name: Build
+      - name: Build (default config)
         run: npm run build
+
+      # The deployed bundle is built with a different base URL and the sample button enabled.
+      # Building it here means a failure in that configuration surfaces in CI rather than at
+      # deploy time.
+      - name: Build (single-container config)
+        env:
+          VITE_API_BASE_URL: ""
+          VITE_SAMPLE_ENABLED: "true"
+        run: |
+          npm run build
+          if grep -q '"/api"' dist/assets/*.js; then
+            echo "::error::single-container bundle still targets /api"; exit 1
+          fi
+
+      - name: Audit npm dependencies
+        # Gated at high so low-severity noise in build-time transitive packages does not train
+        # anyone to ignore this step.
+        run: npm audit --audit-level=high
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history - a secret removed in a later commit is still leaked
+
+      - name: Scan full history for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   docker:
     runs-on: ubuntu-latest
@@ -66,6 +108,53 @@ jobs:
 
       - name: Build frontend image
         run: docker build -f docker/Dockerfile.frontend -t djvisualizer-frontend:ci .
+
+      # The image that actually gets deployed. Built here so a break in it fails CI rather than
+      # first appearing in Render's build log.
+      - name: Build single-container image
+        run: |
+          docker build -f docker/Dockerfile.singlecontainer \
+            --build-arg VITE_BUILD_SHA=${GITHUB_SHA::7} \
+            -t djvisualizer-single:ci .
+
+      # Proves the deployed shape actually serves: the SPA document, a real API route, and the
+      # sample endpoint the demo depends on - not just that the image built.
+      - name: Smoke-test the single-container image
+        run: |
+          docker run -d --name dj -p 8080:8080 -e PORT=8080 \
+            -e Jobs__MinFreeDiskBytes=104857600 \
+            -e Worker__FontFilePathSansBold=/app/fonts/Poppins-ExtraBold.ttf \
+            djvisualizer-single:ci
+          for i in $(seq 1 40); do
+            curl -fs http://localhost:8080/health > /dev/null && break || sleep 2
+          done
+          echo "--- health ---"
+          curl -fs http://localhost:8080/health
+          echo "--- SPA document ---"
+          curl -fs http://localhost:8080/ | grep -q '<div id="root">' \
+            || { echo "SPA document not served"; docker logs dj; exit 1; }
+          echo "--- deep link falls back to the SPA ---"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/deep/link)" = "200"
+          echo "--- sample render end to end ---"
+          JOB=$(curl -fs -X POST http://localhost:8080/jobs/sample \
+                 -H 'Content-Type: application/json' \
+                 -d '{"title":"CI'"'"'s Smoke: 100%","preset":"720p"}' \
+                 | grep -o '"jobId":"[^"]*"' | cut -d'"' -f4)
+          echo "job=$JOB"
+          for i in $(seq 1 90); do
+            STATUS=$(curl -fs http://localhost:8080/jobs/$JOB | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+            echo "  status=$STATUS"
+            case "$STATUS" in
+              Completed) break;;
+              Failed) echo "render failed"; curl -s http://localhost:8080/jobs/$JOB; docker logs dj; exit 1;;
+            esac
+            sleep 2
+          done
+          test "$STATUS" = "Completed" || { echo "render did not finish"; docker logs dj; exit 1; }
+          curl -fs -o /tmp/ci.mp4 http://localhost:8080/jobs/$JOB/download
+          test -s /tmp/ci.mp4 || { echo "download was empty"; exit 1; }
+          echo "rendered $(stat -c%s /tmp/ci.mp4) bytes"
+          docker rm -f dj
 
   e2e:
     runs-on: ubuntu-latest

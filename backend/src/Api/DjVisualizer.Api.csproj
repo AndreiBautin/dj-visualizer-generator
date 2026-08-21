@@ -14,6 +14,11 @@
     <ProjectReference Include="..\Infrastructure\DjVisualizer.Infrastructure.csproj" />
     <ProjectReference Include="..\Application\DjVisualizer.Application.csproj" />
     <ProjectReference Include="..\Domain\DjVisualizer.Domain.csproj" />
+    <!-- The render worker's hosted services, so single-container hosting can register them in
+         this process (Jobs__SingleContainer=true). A library, not the Worker executable: the Api
+         needs the services, not a second entry point, and referencing the exe would collide the
+         two projects' appsettings.json files on publish. -->
+    <ProjectReference Include="..\Worker.Hosting\DjVisualizer.Worker.Hosting.csproj" />
   </ItemGroup>
 
 </Project>

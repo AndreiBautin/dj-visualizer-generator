@@ -76,3 +76,66 @@ export async function getJobStatus(jobId: string): Promise<JobStatusResponse> {
 export function downloadUrl(jobId: string): string {
   return `${BASE_URL}/jobs/${encodeURIComponent(jobId)}/download`
 }
+
+export interface CreateSampleJobRequest {
+  title?: string
+  preset?: VideoPreset
+  rotationSpeedSeconds?: number
+  captionFont?: CaptionFont
+}
+
+/**
+ * Asks the server to render its own bundled sample mix, so a first-time visitor can watch the
+ * pipeline run without finding a DJ set and waiting on a large upload. Enabled per deployment;
+ * a server with the demo switched off answers 404, which surfaces as a normal ApiError.
+ */
+export async function createSampleJob(request: CreateSampleJobRequest = {}): Promise<CreateJobResponse> {
+  const response = await fetch(`${BASE_URL}/jobs/sample`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
+  if (!response.ok) {
+    throw new ApiError(await parseErrorDetail(response), response.status)
+  }
+
+  return (await response.json()) as CreateJobResponse
+}
+
+/**
+ * True when this build was made for a deployment that bundles the sample assets. A function
+ * rather than a module-level constant so it is readable at call time - a constant would freeze
+ * the value at import and could not be exercised in tests.
+ */
+export function isSampleMixEnabled(): boolean {
+  return import.meta.env.VITE_SAMPLE_ENABLED === 'true'
+}
+
+/**
+ * The commit this bundle was built from, injected at build time. Shown in the footer so a
+ * deployed page can be tied back to a commit without guessing which deploy is live.
+ */
+export function buildSha(): string | null {
+  const sha = import.meta.env.VITE_BUILD_SHA
+  return sha && sha !== 'unknown' ? sha : null
+}
+
+export interface UploadLimits {
+  maxAudioBytes: number
+  maxImageBytes: number
+  maxDurationSeconds: number
+}
+
+/**
+ * The instance's effective upload limits. Fetched rather than hardcoded because they differ by
+ * an order of magnitude between a self-hosted instance and the free-tier demo, and a UI that
+ * stated the wrong ones would promise uploads the server rejects.
+ */
+export async function getLimits(): Promise<UploadLimits> {
+  const response = await fetch(`${BASE_URL}/limits`)
+  if (!response.ok) {
+    throw new ApiError(await parseErrorDetail(response), response.status)
+  }
+
+  return (await response.json()) as UploadLimits
+}

@@ -24,6 +24,7 @@
     <ProjectReference Include="..\..\src\Worker\DjVisualizer.Worker.csproj" />
     <ProjectReference Include="..\..\src\Application\DjVisualizer.Application.csproj" />
     <ProjectReference Include="..\..\src\Domain\DjVisualizer.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Worker.Hosting\DjVisualizer.Worker.Hosting.csproj" />
   </ItemGroup>
 
 </Project>

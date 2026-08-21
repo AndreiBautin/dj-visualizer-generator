@@ -1,214 +1,173 @@
 # DJ Visualizer Generator
 
-A free, open-source tool that turns a DJ mix (audio, up to 6 hours) and a piece of artwork into
-a professional-looking spinning-record video, ready to upload to YouTube or SoundCloud. No
-subscriptions, no duration caps, no account required.
+Turns a DJ mix and a piece of cover art into a video of a spinning record with the title
+underneath — so a set can go anywhere that wants a video instead of an audio file. No account, no
+subscription, no duration cap.
 
-- **Upload:** MP3, WAV, FLAC, or M4A audio (up to 2 GB) + JPG or PNG artwork (up to 25 MB).
-- **Output:** 1920x1080 or 1280x720 MP4, H.264/30fps, artwork cropped to a circle with a white
-  border with a soft drop shadow, rotating continuously over an ambient blurred glow of the
-  artwork's own colors, with the track title overlaid bottom-center.
-  Video duration exactly matches the input audio.
-- **Customizable, with sane defaults:** rotation speed (2-15s per spin, default 3s) and caption
-  font (Sans/Serif/Mono) are optional per-render choices in the upload form.
-- **No database, no accounts.** Job state lives on disk next to the files themselves; files are
-  deleted automatically after a short retention window.
+## Live demo
+
+**→ [dj-visualizer.onrender.com](https://dj-visualizer.onrender.com)**
+
+**There is no login** — open it and use it. If you haven't got a mix to hand, click **"Render a
+sample mix"**: the app renders a short synthesized track it ships with, so you can watch the whole
+pipeline run without uploading anything.
+
+Two things to expect, because it's a free instance: the first request after a quiet spell takes
+about a minute while the container wakes up, and the demo caps uploads at 60 MB / 15 minutes (a
+self-hosted instance does 2 GB / 6 hours). It runs on roughly a tenth of a CPU, so renders are
+slower than they'd be anywhere real.
+
+## What it does
+
+- **In:** MP3, WAV, FLAC or M4A, plus JPG or PNG artwork.
+- **Out:** 1080p or 720p H.264/AAC MP4, exactly as long as the audio. Artwork cropped to a circle
+  with a white border and a soft drop shadow, spinning over an ambient blurred glow of the
+  artwork's own colours, title along the bottom.
+- **Choices:** rotation speed (2–15 s per spin) and caption font (sans / serif / mono).
+- **Nothing kept:** no accounts, no database. Files are deleted automatically after a short
+  retention window.
+
+## The one thing worth knowing
+
+A naive renderer encodes every frame, so a three-hour set takes hours. But the record spins at a
+constant rate, so the video is **perfectly periodic** — past one rotation you're re-generating
+frames you already have.
+
+So it renders exactly one rotation (~60 frames) and loops that clip to the audio's length with
+`-c:v copy`, which repackages the encoded bytes instead of re-encoding them. The circular crop and
+the blurred background are rendered once as static images rather than per frame.
+
+**Render time is therefore near-independent of mix length.** 30 minutes of 1080p renders in about
+29 seconds on a normal machine; a six-hour set costs about the same. Before this change, the same
+input was tracking to over 20 minutes.
+
+Details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Architecture
 
 ```
-Browser (React + Vite SPA)
-   │  multipart upload (audio + artwork + title + preset) → POST /jobs
-   │  poll → GET /jobs/{id}          download → GET /jobs/{id}/download
-   ▼
-ASP.NET Core API  (Clean Architecture: Api → Application → Domain ← Infrastructure)
-   │  writes job folder to a shared volume: /data/jobs/{jobId}/
-   │    input/audio.<ext>, input/artwork.<ext>, status.json, output/video.mp4
-   ▼
-Shared filesystem (Docker volume; a local folder in dev)
-   ▲
-   │  polls the same folder for status=Queued every few seconds
-Worker (.NET Worker Service — reuses Domain/Application/Infrastructure)
-   │  runs ffmpeg (circular crop, border+shadow, ambient background, rotation, drawtext, H.264 encode)
-   │  writes output/video.mp4, updates status.json progress 0-100
-   ▼
-output/video.mp4 — served by the API, deleted by the Worker's cleanup sweep after retention
+React SPA ──HTTP──▶ Api ──▶ Application ──▶ Domain
+                     │           ▲
+                     │      Infrastructure (ffmpeg, filesystem)
+                     ▼
+            jobs-data/<id>/status.json   ← the queue AND the repository
+                     ▲
+                     └── Worker polls for Queued jobs
 ```
 
-There is intentionally no message broker and no database. `IJobRepository` (lookup/save/list) and
-`IJobQueue` (enqueue/atomically-claim-next) are the two seams that would need new Infrastructure
-implementations to scale beyond one Worker instance — everything above those interfaces is
-unaware of the filesystem-backed implementation.
+Clean Architecture, enforced literally: `Domain` has zero package references, `Application`
+declares the interfaces it needs, `Infrastructure` implements them, and `Api`/`Worker` are
+composition roots with no business logic.
 
-### Solution layout
+**No database, no message broker, no auth** — all three deliberate. A job is a `status.json` in its
+own directory, and `FileSystemJobStore` implements both `IJobRepository` and `IJobQueue` over it.
+Writing that file *is* the enqueue.
 
-```
-backend/
-  src/
-    Domain/           entities, value objects, business rules — zero dependencies
-    Application/       use cases, interfaces (ports), DTOs — depends only on Domain
-    Infrastructure/     filesystem job store, ffmpeg process management, file validation
-    Api/                controllers, middleware, DI composition root
-    Worker/             background services (polling, cleanup), DI composition root
-  tests/               one xUnit project per src project, mirroring its structure
-frontend/
-  src/
-    api/                typed fetch client
-    components/         UploadCard, FilePreview, RenderSettings, ProgressPanel, DownloadPanel
-    hooks/               useJobStatus (React Query polling)
-    schemas/            Zod validation
-    lib/                 pure helpers (file validation, formatting)
-  e2e/                  Playwright happy-path test
-assets/fonts/           bundled OFL-licensed caption fonts (see the *-OFL.txt files)
-docker/                 Dockerfiles for api, worker, frontend (+ nginx config)
-```
+Full walkthrough, including one request traced end to end through real files:
+**[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
-## Local setup (without Docker)
+## Tech stack, and why
 
-**Windows: just run [`run.bat`](run.bat)** from the repo root. It starts the API, Worker, and
-frontend each in their own window, points them at a shared job storage folder, points ffmpeg's
-title overlay at the bundled fonts in `assets/fonts/`, and opens your browser. Requires .NET 9
-SDK, Node.js 24+, and
-`ffmpeg`/`ffprobe` on PATH (install via `winget install Gyan.FFmpeg` if you don't have them —
-actual rendering needs them; the rest of the app works without them, failing renders with a clear
-error instead).
+| | Why this one |
+|---|---|
+| **.NET 9 / ASP.NET Core** | Long-running CPU-bound work with real threading and first-class process control — this app's core job is orchestrating ffmpeg |
+| **ffmpeg** | The only realistic option for this pipeline. Driven via argument lists, never a shell string |
+| **React 19 + Vite + TypeScript** | The UI is one form and a progress poll; Vite keeps the bundle ~100 KB gzipped |
+| **TanStack Query** | Job status is polled server state, which is exactly what it's for — no hand-rolled polling or cache |
+| **React Hook Form + Zod** | One schema validates the form and types it; the Domain re-validates server-side regardless |
+| **Tailwind v4** | Small UI, no design system needed |
+| **xUnit + NSubstitute + FluentAssertions** | Standard .NET stack; assertions read as sentences in the failure output |
+| **Vitest + Testing Library** | Tests user-visible behaviour rather than component internals |
+| **Docker** | ffmpeg and the fonts are system dependencies — the image is the honest unit of deployment |
+| **No database** | One short-lived entity, no relationships, no queries. It would be a thing to run and back up for no gain |
 
-To run the three services by hand (any OS):
+## Security
 
-```bash
-# Backend API (http://localhost:5080)
-Jobs__RootPath=/path/to/shared/jobs-data dotnet run --project backend/src/Api --urls http://localhost:5080
+No accounts, no cookies, no database — which structurally removes SQL injection, CSRF, session
+attacks and IDOR rather than mitigating them. What *is* exposed: two upload boundaries feeding
+ffmpeg, and a caption that reaches an ffmpeg filter graph.
 
-# Worker (separate terminal — MUST use the same Jobs__RootPath as the API, or it never sees
-# jobs the API creates; on Windows also set Worker__FontFilePathSansBold/SerifBold/MonoBold to
-# the bundled fonts in assets/fonts/, since the production defaults are Linux container paths
-# copied in by Dockerfile.worker - run.bat does this automatically)
-Jobs__RootPath=/path/to/shared/jobs-data dotnet run --project backend/src/Worker
+Two real vulnerabilities were found and fixed during productionization — a **drawtext filter-graph
+injection** via the job title (which had shipped underneath two passing unit tests), and ffmpeg
+diagnostics leaking server paths to callers. CI runs gitleaks over the full history and fails on
+high-severity dependency vulnerabilities.
 
-# Frontend (http://localhost:5173, proxies /api to the API above)
-cd frontend && npm install && npm run dev
-```
-
-Without an explicit `Jobs__RootPath`, the API and Worker each fall back to a `jobs-data/` folder
-next to their *own* build output — two different folders — and the Worker will never see jobs the
-API creates. Always set it explicitly to the same path for both processes in dev mode.
-
-## Running with Docker
-
-```bash
-cp .env.example .env   # adjust limits if you want
-docker compose up --build
-```
-
-- Frontend: http://localhost:5173
-- API: http://localhost:5080 (health check at `/health`)
-
-`docker-compose.yml` wires api + worker + frontend together with a shared `jobs-data` volume; the
-frontend's nginx config proxies `/api/*` to the API container. `ffmpeg` is installed in both the
-API image (needed for `ffprobe` duration checks at upload time) and the Worker image (needed for
-the actual render); the Worker image also bundles the caption fonts from `assets/fonts/`.
+Threat model, both findings in detail, and the risks that remain:
+**[docs/SECURITY.md](docs/SECURITY.md)**.
 
 ## Testing
 
-**Backend** (from `backend/`):
+**303 tests** — 243 backend (xUnit), 60 frontend (Vitest) — plus Playwright against the full
+docker-compose stack in CI. ffmpeg-dependent tests run for real rather than skipping.
 
-```bash
-dotnet test
-```
-
-197 tests across Domain, Application, Infrastructure, Worker, and Api.IntegrationTests. A handful
-of Infrastructure tests that actually invoke `ffmpeg`/`ffprobe` are tagged with a custom
-`[RequiresFfmpegFact]` attribute and auto-skip on machines without ffmpeg installed — they run for
-real in CI (which installs `ffmpeg` + `fonts-dejavu-core` via apt).
-
-**Frontend** (from `frontend/`):
-
-```bash
-npm run test    # Vitest — component and unit tests
-npm run lint     # oxlint
-npm run build    # tsc + production build
-```
-
-53 tests across schemas, components, the API client, and `App`.
-
-**End-to-end** (from `frontend/`, requires the full stack running — see `docker-compose.yml` or
-the local setup above, and Playwright browsers installed via `npx playwright install`):
-
-```bash
-npx playwright test
-```
-
-The E2E test generates a tiny synthetic WAV + PNG at runtime (no binary fixtures committed),
-uploads them through the real UI, and waits for a real render to complete and download. It runs in
-its own CI job against the docker-compose stack, separately from the fast unit-test jobs.
+What's prioritised, and what's deliberately left untested:
+**[docs/TESTING.md](docs/TESTING.md)**.
 
 ## Deployment
 
-The three services are independent containers with no shared code beyond their Dockerfiles' build
-context — deploy `docker/Dockerfile.api` and `docker/Dockerfile.worker` to any container host
-(the Worker needs no public networking, only filesystem access to the same volume as the API), and
-`docker/Dockerfile.frontend` (a static build behind nginx) to any static/container host. They must
-share persistent storage at the path referenced by `Jobs__RootPath` — a Docker volume, an NFS
-mount, or equivalent, depending on your host. Configure via environment variables (see
-`.env.example`): upload limits, minimum free disk space, and the jobs root path.
+One container on Render's free tier — the API serves the SPA and hosts the render worker
+in-process, because a free web service gets no persistent disk and no background-worker type.
+`docker-compose.yml` still runs the real three-container architecture; single-container mode is a
+config flag, not a fork.
 
-## Configuration reference
+Which providers were rejected and why, environment variables, and a troubleshooting table:
+**[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
 
-Per-render options (rotation speed, caption font) are set by the **user, per job**, in the upload
-form — not server config. Everything below is server/worker-level configuration instead.
+## Running it locally
 
-| Variable | Default | Applies to |
-|---|---|---|
-| `Jobs__RootPath` | `jobs-data/` next to the executable | Api, Worker |
-| `Jobs__MaxAudioBytes` | 2 GB | Api |
-| `Jobs__MaxImageBytes` | 25 MB | Api |
-| `Jobs__MaxDurationSeconds` | 21600 (6 hours) | Api |
-| `Jobs__MinFreeDiskBytes` | 3 GB | Api, Worker |
-| `Worker__PollingIntervalSeconds` | 3 | Worker |
-| `Worker__CleanupIntervalSeconds` | 300 | Worker |
-| `Worker__RetentionMinutes` | 60 | Worker |
-| `Worker__StaleProcessingMinutes` | 60 | Worker |
-| `Worker__VideoCodec` | `libx264` (`h264_nvenc` opt-in for a compatible NVIDIA GPU) | Worker |
-| `Worker__X264Preset` | `veryfast` (only used when `VideoCodec` is `libx264`) | Worker |
-| `Worker__FontFilePathSansBold` | Poppins ExtraBold (`assets/fonts/`) | Worker |
-| `Worker__FontFilePathSerifBold` | Abril Fatface (`assets/fonts/`) | Worker |
-| `Worker__FontFilePathMonoBold` | Space Mono Bold (`assets/fonts/`) | Worker |
+**With Docker** — the full three-container stack:
 
-**Rotation speed** is user-selectable between `RotationSpeed.MinSecondsPerRotation` (2s) and
-`MaxSecondsPerRotation` (15s) per rotation, defaulting to 3s. Whatever value is requested is snapped
-to the nearest whole video frame (`FfmpegArgumentsBuilder.SnapRotationPeriodToFrames`) so the
-looped render always wraps seamlessly, with no visible jump.
+```bash
+docker compose up --build
+```
 
-## Contributing
+Frontend on http://localhost:5173, API on http://localhost:5080.
 
-1. Fork and branch from `main`.
-2. Follow TDD: write a failing test, confirm it fails for the right reason, implement the minimum
-   to pass it, refactor, re-run the full suite.
-3. Keep the layering intact — Domain has zero dependencies; Application depends only on Domain and
-   defines interfaces that Infrastructure implements; Api/Worker are composition roots.
-4. Run `dotnet test` and `npm run test && npm run lint && npm run build` before opening a PR; CI
-   runs the same checks plus Docker image builds and the E2E suite.
-5. Keep the scope tight — see "Important" in the original design brief: no auth, no database, no
-   payments, no user accounts. This is a small, focused tool by design.
+**Without Docker** — needs .NET 9 SDK, Node 24, and ffmpeg on `PATH`:
 
-## Known limitations / residual risk
+```bash
+./run.bat
+```
 
-- **Single Worker instance.** Job claiming (`TryDequeueNextAsync`) is safe for one Worker process
-  but not designed for multiple concurrent Worker instances racing to claim the same job — see
-  "Architecture" above for the interfaces (`IJobRepository`, `IJobQueue`) that would need a real
-  backing store (e.g. a database with row locking, or Redis) to support that.
-- **NVENC hardware encoding is opt-in and machine-dependent.** `Worker__VideoCodec=h264_nvenc`
-  needs a compatible NVIDIA GPU and a recent enough driver on the host actually running the
-  Worker; the default `libx264` software encoding works everywhere, including Docker/CI with no
-  GPU, and is what's exercised by CI.
-- **Very large / long-running transfers need generous stall timeouts, not just size limits.**
-  Kestrel and nginx both default to resetting a connection after ~60s of *no data movement* (not
-  overall duration), which a multi-GB upload or multi-hour video download can trip if disk I/O or
-  the network stalls even briefly. Both are configured generously for this app's use case (see
-  `Program.cs`'s `MinRequestBodyDataRate`/`MinResponseDataRate` and `docker/nginx.conf`'s
-  `client_body_timeout`/`send_timeout`) — worth revisiting if you deploy behind another proxy
-  (a CDN, a corporate load balancer) that imposes its own defaults.
+On Windows this starts the API and Worker with a shared jobs directory and the right font paths,
+then the Vite dev server. Otherwise run the three by hand:
 
-## License
+```bash
+dotnet run --project backend/src/Api --urls http://localhost:5080
+```
 
-[MIT](LICENSE)
+```bash
+dotnet run --project backend/src/Worker
+```
+
+```bash
+npm --prefix frontend install && npm --prefix frontend run dev
+```
+
+Set `Jobs__RootPath` to the same absolute path for both .NET processes — they communicate through
+that directory, and their defaults differ.
+
+**Configuration:** copy `.env.example` to `.env`. Every variable is documented there, including
+which `VITE_`-prefixed values get compiled into the public bundle.
+
+**Regenerating the demo assets:**
+
+```bash
+bash scripts/generate-demo-assets.sh
+```
+
+## Documentation
+
+| | |
+|---|---|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Layers, the three deliberate absences, one request traced end to end |
+| [SECURITY.md](docs/SECURITY.md) | Threat model, findings and fixes, remaining risks |
+| [DEMO_DATA.md](docs/DEMO_DATA.md) | How the sample mix is generated and why it can't contain anything personal |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Provider comparison, env vars, troubleshooting |
+| [TESTING.md](docs/TESTING.md) | Strategy per layer, and what is deliberately not tested |
+| [PRODUCTIONIZATION_ASSESSMENT.md](docs/PRODUCTIONIZATION_ASSESSMENT.md) | The state this repo was in before deployment work, assessed honestly |
+
+## Licence
+
+MIT — see [LICENSE](LICENSE). Bundled fonts (Poppins, Abril Fatface, Space Mono) are OFL-licensed;
+their licences are in `assets/fonts/`.

@@ -15,9 +15,7 @@
     <ProjectReference Include="..\Infrastructure\DjVisualizer.Infrastructure.csproj" />
     <ProjectReference Include="..\Application\DjVisualizer.Application.csproj" />
     <ProjectReference Include="..\Domain\DjVisualizer.Domain.csproj" />
+    <ProjectReference Include="..\Worker.Hosting\DjVisualizer.Worker.Hosting.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="DjVisualizer.Worker.Tests" />
-  </ItemGroup>
 </Project>
