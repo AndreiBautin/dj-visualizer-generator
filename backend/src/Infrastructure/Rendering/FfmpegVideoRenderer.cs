@@ -51,10 +51,35 @@ public sealed class FfmpegVideoRenderer(
             // without a BOM: drawtext would otherwise render the BOM as a visible glyph.
             await File.WriteAllTextAsync(titleFilePath, request.Title, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), cancellationToken);
 
+            // One gate for every progress report, across all four passes. It enforces the two
+            // properties the caller depends on: values never go backwards (each pass maps into a
+            // slice above the previous one, but a pass can still emit the same mapped value
+            // repeatedly), and an unchanged value is never re-reported - each report costs a
+            // status.json write in ProcessRenderJobUseCase.
+            var lastReportedPercent = -1;
+            async Task ReportAsync(int percent, CancellationToken ct)
+            {
+                if (percent <= lastReportedPercent)
+                {
+                    return;
+                }
+
+                lastReportedPercent = percent;
+                await onProgress(percent, ct);
+            }
+
             await RenderStaticVinylAsync(request, vinylImagePath, cancellationToken);
+            await ReportAsync(RenderProgressScale.StaticVinylComplete, cancellationToken);
+
             await RenderAmbientBackgroundAsync(request, backgroundImagePath, cancellationToken);
-            await RenderLoopSegmentAsync(request, fontFilePath, titleFilePath, vinylImagePath, backgroundImagePath, loopSegmentPath, cancellationToken);
-            await MuxFinalVideoAsync(request, loopSegmentPath, onProgress, cancellationToken);
+            await ReportAsync(RenderProgressScale.AmbientBackgroundComplete, cancellationToken);
+
+            await RenderLoopSegmentAsync(request, fontFilePath, titleFilePath, vinylImagePath, backgroundImagePath, loopSegmentPath, ReportAsync, cancellationToken);
+            await MuxFinalVideoAsync(request, loopSegmentPath, ReportAsync, cancellationToken);
+
+            // The mux reports against the audio's duration, which ffmpeg can undershoot by a
+            // fraction of a second; finish the bar explicitly rather than leaving it at 99.
+            await ReportAsync(100, cancellationToken);
         }
         finally
         {
@@ -89,13 +114,24 @@ public sealed class FfmpegVideoRenderer(
         string vinylImagePath,
         string backgroundImagePath,
         string loopSegmentPath,
+        RenderProgressCallback onProgress,
         CancellationToken cancellationToken)
     {
         var loopDurationSeconds = FfmpegArgumentsBuilder.SnapRotationPeriodToFrames(request.RotationPeriodSeconds, FfmpegArgumentsBuilder.FrameRate);
         var filterGraph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(request.Preset, titleFilePath, fontFilePath, loopDurationSeconds);
         var arguments = FfmpegArgumentsBuilder.BuildLoopSegmentArguments(
             vinylImagePath, backgroundImagePath, filterGraph, videoCodec, x264Preset, loopDurationSeconds, loopSegmentPath);
-        await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: false), cancellationToken, onOutputLine: null);
+        var loopDuration = TimeSpan.FromSeconds(loopDurationSeconds);
+
+        await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: true), cancellationToken, onOutputLine: async (line, ct) =>
+        {
+            if (FfmpegProgressParser.TryParseElapsed(line, out var elapsed))
+            {
+                await onProgress(RenderProgressScale.ForLoopSegment(FfmpegProgressParser.CalculatePercent(elapsed, loopDuration)), ct);
+            }
+        });
+
+        await onProgress(RenderProgressScale.LoopSegmentEnd, cancellationToken);
     }
 
     private async Task MuxFinalVideoAsync(
@@ -105,29 +141,16 @@ public sealed class FfmpegVideoRenderer(
         CancellationToken cancellationToken)
     {
         var arguments = FfmpegArgumentsBuilder.BuildMuxArguments(loopSegmentPath, request);
-        var lastReportedPercent = -1;
 
+        // No local de-duplication: the shared gate in RenderAsync already drops repeats, and doing
+        // it here as well would only hide which pass a value came from.
         await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: true), cancellationToken, onOutputLine: async (line, ct) =>
         {
-            if (!FfmpegProgressParser.TryParseElapsed(line, out var elapsed))
+            if (FfmpegProgressParser.TryParseElapsed(line, out var elapsed))
             {
-                return;
+                await onProgress(RenderProgressScale.ForMux(FfmpegProgressParser.CalculatePercent(elapsed, request.Duration)), ct);
             }
-
-            var percent = FfmpegProgressParser.CalculatePercent(elapsed, request.Duration);
-            if (percent == lastReportedPercent)
-            {
-                return;
-            }
-
-            lastReportedPercent = percent;
-            await onProgress(percent, ct);
         });
-
-        if (lastReportedPercent != 100)
-        {
-            await onProgress(100, cancellationToken);
-        }
     }
 
     private string ResolveFontPath(CaptionFont captionFont) =>

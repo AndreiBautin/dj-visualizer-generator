@@ -83,6 +83,11 @@ internal static class FfmpegArgumentsBuilder
             .. encoderArgs,
             "-pix_fmt", "yuv420p",
             "-r", FrameRate.ToString(CultureInfo.InvariantCulture),
+            // This pass encodes a known duration, so it can report real progress rather than only
+            // marking its own completion. It is also the slowest of the three duration-independent
+            // passes, which is what made the bar look stuck on a constrained host.
+            "-progress", "pipe:1",
+            "-nostats",
             "-loglevel", "error",
             loopSegmentPath,
         ];

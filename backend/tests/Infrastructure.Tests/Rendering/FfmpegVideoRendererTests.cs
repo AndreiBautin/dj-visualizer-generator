@@ -118,6 +118,47 @@ public class FfmpegVideoRendererTests : IDisposable
     }
 
     /// <summary>
+    /// Progress must actually move while the early passes run. Only the last two ffmpeg passes can
+    /// report from inside themselves, so before this the bar sat at 0 until the mux started - on a
+    /// constrained host that was about two thirds of the render, and it read as hung.
+    /// Deliberately asserts against a real render rather than a stubbed callback, because what
+    /// matters is that ffmpeg genuinely emits progress for the rotation pass.
+    /// </summary>
+    [RequiresFfmpegFact]
+    public async Task RenderAsync_Reports_Progress_Before_The_Final_Mux_Pass_Begins()
+    {
+        var audioPath = Path.Combine(_workDir, "audio.wav");
+        var artworkPath = Path.Combine(_workDir, "artwork.png");
+        var outputPath = Path.Combine(_workDir, "video.mp4");
+        var duration = TimeSpan.FromSeconds(3);
+        File.WriteAllBytes(audioPath, SilentWavBuilder.Build(duration, sampleRate: 8000));
+        await RunFfmpegAsync("-y", "-f", "lavfi", "-i", "color=c=red:s=64x64", "-frames:v", "1", artworkPath);
+
+        var reported = new List<int>();
+        var request = new RenderRequest(
+            audioPath, artworkPath, outputPath, VideoPreset.Hd720p, "Progress", duration,
+            RotationPeriodSeconds: 2.0, CaptionFont: CaptionFont.SansBold);
+
+        await new FfmpegVideoRenderer(FontFilePaths).RenderAsync(request, (percent, _) =>
+        {
+            reported.Add(percent);
+            return Task.CompletedTask;
+        }, CancellationToken.None);
+
+        reported.Should().NotBeEmpty();
+        reported.Should().BeInAscendingOrder("a progress bar must never move backwards");
+        reported.Should().OnlyHaveUniqueItems("each report costs a status.json write, so repeats are dropped");
+        reported.Should().AllSatisfy(percent => percent.Should().BeInRange(0, 100));
+
+        // The substance of the fix: something is reported while the static and rotation passes
+        // run, not only once the mux begins.
+        reported.Should().Contain(percent => percent > 0 && percent < RenderProgressScale.MuxStart,
+            "the passes before the mux should move the bar");
+        reported.Should().Contain(RenderProgressScale.LoopSegmentEnd);
+        reported.Last().Should().Be(100, "the bar must finish even if ffmpeg undershoots the duration");
+    }
+
+    /// <summary>
     /// The job title is caller-controlled text that ends up inside a single-quoted ffmpeg
     /// drawtext option, which ffmpeg's filtergraph parser then re-parses - so a stray quote or
     /// backslash is a filter-graph injection risk, not just a cosmetic bug. This renders for
