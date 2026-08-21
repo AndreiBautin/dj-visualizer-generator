@@ -100,11 +100,18 @@ test('upload a short mix, watch it render, and download the mp4', async ({ page 
   // Exercise the non-default rotation speed / caption font path through a real render, not just
   // mocked unit tests - proves the full frontend-to-ffmpeg pipeline accepts custom values.
   // Arrow keys drive a genuine native input event (a scripted `.value =` assignment does not -
-  // React's change-detection ignores it), matching how a real user drags the slider.
-  await page.getByLabel(/rotation speed/i).click()
+  // React's change-detection ignores it), matching how a real user nudges the slider.
+  //
+  // focus(), NOT click(): clicking a range input moves the thumb to the clicked point, so a
+  // centre click lands near the middle of the 2-15s range and the arrow presses then start from
+  // an unpredictable value rather than the 3s default.
+  const rotationSlider = page.getByLabel(/rotation speed/i)
+  await rotationSlider.focus()
+  await expect(page.getByText(/3\.0s per spin/i)).toBeVisible()
   await page.keyboard.press('ArrowRight')
   await page.keyboard.press('ArrowRight')
-  await expect(page.getByText(/4(\.0)?s per spin/i)).toBeVisible()
+  // step is 0.5, so two presses from the 3s default lands on 4s.
+  await expect(page.getByText(/4\.0s per spin/i)).toBeVisible()
   await page.getByLabel('Mono').check()
 
   await page.getByRole('button', { name: 'Generate Video' }).click()
