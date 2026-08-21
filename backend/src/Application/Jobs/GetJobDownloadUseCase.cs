@@ -39,10 +39,23 @@ public sealed class GetJobDownloadUseCase(IJobRepository jobRepository, IJobFile
         return Result<JobDownloadResult>.Success(new JobDownloadResult(filePath, SanitizeFileName(job.Title.Value) + ".mp4"));
     }
 
+    /// <summary>
+    /// Characters replaced in a download filename. Deliberately a fixed set rather than
+    /// <see cref="Path.GetInvalidFileNameChars"/>, which is <em>platform-dependent</em>: on
+    /// Windows it returns roughly forty characters, on Linux only '/' and NUL. Using it would
+    /// mean the same title produced a different filename depending on the server's OS - and since
+    /// this app is developed on Windows and deployed in a Linux container, the deployed
+    /// behaviour would be the untested one. It also sanitises for the wrong machine: the name
+    /// travels in Content-Disposition and is written to disk by the <em>client</em>, whose OS the
+    /// server cannot know, so the safe choice is the most restrictive common denominator.
+    /// </summary>
+    private static readonly char[] InvalidFileNameChars =
+        [.. @"<>:""/\|?*".ToCharArray(), .. Enumerable.Range(0, 32).Select(c => (char)c)];
+
     private static string SanitizeFileName(string title)
     {
         var sanitized = title;
-        foreach (var invalidChar in Path.GetInvalidFileNameChars())
+        foreach (var invalidChar in InvalidFileNameChars)
         {
             sanitized = sanitized.Replace(invalidChar, '_');
         }
