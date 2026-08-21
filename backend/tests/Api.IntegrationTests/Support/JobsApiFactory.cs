@@ -25,6 +25,10 @@ public sealed class JobsApiFactory : WebApplicationFactory<Program>
 
     public string? DemoArtworkFilePath { get; init; }
 
+    /// <summary>Extra configuration entries layered on last, for settings that have no dedicated
+    /// property here - platform-supplied variables like RENDER_GIT_COMMIT, for instance.</summary>
+    public Dictionary<string, string?> ExtraConfiguration { get; init; } = [];
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -41,6 +45,11 @@ public sealed class JobsApiFactory : WebApplicationFactory<Program>
                 ["Demo:AudioFilePath"] = DemoAudioFilePath ?? "demo/missing-sample.mp3",
                 ["Demo:ArtworkFilePath"] = DemoArtworkFilePath ?? "demo/missing-sample.png",
             });
+
+            if (ExtraConfiguration.Count > 0)
+            {
+                config.AddInMemoryCollection(ExtraConfiguration);
+            }
         });
 
         builder.ConfigureTestServices(services =>

@@ -6,21 +6,19 @@ subscription, no duration cap.
 
 ## Live demo
 
-> **Not yet published.** Everything needed to deploy is in the repository — the
-> [blueprint](render.yaml), the [image](docker/Dockerfile.singlecontainer) and the
-> [instructions](docs/DEPLOYMENT.md#deploying) — but creating the Render account is a manual step.
-> It takes about five minutes: sign in at render.com with GitHub, **New → Blueprint**, pick this
-> repo. Render reads `render.yaml` and configures itself; no card is requested. Replace this
-> callout with the URL once it is up.
+**→ [dj-visualizer.onrender.com](https://dj-visualizer.onrender.com)**
 
-**There will be no login** — open it and use it. If you haven't got a mix to hand, click **"Render
-a sample mix"**: the app renders a short synthesized track it ships with, so you can watch the
-whole pipeline run without uploading anything.
+**There is no login** — open it and use it. If you haven't got a mix to hand, click **"Render a
+sample mix"**: the app renders a short synthesized track it ships with, so you can watch the whole
+pipeline run without uploading anything.
 
-Two things to expect, because it's a free instance: the first request after a quiet spell takes
-about a minute while the container wakes up, and the demo caps uploads at 60 MB / 15 minutes (a
-self-hosted instance does 2 GB / 6 hours). It runs on roughly a tenth of a CPU, so renders are
-slower than they'd be anywhere real.
+Three things to expect, because it's a free instance:
+
+- The first request after a quiet spell takes up to a minute while the container wakes up.
+- Uploads are capped at 60 MB / 15 minutes (a self-hosted instance does 2 GB / 6 hours). The UI
+  reads those limits from the server, so what it shows is always what it will accept.
+- It runs on roughly a tenth of a CPU. The bundled 24-second sample renders in about **67 seconds**
+  there, against 8 seconds on a normal machine.
 
 ## What it does
 
@@ -102,7 +100,7 @@ Threat model, both findings in detail, and the risks that remain:
 
 ## Testing
 
-**311 tests** — 251 backend (xUnit), 60 frontend (Vitest) — plus Playwright against the full
+**318 tests** — 254 backend (xUnit), 64 frontend (Vitest) — plus Playwright against the full
 docker-compose stack in CI. ffmpeg-dependent tests run for real rather than skipping.
 
 What's prioritised, and what's deliberately left untested:

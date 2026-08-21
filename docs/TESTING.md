@@ -7,11 +7,11 @@
 | Domain.Tests | 52 | 52 |
 | Application.Tests | 29 | 39 |
 | Infrastructure.Tests | 89 | 95 |
-| Api.IntegrationTests | 17 | 55 |
+| Api.IntegrationTests | 17 | 58 |
 | Worker.Tests | 10 | 10 |
-| **Backend total** | **197** | **251** |
-| Frontend (vitest) | 53 | 60 |
-| **Total** | **250** | **311** |
+| **Backend total** | **197** | **254** |
+| Frontend (vitest) | 53 | 64 |
+| **Total** | **250** | **318** |
 
 All passing, zero skipped. ffmpeg is installed locally and in CI, so the `[RequiresFfmpegFact]` /
 `[RequiresFfmpegTheory]` tests run for real rather than auto-skipping.

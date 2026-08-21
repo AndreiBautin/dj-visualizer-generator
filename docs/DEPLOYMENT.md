@@ -72,6 +72,22 @@ Two details that break static-ish deploys and are handled explicitly:
   expansion, so the entrypoint is `sh -c "exec dotnet … --urls http://+:${PORT:-8080}"`. The `exec`
   keeps dotnet as PID 1 so it still receives `SIGTERM` and shuts the hosted services down cleanly.
 
+## Live
+
+**https://dj-visualizer.onrender.com** — deployed 2026-08-21 from `render.yaml`, verified end to
+end by `scripts/verify-deployment.sh` (9 checks, all passing).
+
+Measured on the free instance, for calibration against the numbers elsewhere in these docs:
+
+| | Free instance | Development machine |
+|---|---|---|
+| 24 s sample, 720p | **67 s** | 8 s |
+| Output size | 12.5 MB | 3.6 MB (`veryfast` rather than `ultrafast`) |
+| Cold start after 15 min idle | up to ~60 s | n/a |
+
+`plan: free` was accepted for a Docker web service, which Render's own documentation does not state
+either way — worth knowing, since the free-tier page lists only language runtimes.
+
 ## Deploying
 
 Exactly one manual step exists, and it is the account. Everything before and after it is

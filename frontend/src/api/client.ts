@@ -139,3 +139,16 @@ export async function getLimits(): Promise<UploadLimits> {
 
   return (await response.json()) as UploadLimits
 }
+
+/**
+ * The commit this instance is running, resolved at runtime by the server. Null when the host
+ * exposes no commit - the footer then simply does not render.
+ */
+export async function getVersion(): Promise<{ commit: string | null }> {
+  const response = await fetch(`${BASE_URL}/version`)
+  if (!response.ok) {
+    throw new ApiError(await parseErrorDetail(response), response.status)
+  }
+
+  return (await response.json()) as { commit: string | null }
+}

@@ -16,12 +16,11 @@ something below sounds impressive but you cannot point at the file, it should no
 > basically independent of mix length. A six-hour set costs about what a five-minute one does.
 >
 > It's .NET 9 in Clean Architecture with a React frontend, running as a single free container on
-> Render.
+> Render — I can pull it up now if you like.
 
-> **Before using this line:** it assumes the Render deploy has actually been done (see
-> [DEPLOYMENT.md](DEPLOYMENT.md#deploying) — about five minutes). Until then say "it's packaged to
-> deploy as a single container" instead. Do not claim a live site you cannot open in front of
-> them.
+It is live at **https://dj-visualizer.onrender.com**. Open it before the call so the instance is
+already awake: it spins down after 15 minutes idle and the cold start takes up to a minute, which
+is a bad thing to discover while someone is watching.
 
 Then stop. Let them pick the thread.
 
@@ -188,7 +187,7 @@ judgement, an unmentioned one reads as an oversight.
 
 ## Testing
 
-311 tests, up from 250 — **and CI is green, which it had never been.** Every run before this work
+318 tests, up from 250 — **and CI is green, which it had never been.** Every run before this work
 failed, for three separate reasons that all passed locally. That's worth volunteering:
 
 > The suite was green on my machine and red in CI the whole time. Three causes.
