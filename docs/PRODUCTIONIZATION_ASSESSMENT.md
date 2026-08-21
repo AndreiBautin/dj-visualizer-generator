@@ -53,6 +53,27 @@ before returning it.
 | 8 | CI never deploys and never checks a live URL | Green CI would coexist with a dead site |
 | 9 | No `.gitattributes`; author on Windows, CI on Linux | A formatting gate would pass in CI and fail locally |
 | 10 | `SecurityHeadersMiddleware` sends `default-src 'none'` on every response | Correct for a JSON API; would break the SPA outright once the API also serves it |
+| 11 | **CI had been red since the first commit** | Two tests asserted Windows-specific filename sanitization and only ever passed locally — see below |
+
+## Found only by running things
+
+Three defects existed that no amount of reading would have surfaced, and all three were found by
+executing rather than inspecting. They are listed together because the pattern is the point.
+
+**`Path.GetInvalidFileNameChars()` is platform-dependent.** It returns roughly forty characters on
+Windows and only `/` and NUL on Linux. `GetJobDownloadUseCase` used it, so a download filename
+differed between the developer's machine and the Linux container this deploys to — and the
+deployed behaviour was the untested one. Two tests asserted the Windows result; they passed
+locally and failed in CI, which is why **both prior CI runs were red**. Fixed with a fixed
+character set, which is also the correct choice on its merits: the name travels in
+`Content-Disposition` and is written to disk by the *client*, whose OS the server cannot know.
+
+**The drawtext escaping was wrong** (Security F-1) and had shipped underneath two passing unit
+tests, because they asserted that escaping was applied rather than that ffmpeg accepted it.
+
+**Publishing the Api broke** once it referenced the Worker executable — both entry points ship an
+`appsettings.json` and they collided (`NETSDK1152`). Only visible on `dotnet publish`, never on
+`dotnet build`. Resolved by extracting the hosted services into a library.
 
 ## Security findings
 

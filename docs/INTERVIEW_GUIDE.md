@@ -15,7 +15,13 @@ something below sounds impressive but you cannot point at the file, it should no
 > audio with a stream copy, which repackages bytes instead of re-encoding them. Render time is
 > basically independent of mix length. A six-hour set costs about what a five-minute one does.
 >
-> It's .NET 9 in Clean Architecture with a React frontend, and it's deployed free on Render.
+> It's .NET 9 in Clean Architecture with a React frontend, running as a single free container on
+> Render.
+
+> **Before using this line:** it assumes the Render deploy has actually been done (see
+> [DEPLOYMENT.md](DEPLOYMENT.md#deploying) — about five minutes). Until then say "it's packaged to
+> deploy as a single container" instead. Do not claim a live site you cannot open in front of
+> them.
 
 Then stop. Let them pick the thread.
 
