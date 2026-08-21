@@ -74,17 +74,60 @@ Two details that break static-ish deploys and are handled explicitly:
 
 ## Deploying
 
-The repository contains [`render.yaml`](../render.yaml), so Render configures itself from the
-blueprint — no dashboard fields to fill in by hand.
+Exactly one manual step exists, and it is the account. Everything before and after it is
+automated: [`render.yaml`](../render.yaml) configures the service, and no `envVar` uses
+`sync: false`, so the blueprint asks no questions when applied.
 
-1. Sign in at [render.com](https://render.com) with GitHub. No card is requested on the free path.
-2. **New → Blueprint**, pick this repository, and let Render read `render.yaml`.
-3. Confirm. The first build takes roughly 5–10 minutes (two build stages plus the ffmpeg apt
+1. Sign in at [render.com](https://render.com) with **GitHub** — it is an OAuth authorisation, not
+   a signup form, and no card is requested on the free path.
+2. **New → Blueprint**, pick this repository, apply. Render reads `render.yaml`.
+3. First build takes roughly 5–10 minutes (a node stage, a .NET publish stage, and the ffmpeg apt
    install).
 4. The service comes up at `https://<name>.onrender.com`.
 
+Then record the URL so the live checks start running:
+
+```bash
+gh variable set PRODUCTION_URL --body "https://<your-service>.onrender.com"
+```
+
+That is all the configuration there is. From then on `autoDeploy: true` redeploys on every push to
+`main` with no further interaction, and
+[`.github/workflows/verify-deployment.yml`](../.github/workflows/verify-deployment.yml) checks the
+live site after each deploy and once a day.
+
+To check it by hand at any point:
+
+```bash
+bash scripts/verify-deployment.sh https://<your-service>.onrender.com
+```
+
+That script wakes the instance, asserts the SPA document and both content-security policies, checks
+that a deep link falls back to the SPA, reads `/limits`, then renders the bundled sample end to end
+and downloads the MP4 — with a caption full of filtergraph metacharacters, so it re-proves
+[SECURITY.md](SECURITY.md) F-1 against the deployed build rather than only in CI.
+
+**On being charged.** `plan: free` is the only plan named in the blueprint, so it cannot silently
+provision a billable instance — an invalid plan fails the blueprint with an explicit error. With no
+payment method on file, Render suspends a free service that exceeds its limits rather than billing
+for the overage.
+
 Render can deploy a **private** repository, so the source does not have to be public for the demo
 to work. For a portfolio it probably should be — that is a separate decision from deploying.
+
+### Why there is no account-free option
+
+Worth stating, because it is the first question anyone asks. This app needs a long-running process,
+a ~100 MB native ffmpeg binary, writable disk, and minutes of CPU per job. That rules out every
+free host that does not require an identity — GitHub Pages, Cloudflare Pages and Netlify are static
+only and cannot execute .NET or ffmpeg at all. GitHub Actions can run the workload but is CI, not
+hosting: it exposes no inbound HTTP endpoint. Codespaces can forward a port, but only while a
+codespace someone started by hand is still running.
+
+So the choice is not "Render versus something with no account" — it is "one OAuth versus no live
+app." The nearest account-free alternative is a static showcase on GitHub Pages (a recorded demo
+plus the docs), which needs no signup but does need the repository to be public, since
+[Pages on the free plan does not serve private repos](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits).
 
 ### Environment variables
 

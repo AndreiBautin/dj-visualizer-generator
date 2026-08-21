@@ -3,10 +3,18 @@
 # One free web service running the single-container image: the API process serves the SPA and
 # hosts the render worker in-process. Free instances have no persistent disk and no background
 # worker type, which is precisely why this shape exists.
+#
+# Every value below is literal - no envVar uses `sync: false` - so the blueprint asks no
+# questions when it is applied. Connect it once and it configures itself.
+#
+# On cost: `plan: free` is the only plan named here, so this cannot silently provision a paid
+# instance. If Render ever rejects that value it fails the blueprint with an explicit error
+# rather than falling back to a billable plan. With no payment method on file Render suspends a
+# free service that exceeds its limits instead of charging for the overage.
 services:
   - type: web
     name: dj-visualizer
-    runtime: docker
+    runtime: docker # not the deprecated `env:` key
     plan: free
     dockerfilePath: ./docker/Dockerfile.singlecontainer
     dockerContext: .
