@@ -136,4 +136,97 @@ public class JobTests
 
         act.Should().Throw<InvalidJobStateTransitionException>();
     }
+
+    private static Job CompletedJob()
+    {
+        var job = CreateJob();
+        job.Start(Now);
+        job.Complete(Now);
+        return job;
+    }
+
+    [Fact]
+    public void RecordDownload_Counts_Downloads_Until_The_Limit_Is_Reached()
+    {
+        var job = CompletedJob();
+
+        for (var i = 0; i < Job.MaxDownloads; i++)
+        {
+            job.DownloadLimitReached.Should().BeFalse($"only {i} of {Job.MaxDownloads} downloads have been recorded");
+            job.RecordDownload();
+        }
+
+        job.DownloadCount.Should().Be(Job.MaxDownloads);
+        job.DownloadLimitReached.Should().BeTrue();
+
+        var act = job.RecordDownload;
+
+        act.Should().Throw<DownloadLimitExceededException>();
+    }
+
+    /// <summary>
+    /// The trap this guards. Retention sweeps delete terminal jobs once <c>UpdatedAt</c> is older
+    /// than the retention window, so if a download touched that timestamp anyone holding the id
+    /// could keep the job - and its video - alive forever by re-downloading inside the window.
+    /// The download limit would then be the only thing left bounding storage as well as egress,
+    /// and a job that should have been swept would linger instead.
+    /// </summary>
+    [Fact]
+    public void RecordDownload_Does_Not_Extend_The_Jobs_Retention_Window()
+    {
+        var job = CompletedJob();
+        var completedAt = job.UpdatedAt;
+
+        job.RecordDownload();
+
+        job.UpdatedAt.Should().Be(completedAt);
+    }
+
+    [Theory]
+    [InlineData(JobStatus.Queued)]
+    [InlineData(JobStatus.Processing)]
+    [InlineData(JobStatus.Failed)]
+    public void RecordDownload_Throws_When_The_Job_Has_No_Video_To_Download(JobStatus status)
+    {
+        var job = CreateJob();
+        if (status is JobStatus.Processing or JobStatus.Failed)
+        {
+            job.Start(Now);
+        }
+
+        if (status == JobStatus.Failed)
+        {
+            job.Fail("ffmpeg exited with code 1", Now);
+        }
+
+        var act = job.RecordDownload;
+
+        act.Should().Throw<InvalidJobStateTransitionException>();
+        job.DownloadCount.Should().Be(0);
+    }
+
+    /// <summary>
+    /// The count is persisted in status.json and read back on every download, so a rehydrated job
+    /// that forgot it would hand a used-up id its full allowance again on the next request - and
+    /// on every request after that, since each one rehydrates afresh.
+    /// </summary>
+    [Fact]
+    public void Rehydrate_Restores_The_Download_Count()
+    {
+        var job = Job.Rehydrate(
+            JobId.New(),
+            JobTitle.Create("Friday Night Set"),
+            VideoPreset.FullHd1080p,
+            RotationSpeed.Default,
+            CaptionFont.Default,
+            JobStatus.Completed,
+            progress: 100,
+            errorMessage: null,
+            createdAt: Now,
+            updatedAt: Now,
+            downloadCount: Job.MaxDownloads);
+
+        job.DownloadCount.Should().Be(Job.MaxDownloads);
+        job.DownloadLimitReached.Should().BeTrue();
+    }
 }

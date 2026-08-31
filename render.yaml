@@ -7,10 +7,17 @@
 # Every value below is literal - no envVar uses `sync: false` - so the blueprint asks no
 # questions when it is applied. Connect it once and it configures itself.
 #
-# On cost: `plan: free` is the only plan named here, so this cannot silently provision a paid
-# instance. If Render ever rejects that value it fails the blueprint with an explicit error
-# rather than falling back to a billable plan. With no payment method on file Render suspends a
-# free service that exceeds its limits instead of charging for the overage.
+# On cost, in the order the money could actually move:
+#
+#   1. `plan: free` is the only plan named here, so this cannot silently provision a paid
+#      instance. If Render ever rejects that value it fails the blueprint with an explicit error
+#      rather than falling back to a billable plan.
+#   2. `Jobs__MaxEgressBytesPerWindow` below caps served video below the plan's included
+#      bandwidth. Bandwidth is the only metered thing an anonymous visitor can spend here, and
+#      before that cap existed a single scripted loop over one finished job's download URL could
+#      have emptied a month's allowance in an afternoon.
+#   3. With no payment method on file Render suspends a free service that exceeds its limits
+#      instead of charging for the overage - the backstop, not the plan.
 services:
   - type: web
     name: dj-visualizer
@@ -30,9 +37,30 @@ services:
       - key: Jobs__MaxImageBytes
         value: "10485760" # 10 MB
       - key: Jobs__MaxDurationSeconds
-        value: "900" # 15 minutes
+        value: "600" # 10 minutes
       - key: Jobs__MinFreeDiskBytes
         value: "104857600" # 100 MB
+
+      # --- Bandwidth ceiling ------------------------------------------------------------------
+      # The one limit here that is about the bill rather than about the box.
+      #
+      # Compute on this plan is not metered - it is a fixed, free instance, so CPU abuse can only
+      # make the demo slow. Bandwidth is metered, and downloads are the only large responses the
+      # app serves. Left uncapped, one accepted render is unbounded egress: the finished video
+      # sits on disk for the retention window and re-serving it costs nothing but bytes.
+      #
+      # 3 GB per 24 hours is ~90 GB in a 30-day month, comfortably under Render's 100 GB free
+      # allowance, so overage is unreachable rather than merely unlikely. At ~0.5 MB of video per
+      # second of audio, that is roughly 100 minutes of rendered mix served per day - far more
+      # than a portfolio demo sees, and a hard stop if it ever sees more. Past it, downloads
+      # answer 503 until the window rolls; rendering keeps working.
+      #
+      # Zero (the default) means unlimited, which is what a self-hosted instance wants: on your
+      # own hardware bandwidth is not metered and a cap would only break a legitimate download.
+      - key: Jobs__MaxEgressBytesPerWindow
+        value: "3221225472" # 3 GB
+      - key: Jobs__EgressWindowHours
+        value: "24"
 
       # --- Render worker ---------------------------------------------------------------------
       # ultrafast, not the self-hosted veryfast: at roughly a tenth of a core, encode speed

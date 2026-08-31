@@ -24,8 +24,9 @@ What is genuinely exposed:
 1. **Two file-upload trust boundaries** feeding a native binary (ffmpeg) that parses hostile input.
 2. **A caption string** that reaches an ffmpeg filter graph.
 3. **A job id** in a URL path used to build filesystem paths.
-4. **An unauthenticated, resource-expensive endpoint** — rendering is CPU and disk work anyone can
-   trigger.
+4. **Two unauthenticated, resource-expensive endpoints** — rendering is CPU and disk work anyone
+   can trigger, and downloading is bandwidth anyone can spend. On metered hosting the second is
+   the one that costs money, which is a distinction this document originally missed (see F-5).
 5. **Error text** travelling back out to callers.
 
 Everything below concerns those five.
@@ -107,7 +108,63 @@ directories present (all 16-byte test fixtures, no real audio).
 
 The ignore rule is now unanchored (`jobs-data/`), so it matches wherever the fallback lands.
 
-### F-5 — `AllowedHosts: "*"` (Low) — **accepted**
+### F-5 — unmetered download endpoint: unbounded egress from one render (High) — **fixed**
+
+**What it was.** `POST /jobs` and `POST /jobs/sample` carried `[EnableRateLimiting("job-creation")]`.
+`GET /jobs/{id}/download` carried nothing at all, and neither did `GET /jobs/{id}`.
+
+That is an amplification, not merely a missing limit. Creating a job is the expensive half for the
+*server* — minutes of CPU on a tenth of a core — and it was the only half that was limited.
+Downloading is the expensive half for the *bill*, and it was free: the finished MP4 sits on disk
+for the whole retention window, a job id is a bearer token with no owner, and re-serving the file
+costs no CPU. One permitted job creation therefore bought unlimited bytes.
+
+**Why it mattered here specifically.** The threat model above named "anyone can spend the server's
+CPU" as the residual risk and judged the blast radius acceptable, which it is — a free instance is
+a fixed-price box, so CPU abuse degrades the demo and cannot cost anything. That reasoning is
+correct and it was applied to the wrong resource. **Bandwidth is the only metered thing an
+anonymous visitor can spend on this deployment**, and it was the one thing with no limit on it.
+
+Concretely, at the demo's then-current 15-minute cap and the measured ~0.5 MB of video per second
+of audio, one 1080p render produced a file approaching a gigabyte, downloadable without bound for
+30 minutes. A `curl` loop against a single job id could have moved a month's included bandwidth in
+an afternoon.
+
+**The fix.** Three limits at three different scopes, because no single one of them bounds the
+total:
+
+| Limit | Scope | Where |
+|---|---|---|
+| 5 downloads per job | one job id | `Job.MaxDownloads` — a domain rule, persisted in `status.json` |
+| 20 downloads / 5 min | one IP | `"job-download"` rate limit policy, `Api/Program.cs` |
+| `MaxEgressBytesPerWindow` | the whole instance | `IEgressBudget` / `RollingWindowEgressBudget` |
+
+The first two both scale with the number of jobs and callers, so neither caps a total; the third
+does, and it is the one the hosting bill is actually bounded by. It is set to 3 GB per 24 hours in
+`render.yaml` — roughly 90 GB per 30-day month, under the free plan's 100 GB allowance — and
+defaults to **unlimited** for self-hosting, where bandwidth is not metered and a cap would only
+break a legitimate download. Past the budget, downloads answer 503 and rendering is unaffected.
+
+`GET /jobs/{id}` also picked up a rate limit (240/min per IP). That one is a hammering guard, not
+a cost control: status responses are a few hundred bytes. It is sized against the real client —
+the SPA polls every 2 seconds, so a visitor watching one render spends about 45 requests a minute.
+
+Two details worth keeping:
+
+- **`RecordDownload` deliberately does not touch `UpdatedAt`.** Retention sweeps key on that
+  timestamp, so bumping it on download would have let anyone holding the id keep a job — and its
+  video — alive indefinitely by re-downloading inside the retention window. Pinned by
+  `JobTests.RecordDownload_Does_Not_Extend_The_Jobs_Retention_Window`.
+- **The budget is reserved before the file is served, not measured after.** A response bigger than
+  what remains is refused rather than discovered to have overshot. The reservation is also charged
+  only once the job is known to be downloadable, so 404s and not-ready polls cost nothing — a
+  guard that could be exhausted by requests transferring no bytes would be the denial of service
+  it exists to prevent.
+
+The demo's `MaxDurationSeconds` also came down from 900 to 600, which shrinks the unit rather than
+the total. It is a smaller lever than the budget and is not what makes the guarantee.
+
+### F-6 — `AllowedHosts: "*"` (Low) — **accepted**
 
 The API does not restrict the `Host` header. It generates no absolute URLs from it, sets no
 cookies, and issues no password-reset links, so the usual host-header attacks have nothing to act
@@ -182,28 +239,40 @@ resolving something that was never tested.
 1. **Anyone can spend the server's CPU.** There is no auth, so the rate limiter and the upload
    limits are the only things standing between the public demo and someone using it as a free
    transcoder. On the free tier the blast radius is one small instance that spins down anyway, and
-   the demo's limits (60 MB, 15 minutes) are set with this in mind. On a self-hosted instance with
+   the demo's limits (60 MB, 10 minutes) are set with this in mind. On a self-hosted instance with
    the 2 GB defaults, **do not expose it to the internet without putting auth in front of it.**
 
-2. **The rate limiter partitions on `RemoteIpAddress`.** Behind a proxy that is the proxy's
+   Note the distinction this list previously blurred: on the deployed demo, spending CPU cannot
+   spend *money*. The instance is fixed-price, so the worst an abuser achieves is a slow demo.
+   Bandwidth is the metered resource, and it is bounded by F-5's three limits rather than by
+   anything about the render pipeline.
+
+2. **Nothing here defeats a distributed attacker.** The per-IP rate limits partition on a single
+   address, so enough distinct sources dilute them. That is why the egress budget exists and why
+   it is instance-wide: it is the only limit whose guarantee does not depend on how many callers
+   there are. It is also in-memory, so a restart forgives the spend so far — a deliberate trade
+   (see `RollingWindowEgressBudget`), and the reason the platform's own suspension-on-overrun
+   remains a backstop worth having rather than a redundancy.
+
+3. **The rate limiter partitions on `RemoteIpAddress`.** Behind a proxy that is the proxy's
    address unless forwarded headers are configured, so it degrades toward a global limit. On the
    single-container deployment the app is the origin, so this is accurate there.
 
-3. **A job id is a bearer token.** Anyone with the GUID can read a job's status and download its
+4. **A job id is a bearer token.** Anyone with the GUID can read a job's status and download its
    video. GUIDs are unguessable and jobs are deleted within the retention window, but a leaked URL
    is a leaked video. Adding accounts would fix this and was deliberately not done.
 
-4. **ffmpeg parses untrusted media.** A malicious file targeting an ffmpeg parser vulnerability is
+5. **ffmpeg parses untrusted media.** A malicious file targeting an ffmpeg parser vulnerability is
    the most plausible remote-code-execution path in this system. Signature checks reduce the file
    types that reach it; they do not make ffmpeg safe. The realistic mitigations are keeping the
    base image current (the Dockerfiles install ffmpeg from the distro, so a rebuild picks up
    patches) and the fact that the container holds nothing worth stealing. Not mitigated:
    sandboxing ffmpeg further, e.g. seccomp or a separate unprivileged container per render.
 
-5. **The container runs as root.** The .NET base images default to it and this was not changed —
+6. **The container runs as root.** The .NET base images default to it and this was not changed —
    noted rather than quietly ignored.
 
-6. **The `Demo__Enabled` flag and the frontend's `VITE_SAMPLE_ENABLED` can disagree.** They are
+7. **The `Demo__Enabled` flag and the frontend's `VITE_SAMPLE_ENABLED` can disagree.** They are
    set together per deployment. A mismatch degrades gracefully — the button appears and the server
    answers 404, which the UI surfaces as an error — but it is two switches where one would be
    better.

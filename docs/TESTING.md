@@ -2,16 +2,22 @@
 
 ## Numbers
 
-| Suite | Before | After |
-|---|---|---|
-| Domain.Tests | 52 | 52 |
-| Application.Tests | 29 | 39 |
-| Infrastructure.Tests | 89 | 95 |
-| Api.IntegrationTests | 17 | 58 |
-| Worker.Tests | 10 | 10 |
-| **Backend total** | **197** | **254** |
-| Frontend (vitest) | 53 | 64 |
-| **Total** | **250** | **318** |
+| Suite | Before | After productionization | After egress hardening |
+|---|---|---|---|
+| Domain.Tests | 52 | 52 | 58 |
+| Application.Tests | 29 | 39 | 44 |
+| Infrastructure.Tests | 89 | 95 | 115 |
+| Api.IntegrationTests | 17 | 58 | 65 |
+| Worker.Tests | 10 | 10 | 10 |
+| **Backend total** | **197** | **254** | **292** |
+| Frontend (vitest) | 53 | 64 | 64 |
+| **Total** | **250** | **318** | **356** |
+
+The last column is [SECURITY.md](SECURITY.md) F-5 — the download limits. Most of those tests are
+about a *limit* rather than a feature, which is the unusual part: each one names the specific way
+the guard could be wrong (an off-by-one on the allowance, a counter that never persists, a
+reservation charged for a request that transfers nothing, a budget that overflows into
+re-authorising everything).
 
 All passing, zero skipped. ffmpeg is installed locally and in CI, so the `[RequiresFfmpegFact]` /
 `[RequiresFfmpegTheory]` tests run for real rather than auto-skipping.
@@ -116,6 +122,15 @@ server's limits and falls back to the built-in ones when that request fails.
 - **The three-container compose stack, in unit tests.** It is covered by the Playwright e2e job in
   CI, which is the only place it is a real system.
 - **Kestrel, ASP.NET model binding, React, TanStack Query.** Framework behaviour.
+- **Concurrent downloads of the *same* job racing the download counter.** `GetJobDownloadUseCase`
+  reads the job, increments, and writes it back; two simultaneous requests for one job id can both
+  read the same count and one increment is lost. Not tested, and not fixed, because the fix is
+  wrong for the shape of the store: locking a JSON file per job would put a lock on the read path
+  of every status poll to bound an overshoot of a handful of downloads. The limit is a cost
+  control, not an entitlement — a few extra downloads of one job change nothing, and the
+  instance-wide egress budget (which *is* locked, and is the limit the hosting bill depends on)
+  has no such race. Asserting on a lost update here would pin behaviour we have deliberately
+  chosen not to guarantee.
 
 ## Running them
 

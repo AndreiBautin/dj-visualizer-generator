@@ -6,6 +6,7 @@ using DjVisualizer.Application.Abstractions;
 using DjVisualizer.Application.Jobs;
 using DjVisualizer.Domain.Uploads;
 using DjVisualizer.Infrastructure.Audio;
+using DjVisualizer.Infrastructure.Egress;
 using DjVisualizer.Infrastructure.Jobs;
 using DjVisualizer.Infrastructure.Time;
 using DjVisualizer.Infrastructure.Uploads;
@@ -34,6 +35,8 @@ builder.Services.AddOptions<JobsOptions>().Configure<IConfiguration>((options, c
     options.MaxImageBytes = parsed.MaxImageBytes;
     options.MaxDurationSeconds = parsed.MaxDurationSeconds;
     options.MinFreeDiskBytes = parsed.MinFreeDiskBytes;
+    options.MaxEgressBytesPerWindow = parsed.MaxEgressBytesPerWindow;
+    options.EgressWindowHours = parsed.EgressWindowHours;
 });
 builder.Services.Configure<DemoOptions>(builder.Configuration.GetSection(DemoOptions.SectionName));
 
@@ -75,6 +78,34 @@ builder.Services.AddRateLimiter(options =>
             Window = TimeSpan.FromMinutes(1),
             QueueLimit = 0,
         }));
+
+    // Downloads are the expensive responses in this app - tens to hundreds of megabytes each,
+    // served straight off disk with no CPU to slow an attacker down. Limiting job creation alone
+    // left the amplification open: one accepted render could be re-fetched without bound.
+    //
+    // 20 per 5 minutes is far above a visitor's needs (Job.MaxDownloads caps them at 5 per job
+    // anyway) and far below a useful transfer rate for anyone scripting it.
+    options.AddPolicy("job-download", context => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 20,
+            Window = TimeSpan.FromMinutes(5),
+            QueueLimit = 0,
+        }));
+
+    // Status responses are a few hundred bytes, so this is a hammering guard rather than a cost
+    // control. Sized against the real client: the SPA polls every 2 seconds for the length of a
+    // render, which on the free instance is ~90 seconds, so a visitor watching one job spends
+    // ~45 requests a minute. 240 leaves room for several tabs before anyone legitimate is told no.
+    options.AddPolicy("job-status", context => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 240,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+        }));
 });
 
 builder.Services.AddSingleton(sp =>
@@ -109,6 +140,17 @@ builder.Services.AddSingleton<IJobFileStorage>(sp =>
         sp.GetRequiredService<UploadLimits>());
 });
 builder.Services.AddSingleton<IAudioProbe, FfmpegAudioProbe>();
+
+// Singleton because the budget is a property of the instance, not of a request: a per-request
+// counter would reset on every download and cap nothing.
+builder.Services.AddSingleton<IEgressBudget>(sp =>
+{
+    var jobsOptions = sp.GetRequiredService<IOptions<JobsOptions>>().Value;
+    return new RollingWindowEgressBudget(
+        jobsOptions.MaxEgressBytesPerWindow,
+        TimeSpan.FromHours(jobsOptions.EgressWindowHours),
+        sp.GetRequiredService<IClock>());
+});
 builder.Services.AddScoped<ICreateJobUseCase, CreateJobUseCase>();
 builder.Services.AddScoped<IGetJobStatusUseCase, GetJobStatusUseCase>();
 builder.Services.AddScoped<IGetJobDownloadUseCase, GetJobDownloadUseCase>();

@@ -10,11 +10,15 @@ namespace DjVisualizer.Application.Tests.Jobs;
 public class GetJobDownloadUseCaseTests
 {
     private static readonly DateTimeOffset Now = new(2026, 7, 31, 12, 0, 0, TimeSpan.Zero);
+    private const long VideoBytes = 12_500_000;
 
     private readonly IJobRepository _jobRepository = Substitute.For<IJobRepository>();
     private readonly IJobFileStorage _fileStorage = Substitute.For<IJobFileStorage>();
+    private readonly IEgressBudget _egressBudget = Substitute.For<IEgressBudget>();
 
-    private GetJobDownloadUseCase CreateSut() => new(_jobRepository, _fileStorage);
+    public GetJobDownloadUseCaseTests() => _egressBudget.TryReserve(Arg.Any<long>()).Returns(true);
+
+    private GetJobDownloadUseCase CreateSut() => new(_jobRepository, _fileStorage, _egressBudget);
 
     private static Job CompletedJob()
     {
@@ -62,7 +66,7 @@ public class GetJobDownloadUseCaseTests
     {
         var job = CompletedJob();
         _jobRepository.FindAsync(job.Id, Arg.Any<CancellationToken>()).Returns(job);
-        _fileStorage.GetOutputFilePathAsync(job.Id, Arg.Any<CancellationToken>()).Returns((string?)null);
+        _fileStorage.GetRenderedVideoAsync(job.Id, Arg.Any<CancellationToken>()).Returns((RenderedVideo?)null);
 
         var result = await CreateSut().ExecuteAsync(job.Id.ToString(), CancellationToken.None);
 
@@ -75,13 +79,99 @@ public class GetJobDownloadUseCaseTests
     {
         var job = CompletedJob();
         _jobRepository.FindAsync(job.Id, Arg.Any<CancellationToken>()).Returns(job);
-        _fileStorage.GetOutputFilePathAsync(job.Id, Arg.Any<CancellationToken>()).Returns("/data/jobs/x/output/video.mp4");
+        _fileStorage.GetRenderedVideoAsync(job.Id, Arg.Any<CancellationToken>()).Returns(new RenderedVideo("/data/jobs/x/output/video.mp4", VideoBytes));
 
         var result = await CreateSut().ExecuteAsync(job.Id.ToString(), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value!.FilePath.Should().Be("/data/jobs/x/output/video.mp4");
         result.Value.FileName.Should().Be("Friday Night_ Deep House Set.mp4");
+    }
+
+    /// <summary>
+    /// The amplification this whole limit exists for: without it, one accepted render permits
+    /// unbounded egress, because the file is already on disk and re-serving it costs no CPU.
+    /// Asserting on the sixth call specifically, rather than on "some call eventually fails",
+    /// because an off-by-one that allowed six would still pass a vaguer test.
+    /// </summary>
+    [Fact]
+    public async Task ExecuteAsync_Refuses_The_Download_Past_The_Per_Job_Limit()
+    {
+        var job = CompletedJob();
+        _jobRepository.FindAsync(job.Id, Arg.Any<CancellationToken>()).Returns(job);
+        _fileStorage.GetRenderedVideoAsync(job.Id, Arg.Any<CancellationToken>()).Returns(new RenderedVideo("/data/jobs/x/output/video.mp4", VideoBytes));
+
+        for (var i = 0; i < Job.MaxDownloads; i++)
+        {
+            var allowed = await CreateSut().ExecuteAsync(job.Id.ToString(), CancellationToken.None);
+            allowed.IsSuccess.Should().BeTrue($"download {i + 1} is within the allowance of {Job.MaxDownloads}");
+        }
+
+        var refused = await CreateSut().ExecuteAsync(job.Id.ToString(), CancellationToken.None);
+
+        refused.IsSuccess.Should().BeFalse();
+        refused.Error!.Code.Should().Be(ErrorCodes.Exhausted);
+    }
+
+    /// <summary>
+    /// The count has to survive the process, since the whole point is to limit a job id that
+    /// outlives any one request. It lives on the job, so the job must be written back.
+    /// </summary>
+    [Fact]
+    public async Task ExecuteAsync_Persists_The_Incremented_Download_Count()
+    {
+        var job = CompletedJob();
+        _jobRepository.FindAsync(job.Id, Arg.Any<CancellationToken>()).Returns(job);
+        _fileStorage.GetRenderedVideoAsync(job.Id, Arg.Any<CancellationToken>()).Returns(new RenderedVideo("/data/jobs/x/output/video.mp4", VideoBytes));
+
+        await CreateSut().ExecuteAsync(job.Id.ToString(), CancellationToken.None);
+
+        job.DownloadCount.Should().Be(1);
+        await _jobRepository.Received(1).SaveAsync(job, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Returns_Unavailable_When_The_Egress_Budget_Is_Spent()
+    {
+        var job = CompletedJob();
+        _jobRepository.FindAsync(job.Id, Arg.Any<CancellationToken>()).Returns(job);
+        _fileStorage.GetRenderedVideoAsync(job.Id, Arg.Any<CancellationToken>()).Returns(new RenderedVideo("/data/jobs/x/output/video.mp4", VideoBytes));
+        _egressBudget.TryReserve(Arg.Any<long>()).Returns(false);
+
+        var result = await CreateSut().ExecuteAsync(job.Id.ToString(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(ErrorCodes.Unavailable);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Charges_The_Egress_Budget_The_Actual_Size_Of_The_Video()
+    {
+        var job = CompletedJob();
+        _jobRepository.FindAsync(job.Id, Arg.Any<CancellationToken>()).Returns(job);
+        _fileStorage.GetRenderedVideoAsync(job.Id, Arg.Any<CancellationToken>()).Returns(new RenderedVideo("/data/jobs/x/output/video.mp4", VideoBytes));
+
+        await CreateSut().ExecuteAsync(job.Id.ToString(), CancellationToken.None);
+
+        _egressBudget.Received(1).TryReserve(VideoBytes);
+    }
+
+    /// <summary>
+    /// A refused download must cost nothing, or a caller could exhaust the instance's budget with
+    /// requests that never transfer a byte - turning the guard into the denial of service it is
+    /// meant to prevent.
+    /// </summary>
+    [Fact]
+    public async Task ExecuteAsync_Does_Not_Charge_The_Budget_For_A_Job_That_Cannot_Be_Downloaded()
+    {
+        var queued = Job.Create(JobTitle.Create("Set"), VideoPreset.FullHd1080p, RotationSpeed.Default, CaptionFont.Default, Now);
+        _jobRepository.FindAsync(queued.Id, Arg.Any<CancellationToken>()).Returns(queued);
+
+        await CreateSut().ExecuteAsync(queued.Id.ToString(), CancellationToken.None);
+        await CreateSut().ExecuteAsync(JobId.New().ToString(), CancellationToken.None);
+        await CreateSut().ExecuteAsync("not-a-guid", CancellationToken.None);
+
+        _egressBudget.DidNotReceive().TryReserve(Arg.Any<long>());
     }
 
     /// <summary>
@@ -110,7 +200,7 @@ public class GetJobDownloadUseCaseTests
         job.Start(Now);
         job.Complete(Now);
         _jobRepository.FindAsync(job.Id, Arg.Any<CancellationToken>()).Returns(job);
-        _fileStorage.GetOutputFilePathAsync(job.Id, Arg.Any<CancellationToken>()).Returns("/data/jobs/x/output/video.mp4");
+        _fileStorage.GetRenderedVideoAsync(job.Id, Arg.Any<CancellationToken>()).Returns(new RenderedVideo("/data/jobs/x/output/video.mp4", VideoBytes));
 
         var result = await CreateSut().ExecuteAsync(job.Id.ToString(), CancellationToken.None);
 

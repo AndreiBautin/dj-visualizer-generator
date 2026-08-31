@@ -96,17 +96,49 @@ public class JobsOptionsFactoryTests
             ["Jobs:SingleContainer"] = "true",
             ["Jobs:MaxAudioBytes"] = "62914560",
             ["Jobs:MaxImageBytes"] = "10485760",
-            ["Jobs:MaxDurationSeconds"] = "900",
+            ["Jobs:MaxDurationSeconds"] = "600",
             ["Jobs:MinFreeDiskBytes"] = "104857600",
+            ["Jobs:MaxEgressBytesPerWindow"] = "3221225472",
+            ["Jobs:EgressWindowHours"] = "24",
         }, out var warnings);
 
         options.RootPath.Should().Be("/tmp/djvisualizer-jobs");
         options.SingleContainer.Should().BeTrue();
         options.MaxAudioBytes.Should().Be(62_914_560);
         options.MaxImageBytes.Should().Be(10_485_760);
-        options.MaxDurationSeconds.Should().Be(900);
+        options.MaxDurationSeconds.Should().Be(600);
         options.MinFreeDiskBytes.Should().Be(104_857_600);
+        options.MaxEgressBytesPerWindow.Should().Be(3_221_225_472);
+        options.EgressWindowHours.Should().Be(24);
         warnings.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Every other size here rejects 0, because a zero upload limit is always a mistake. The
+    /// egress budget is the exception: 0 is how a self-hosted instance says "do not cap this",
+    /// and it is the default. Sharing the stricter parser would have turned that default into a
+    /// warning and silently kept whatever fallback came with it.
+    /// </summary>
+    [Fact]
+    public void Accepts_Zero_As_An_Unlimited_Egress_Budget()
+    {
+        var options = Create(new() { ["Jobs:MaxEgressBytesPerWindow"] = "0" }, out var warnings);
+
+        options.MaxEgressBytesPerWindow.Should().Be(0);
+        warnings.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("lots")]
+    [InlineData("-1")]
+    public void Falls_Back_And_Warns_On_A_Malformed_Egress_Budget(string raw)
+    {
+        var options = Create(new() { ["Jobs:MaxEgressBytesPerWindow"] = raw }, out var warnings);
+
+        options.MaxEgressBytesPerWindow.Should().Be(new JobsOptions().MaxEgressBytesPerWindow);
+        // An empty value is "unset", not "malformed" - it takes the default without complaint.
+        warnings.Should().HaveCount(raw.Length == 0 ? 0 : 1);
     }
 
     [Fact]

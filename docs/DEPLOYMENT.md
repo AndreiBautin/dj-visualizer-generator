@@ -150,10 +150,27 @@ that a deep link falls back to the SPA, reads `/limits`, then renders the bundle
 and downloads the MP4 — with a caption full of filtergraph metacharacters, so it re-proves
 [SECURITY.md](SECURITY.md) F-1 against the deployed build rather than only in CI.
 
-**On being charged.** `plan: free` is the only plan named in the blueprint, so it cannot silently
-provision a billable instance — an invalid plan fails the blueprint with an explicit error. With no
-payment method on file, Render suspends a free service that exceeds its limits rather than billing
-for the overage.
+**On being charged.** Three things stand between this deployment and a bill, and they are worth
+separating because only one of them is under this repository's control end to end.
+
+*The plan cannot escalate.* `plan: free` is the only plan named in the blueprint, so it cannot
+silently provision a billable instance — an invalid plan fails the blueprint with an explicit
+error.
+
+*The metered resource is capped below its allowance.* Compute on the free plan is fixed-price, so
+an abuser spending CPU can only make the demo slow. **Bandwidth is the only thing an anonymous
+visitor can spend that a host meters**, and downloads are the only large responses this app
+serves. `Jobs__MaxEgressBytesPerWindow` holds that to 3 GB per 24 hours — about 90 GB in a 30-day
+month, under Render's 100 GB free allowance — so overage is unreachable rather than merely
+unlikely. Past the cap, downloads answer 503 until the window rolls and rendering keeps working.
+Two narrower limits sit inside it: 5 downloads per job and 20 downloads per 5 minutes per IP.
+[SECURITY.md](SECURITY.md) F-5 has the reasoning, including why the instance-wide one is the only
+one of the three that bounds a total.
+
+*And the platform backstops it.* With no payment method on file, Render suspends a free service
+that exceeds its limits rather than billing for the overage. This is the least load-bearing of the
+three — it depends on Render's current terms and on the account genuinely having no card, neither
+of which this repository can assert. Treat it as the last line, not the plan.
 
 Render can deploy a **private** repository, so the source does not have to be public for the demo
 to work. For a portfolio it probably should be — that is a separate decision from deploying.
@@ -182,8 +199,10 @@ All set by `render.yaml`; none is a secret, because the app has no secrets.
 | `Jobs__RootPath` | `/tmp/djvisualizer-jobs` | content root | Ephemeral disk |
 | `Jobs__MaxAudioBytes` | 60 MB | 2 GB | 512 MB RAM, ephemeral disk |
 | `Jobs__MaxImageBytes` | 10 MB | 25 MB | Same |
-| `Jobs__MaxDurationSeconds` | 900 (15 min) | 21600 (6 h) | Same |
+| `Jobs__MaxDurationSeconds` | 600 (10 min) | 21600 (6 h) | Same, plus a smaller output file per job |
 | `Jobs__MinFreeDiskBytes` | 100 MB | 3 GB | The default would refuse every job on a small instance |
+| `Jobs__MaxEgressBytesPerWindow` | 3 GB | 0 (unlimited) | The only limit here about the bill rather than the box — see "On being charged" |
+| `Jobs__EgressWindowHours` | 24 | 24 | — |
 | `Demo__Enabled` | `true` (in the Dockerfile) | `false` | Enables `POST /jobs/sample` |
 | `Worker__X264Preset` | `ultrafast` | `veryfast` | ~0.1 CPU; only ~60 frames are ever encoded |
 | `Worker__RetentionMinutes` | 30 | 60 | Small ephemeral disk |

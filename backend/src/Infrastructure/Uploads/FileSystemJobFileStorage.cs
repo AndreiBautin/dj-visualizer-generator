@@ -39,10 +39,11 @@ public sealed class FileSystemJobFileStorage(string rootPath, IFileSignatureVali
         return Task.FromResult(Path.Combine(outputDirectory, "video.mp4"));
     }
 
-    public Task<string?> GetOutputFilePathAsync(JobId jobId, CancellationToken cancellationToken)
+    public Task<RenderedVideo?> GetRenderedVideoAsync(JobId jobId, CancellationToken cancellationToken)
     {
         var outputPath = Path.Combine(JobPaths.GetJobDirectory(_rootPath, jobId), "output", "video.mp4");
-        return Task.FromResult(File.Exists(outputPath) ? outputPath : null);
+        var file = new FileInfo(outputPath);
+        return Task.FromResult(file.Exists ? new RenderedVideo(outputPath, file.Length) : null);
     }
 
     private async Task<Result<SavedFile>> SaveAsync(

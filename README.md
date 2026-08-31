@@ -15,7 +15,7 @@ pipeline run without uploading anything.
 Three things to expect, because it's a free instance:
 
 - The first request after a quiet spell takes up to a minute while the container wakes up.
-- Uploads are capped at 60 MB / 15 minutes (a self-hosted instance does 2 GB / 6 hours). The UI
+- Uploads are capped at 60 MB / 10 minutes (a self-hosted instance does 2 GB / 6 hours). The UI
   reads those limits from the server, so what it shows is always what it will accept.
 - It runs on roughly a tenth of a CPU. The bundled 24-second sample renders in about **67 seconds**
   there, against 8 seconds on a normal machine.

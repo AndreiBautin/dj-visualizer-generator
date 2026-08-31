@@ -254,4 +254,57 @@ public class FileSystemJobStoreTests : IDisposable
 
         await act.Should().NotThrowAsync();
     }
+
+    [Fact]
+    public async Task SaveAsync_Then_FindAsync_Roundtrips_The_Download_Count()
+    {
+        var sut = CreateSut();
+        var job = CreateJob();
+        job.Start(Now);
+        job.Complete(Now);
+        job.RecordDownload();
+        job.RecordDownload();
+
+        await sut.SaveAsync(job, CancellationToken.None);
+        var found = await sut.FindAsync(job.Id, CancellationToken.None);
+
+        found!.DownloadCount.Should().Be(2);
+    }
+
+    /// <summary>
+    /// status.json files written before download limiting existed have no DownloadCount property.
+    /// Those must rehydrate with a full allowance rather than failing to deserialize - on the
+    /// deployed instance the disk is ephemeral, but a self-hosted one carries its jobs across the
+    /// upgrade, and a job that would not load is a job whose video is unreachable.
+    /// </summary>
+    [Fact]
+    public async Task FindAsync_Treats_A_Status_File_Without_A_Download_Count_As_Never_Downloaded()
+    {
+        var sut = CreateSut();
+        var jobId = JobId.New();
+        var jobDirectory = Path.Combine(_rootPath, jobId.ToString());
+        Directory.CreateDirectory(jobDirectory);
+
+        // Hand-authored rather than written and then edited: this is literally the shape the old
+        // serializer produced, so the test breaks if that shape stops loading for any reason.
+        await File.WriteAllTextAsync(Path.Combine(jobDirectory, "status.json"), $$"""
+            {
+              "Id": "{{jobId}}",
+              "Title": "Friday Night Set",
+              "Preset": "1080p",
+              "RotationSpeedSecondsPerRotation": 6,
+              "CaptionFont": "sans-bold",
+              "Status": "Completed",
+              "Progress": 100,
+              "ErrorMessage": null,
+              "CreatedAt": "2026-07-31T12:00:00+00:00",
+              "UpdatedAt": "2026-07-31T12:00:00+00:00"
+            }
+            """);
+
+        var found = await sut.FindAsync(jobId, CancellationToken.None);
+
+        found.Should().NotBeNull();
+        found!.DownloadCount.Should().Be(0);
+    }
 }

@@ -158,7 +158,8 @@ public sealed class FileSystemJobStore : IJobRepository, IJobQueue
         job.Progress,
         job.ErrorMessage,
         job.CreatedAt,
-        job.UpdatedAt);
+        job.UpdatedAt,
+        job.DownloadCount);
 
     private static Job ToDomain(JobDto dto) => Job.Rehydrate(
         JobId.Parse(dto.Id),
@@ -175,5 +176,6 @@ public sealed class FileSystemJobStore : IJobRepository, IJobQueue
         dto.Progress,
         dto.ErrorMessage,
         dto.CreatedAt,
-        dto.UpdatedAt);
+        dto.UpdatedAt,
+        dto.DownloadCount);
 }
