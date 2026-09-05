@@ -97,7 +97,7 @@ it's the honest shape anyway: the API wants the services, not a second entry poi
 **Cost:** one more project in the solution.
 
 **Server-published upload limits.** The SPA used to hardcode 2 GB and 25 MB. On the free tier the
-real limits are 60 MB and 15 minutes, so the UI would have invited uploads the server rejects.
+real limits are 120 MB and 45 minutes, so the UI would have invited uploads the server rejects.
 `GET /limits` publishes them and the UI renders from that.
 **Cost:** an extra request on load, and a fallback path when it fails. Cheap next to a demo that
 lies to the person trying it.

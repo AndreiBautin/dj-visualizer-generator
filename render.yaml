@@ -32,14 +32,24 @@ services:
       # The self-hosted defaults (2 GB audio, 6 hours, 3 GB free-disk floor) are impossible here:
       # the free instance would refuse every job on the disk check alone. These are the demo's
       # limits, not the application's - docker-compose still runs the full-size defaults.
+      #
+      # 10 minutes turned out too short to be worth demoing - a real DJ mix runs 30-45+ minutes,
+      # and rejecting the thing the app exists to render made the demo pointless. Raised to 45
+      # minutes (2700 s) with the audio cap widened to match (a compressed 45-minute mix at a
+      # generous bitrate) and MinFreeDiskBytes raised to the worst-case output size at ~0.5 MB of
+      # video per second of audio (see the egress comment below) plus the upload itself, so an
+      # instance that is actually too full to finish the render is rejected with a clean 503 at
+      # creation time rather than failing partway through a mux with no disk left. The real
+      # ceiling on this free instance's ephemeral disk is undocumented and unverified against a
+      # real 45-minute render - watch the first few live renders at this length.
       - key: Jobs__MaxAudioBytes
-        value: "62914560" # 60 MB
+        value: "125829120" # 120 MB
       - key: Jobs__MaxImageBytes
         value: "10485760" # 10 MB
       - key: Jobs__MaxDurationSeconds
-        value: "600" # 10 minutes
+        value: "2700" # 45 minutes
       - key: Jobs__MinFreeDiskBytes
-        value: "104857600" # 100 MB
+        value: "1610612736" # 1.5 GB
 
       # --- Bandwidth ceiling ------------------------------------------------------------------
       # The one limit here that is about the bill rather than about the box.
@@ -54,6 +64,11 @@ services:
       # second of audio, that is roughly 100 minutes of rendered mix served per day - far more
       # than a portfolio demo sees, and a hard stop if it ever sees more. Past it, downloads
       # answer 503 until the window rolls; rendering keeps working.
+      #
+      # A single 45-minute download (the new duration ceiling above) is itself ~1.35 GB - about
+      # 45% of this budget in one download. That is an accepted trade for supporting real mix
+      # lengths: a handful of full-length demo downloads a day is expected traffic, not abuse;
+      # this cap still exists to stop a scripted loop from being the thing that empties it.
       #
       # Zero (the default) means unlimited, which is what a self-hosted instance wants: on your
       # own hardware bandwidth is not metered and a cap would only break a legitimate download.

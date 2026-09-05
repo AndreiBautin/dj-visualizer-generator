@@ -197,10 +197,10 @@ All set by `render.yaml`; none is a secret, because the app has no secrets.
 |---|---|---|---|
 | `Jobs__SingleContainer` | `true` (in the Dockerfile) | `false` | Host the worker in-process and serve the SPA |
 | `Jobs__RootPath` | `/tmp/djvisualizer-jobs` | content root | Ephemeral disk |
-| `Jobs__MaxAudioBytes` | 60 MB | 2 GB | 512 MB RAM, ephemeral disk |
+| `Jobs__MaxAudioBytes` | 120 MB | 2 GB | 512 MB RAM, ephemeral disk |
 | `Jobs__MaxImageBytes` | 10 MB | 25 MB | Same |
-| `Jobs__MaxDurationSeconds` | 600 (10 min) | 21600 (6 h) | Same, plus a smaller output file per job |
-| `Jobs__MinFreeDiskBytes` | 100 MB | 3 GB | The default would refuse every job on a small instance |
+| `Jobs__MaxDurationSeconds` | 2700 (45 min) | 21600 (6 h) | Same, plus a smaller output file per job |
+| `Jobs__MinFreeDiskBytes` | 1.5 GB | 3 GB | Sized to the worst-case 45-minute output, not the default's real-hardware margin |
 | `Jobs__MaxEgressBytesPerWindow` | 3 GB | 0 (unlimited) | The only limit here about the bill rather than the box — see "On being charged" |
 | `Jobs__EgressWindowHours` | 24 | 24 | — |
 | `Demo__Enabled` | `true` (in the Dockerfile) | `false` | Enables `POST /jobs/sample` |
@@ -245,9 +245,11 @@ passes.
 
 - **Instance hours:** 750/month against ~730 hours in a month; spin-down means real usage is well
   under. Comfortable.
-- **Disk:** each job is the upload pair plus the output. At 60 MB in, a job's peak footprint is a
-  few hundred MB, and retention is 30 minutes. One render at a time, so this is bounded.
+- **Disk:** each job is the upload pair plus the output. At 120 MB in and ~0.5 MB of video per
+  second of audio out, a 45-minute job's peak footprint is on the order of 1.3-1.4 GB — most of
+  `MinFreeDiskBytes`'s 1.5 GB floor. Retention is 30 minutes and one render runs at a time, so this
+  is bounded but tight; this is unverified against a real 45-minute render on the live instance.
 - **CPU:** the real constraint. Rendering is single-job-at-a-time by design, and the queue absorbs
   concurrency rather than thrashing.
-- **Bandwidth:** a rendered video is the large object. A 15-minute 720p render is on the order of
-  100 MB, so sustained traffic would be the first limit reached in practice.
+- **Bandwidth:** a rendered video is the large object. A 45-minute 1080p render is on the order of
+  1.3 GB, so a handful of full-length downloads a day is expected usage, not headroom to spare.

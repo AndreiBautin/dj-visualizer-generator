@@ -164,6 +164,13 @@ Two details worth keeping:
 The demo's `MaxDurationSeconds` also came down from 900 to 600, which shrinks the unit rather than
 the total. It is a smaller lever than the budget and is not what makes the guarantee.
 
+It went back up, later, to 2700 (45 minutes) — 600 rejected the real DJ mixes the app exists to
+render, which made the demo pointless for its actual purpose. The guarantee above still holds
+unchanged: the total is bounded by `MaxEgressBytesPerWindow`, not by the per-job duration, so a
+larger unit means fewer full-length downloads fit in the daily budget before 503s start, not a
+larger total spend. See `render.yaml`'s own comment for the resulting per-download share of the
+budget.
+
 ### F-6 — `AllowedHosts: "*"` (Low) — **accepted**
 
 The API does not restrict the `Host` header. It generates no absolute URLs from it, sets no
@@ -239,7 +246,7 @@ resolving something that was never tested.
 1. **Anyone can spend the server's CPU.** There is no auth, so the rate limiter and the upload
    limits are the only things standing between the public demo and someone using it as a free
    transcoder. On the free tier the blast radius is one small instance that spins down anyway, and
-   the demo's limits (60 MB, 10 minutes) are set with this in mind. On a self-hosted instance with
+   the demo's limits (120 MB, 45 minutes) are set with this in mind. On a self-hosted instance with
    the 2 GB defaults, **do not expose it to the internet without putting auth in front of it.**
 
    Note the distinction this list previously blurred: on the deployed demo, spending CPU cannot
