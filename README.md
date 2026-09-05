@@ -150,6 +150,20 @@ npm --prefix frontend install && npm --prefix frontend run dev
 Set `Jobs__RootPath` to the same absolute path for both .NET processes — they communicate through
 that directory, and their defaults differ.
 
+**Standalone, for installing as a desktop app** — one process, one port, the full self-hosted
+limits (2 GB / 6 hours, not the deployed demo's caps), and a real production build so the PWA's
+update check actually has something to detect:
+
+```bash
+./run-standalone.bat
+```
+
+This builds the frontend once and runs the API with `Jobs__SingleContainer=true`, the same flag
+the deployed image uses — the API serves the built SPA and hosts the render worker itself, at
+http://localhost:5080. Install that URL as an app (browser address bar → install), and re-running
+this script after pulling new code is what makes the installed app offer an update; `run.bat`'s
+dev server does not produce one.
+
 **Configuration:** copy `.env.example` to `.env`. Every variable is documented there, including
 which `VITE_`-prefixed values get compiled into the public bundle.
 
