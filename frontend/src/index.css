@@ -1,1 +1,45 @@
 @import "tailwindcss";
+
+/* The same three files the render worker burns captions with (assets/fonts/, copied into
+   public/fonts/ - see docs/BACKLOG.md item 3) - so the caption-font choice previews itself in
+   its actual typeface instead of naming itself in the UI's own font. */
+@font-face {
+  font-family: 'Caption Sans';
+  src: url('/fonts/Poppins-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Caption Serif';
+  src: url('/fonts/AbrilFatface-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Caption Mono';
+  src: url('/fonts/SpaceMono-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+}
+
+/* Sweeps a highlight across the queued progress bar - see motion-safe:animate-[progress-sweep...]
+   in ProgressPanel. The parent has overflow-hidden, so this only ever shows within its bounds. */
+@keyframes progress-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+/* The completion payoff - see motion-safe:animate-[panel-in...] in DownloadPanel. */
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

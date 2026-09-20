@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { FormProvider, useForm } from 'react-hook-form'
 import { describe, expect, it } from 'vitest'
+import { SURFACE_SUNKEN } from '../lib/surfaces'
 import {
   renderSettingsSchema,
   type RenderSettingsInput,
@@ -33,6 +34,19 @@ describe('RenderSettings', () => {
     expect(screen.getByLabelText(/track title/i)).toBeInTheDocument()
     expect(screen.getByLabelText('1080p')).toBeInTheDocument()
     expect(screen.getByLabelText('720p')).toBeInTheDocument()
+  })
+
+  it('uses the shared sunken-surface treatment for the title field, since it is a well to type into', () => {
+    render(<TestForm onSubmit={() => {}} />)
+
+    expect(screen.getByLabelText(/track title/i)).toHaveClass(...SURFACE_SUNKEN.split(' '))
+  })
+
+  it('uses the shared sunken-surface treatment for the segmented-control tracks', () => {
+    render(<TestForm onSubmit={() => {}} />)
+
+    expect(screen.getByTestId('preset-options')).toHaveClass(...SURFACE_SUNKEN.split(' '))
+    expect(screen.getByTestId('caption-font-options')).toHaveClass(...SURFACE_SUNKEN.split(' '))
   })
 
   it('defaults to the 1080p preset', () => {
@@ -102,6 +116,14 @@ describe('RenderSettings', () => {
     expect(screen.getByLabelText('Sans')).toBeChecked()
     expect(screen.getByLabelText('Serif')).not.toBeChecked()
     expect(screen.getByLabelText('Mono')).not.toBeChecked()
+  })
+
+  it('renders each caption font option set in its own font, so the choice previews itself', () => {
+    render(<TestForm onSubmit={() => {}} />)
+
+    expect(screen.getByText('Sans')).toHaveStyle({ fontFamily: "'Caption Sans', sans-serif" })
+    expect(screen.getByText('Serif')).toHaveStyle({ fontFamily: "'Caption Serif', serif" })
+    expect(screen.getByText('Mono')).toHaveStyle({ fontFamily: "'Caption Mono', monospace" })
   })
 
   it('submits a custom rotation speed and caption font', async () => {

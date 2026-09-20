@@ -73,4 +73,20 @@ describe('App', () => {
       expect.anything(),
     )
   })
+
+  it('shows a specific, human fallback when job creation fails for a reason that is not an API error', async () => {
+    // A plain network failure (fetch rejecting outright) rather than an ApiError - the case the
+    // generic fallback message exists for. It should read as an invitation to retry, not as
+    // interchangeable boilerplate ("Something went wrong. Please try again.").
+    vi.spyOn(apiClient, 'createJob').mockRejectedValue(new TypeError('Failed to fetch'))
+    const user = userEvent.setup()
+    renderApp()
+
+    await user.type(screen.getByLabelText(/track title/i), 'Friday Night Set')
+    await user.upload(screen.getByLabelText('Audio file', { selector: 'input' }), makeFile('mix.mp3'))
+    await user.upload(screen.getByLabelText('Artwork', { selector: 'input' }), makeFile('cover.png', 'image/png'))
+    await user.click(screen.getByRole('button', { name: /generate video/i }))
+
+    expect(await screen.findByText("That upload didn't make it — mind trying again?")).toBeInTheDocument()
+  })
 })

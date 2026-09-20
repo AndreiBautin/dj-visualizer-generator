@@ -1,4 +1,5 @@
-import { useId, type DragEvent } from 'react'
+import { useId, useRef, useState, type DragEvent } from 'react'
+import { SURFACE_BASE } from '../lib/surfaces'
 import { FilePreview } from './FilePreview'
 
 interface UploadCardProps {
@@ -13,9 +14,31 @@ interface UploadCardProps {
 
 export function UploadCard({ label, hint, accept, file, error, onFileSelected, onClear }: UploadCardProps) {
   const inputId = useId()
+  const [isDragActive, setIsDragActive] = useState(false)
+  // Counts nested enter/leave pairs rather than toggling on either event alone - the dropzone
+  // has child elements (the label, the hint text), and a real drag re-fires enter/leave every
+  // time the pointer crosses one of their boundaries. A plain boolean would flicker the
+  // highlight off each time; the counter only reaches zero once the pointer truly leaves.
+  const dragDepth = useRef(0)
+
+  function handleDragEnter(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+    dragDepth.current += 1
+    setIsDragActive(true)
+  }
+
+  function handleDragLeave(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+    dragDepth.current = Math.max(0, dragDepth.current - 1)
+    if (dragDepth.current === 0) {
+      setIsDragActive(false)
+    }
+  }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault()
+    dragDepth.current = 0
+    setIsDragActive(false)
     const droppedFile = event.dataTransfer.files?.[0]
     if (droppedFile) {
       onFileSelected(droppedFile)
@@ -25,9 +48,18 @@ export function UploadCard({ label, hint, accept, file, error, onFileSelected, o
   return (
     <div
       data-testid="upload-dropzone"
+      data-drag-active={isDragActive}
       onDrop={handleDrop}
       onDragOver={(event) => event.preventDefault()}
-      className="rounded-xl border border-dashed border-white/20 bg-white/5 p-4 transition-colors hover:border-white/40"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      className={`border-dashed p-4 transition-colors ${SURFACE_BASE} ${
+        // SURFACE_BASE already sets a border color and background; the ! suffix (Tailwind v4's
+        // important modifier) deterministically overrides those two specific utilities for the
+        // active-drag state instead of leaving two same-property classes to fight over cascade
+        // order.
+        isDragActive ? 'border-white/60! bg-white/10!' : 'hover:border-white/25'
+      }`}
     >
       <label htmlFor={inputId} className="cursor-pointer text-sm font-semibold text-white">
         {label}

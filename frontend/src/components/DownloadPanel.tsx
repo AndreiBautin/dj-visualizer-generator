@@ -7,8 +7,19 @@ interface DownloadPanelProps {
 
 export function DownloadPanel({ jobId, onReset }: DownloadPanelProps) {
   return (
-    <div className="flex flex-col items-center gap-4 text-center">
+    <div className="flex flex-col items-center gap-4 text-center motion-safe:animate-[panel-in_220ms_ease-out]">
       <p className="text-lg font-semibold text-white">Your video is ready.</p>
+      {/*
+        preload="none": the download endpoint is rate-limited and counts each request against
+        the job's small download allowance (Job.MaxDownloads) - fetching eagerly the moment this
+        panel mounts would spend one before the visitor ever presses play.
+      */}
+      <video
+        controls
+        preload="none"
+        src={downloadUrl(jobId)}
+        className="w-full max-w-md rounded-lg bg-black"
+      />
       <a
         href={downloadUrl(jobId)}
         download

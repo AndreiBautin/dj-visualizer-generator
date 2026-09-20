@@ -79,15 +79,21 @@ function App() {
       return
     }
 
-    const result = await createJobMutation.mutateAsync({
-      title: values.title,
-      preset: values.preset,
-      rotationSpeedSeconds: values.rotationSpeedSeconds,
-      captionFont: values.captionFont,
-      audioFile,
-      artworkFile,
-    })
-    setJobId(result.jobId)
+    try {
+      const result = await createJobMutation.mutateAsync({
+        title: values.title,
+        preset: values.preset,
+        rotationSpeedSeconds: values.rotationSpeedSeconds,
+        captionFont: values.captionFont,
+        audioFile,
+        artworkFile,
+      })
+      setJobId(result.jobId)
+    } catch {
+      // Swallowed deliberately, same reasoning as handleTrySample below: the mutation already
+      // holds the error and it's rendered by the alert further down, so letting this reject
+      // upward would only be an unhandled-rejection console warning with nothing to observe it.
+    }
   }
 
   if (jobId) {
@@ -142,7 +148,7 @@ function App() {
             <p role="alert" className="text-sm text-red-400">
               {(() => {
                 const error = createJobMutation.error ?? sampleJobMutation.error
-                return error instanceof ApiError ? error.message : 'Something went wrong. Please try again.'
+                return error instanceof ApiError ? error.message : "That upload didn't make it — mind trying again?"
               })()}
             </p>
           )}

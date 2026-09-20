@@ -12,6 +12,28 @@ describe('DownloadPanel', () => {
     expect(link).toHaveAttribute('href', downloadUrl('abc-123'))
   })
 
+  it('renders an inline player pointing at the same job download endpoint', () => {
+    render(<DownloadPanel jobId="abc-123" onReset={vi.fn()} />)
+
+    const video = document.querySelector('video')
+    expect(video).toHaveAttribute('src', downloadUrl('abc-123'))
+    expect(video).toHaveAttribute('controls')
+  })
+
+  it('does not fetch the video until the visitor presses play', () => {
+    render(<DownloadPanel jobId="abc-123" onReset={vi.fn()} />)
+
+    // The download endpoint is rate-limited and counts against the job's small download
+    // allowance (Job.MaxDownloads) - mounting the player must not itself spend one.
+    expect(document.querySelector('video')).toHaveAttribute('preload', 'none')
+  })
+
+  it('animates in on mount, for visitors who have not asked for reduced motion', () => {
+    const { container } = render(<DownloadPanel jobId="abc-123" onReset={vi.fn()} />)
+
+    expect(container.firstChild).toHaveClass('motion-safe:animate-[panel-in_220ms_ease-out]')
+  })
+
   it('calls onReset when starting another video', async () => {
     const onReset = vi.fn()
     const user = userEvent.setup()
