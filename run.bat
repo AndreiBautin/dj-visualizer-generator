@@ -22,6 +22,12 @@ if errorlevel 1 (
   echo.
 )
 
+rem ASP.NET Core's static-web-assets startup step throws if the Api project's own wwwroot doesn't
+rem exist on disk. It's gitignored (run-standalone.bat/Dockerfile populate it from the frontend
+rem build for single-container hosting) so a fresh dev checkout doesn't have it, and dotnet run
+rem would crash a few seconds after "Building..." with no obvious link to this empty folder.
+if not exist "%~dp0backend\src\Api\wwwroot" mkdir "%~dp0backend\src\Api\wwwroot"
+
 rem The API and Worker must agree on where job files live. Without this, each process falls
 rem back to a "jobs-data" folder next to its own build output - two different folders - and the
 rem Worker never sees jobs the API creates.
