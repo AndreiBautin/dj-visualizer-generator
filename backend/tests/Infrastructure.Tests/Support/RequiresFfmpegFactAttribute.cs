@@ -36,7 +36,14 @@ internal static class FfmpegAvailability
                 return false;
             }
 
-            process.WaitForExit(2000);
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            if (!process.WaitForExit(10000))
+            {
+                process.Kill(entireProcessTree: true);
+                return false;
+            }
+            Task.WhenAll(stdout, stderr).GetAwaiter().GetResult();
             return process.ExitCode == 0;
         }
         catch

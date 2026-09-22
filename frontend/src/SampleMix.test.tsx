@@ -6,7 +6,9 @@ import App from './App'
 import * as apiClient from './api/client'
 
 function renderApp() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   return render(
     <QueryClientProvider client={queryClient}>
       <App />
@@ -31,37 +33,51 @@ describe('sample mix', () => {
     vi.spyOn(apiClient, 'isSampleMixEnabled').mockReturnValue(false)
     renderApp()
 
-    expect(screen.queryByRole('button', { name: /render a sample mix/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /render a sample mix/i }),
+    ).not.toBeInTheDocument()
   })
 
   it('offers the sample button when the build enabled it', () => {
     vi.spyOn(apiClient, 'isSampleMixEnabled').mockReturnValue(true)
     renderApp()
 
-    expect(screen.getByRole('button', { name: /render a sample mix/i })).toBeEnabled()
+    expect(
+      screen.getByRole('button', { name: /render a sample mix/i }),
+    ).toBeEnabled()
   })
 
   it('starts a sample job without requiring any file to be chosen', async () => {
     vi.spyOn(apiClient, 'isSampleMixEnabled').mockReturnValue(true)
-    const createSampleJob = vi.spyOn(apiClient, 'createSampleJob').mockResolvedValue({ jobId: 'job-1' })
+    const createSampleJob = vi
+      .spyOn(apiClient, 'createSampleJob')
+      .mockResolvedValue({ jobId: 'job-1' })
     const user = userEvent.setup()
     renderApp()
 
-    await user.click(screen.getByRole('button', { name: /render a sample mix/i }))
+    await user.click(
+      screen.getByRole('button', { name: /render a sample mix/i }),
+    )
 
     expect(createSampleJob).toHaveBeenCalledTimes(1)
     // The upload form requires two files; the sample path must not.
-    await waitFor(() => expect(screen.queryByText('Audio file')).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByText('Audio file')).not.toBeInTheDocument(),
+    )
   })
 
   it('sends the render settings currently in the form', async () => {
     vi.spyOn(apiClient, 'isSampleMixEnabled').mockReturnValue(true)
-    const createSampleJob = vi.spyOn(apiClient, 'createSampleJob').mockResolvedValue({ jobId: 'job-2' })
+    const createSampleJob = vi
+      .spyOn(apiClient, 'createSampleJob')
+      .mockResolvedValue({ jobId: 'job-2' })
     const user = userEvent.setup()
     renderApp()
 
     await user.type(screen.getByLabelText(/track title/i), 'My Sample')
-    await user.click(screen.getByRole('button', { name: /render a sample mix/i }))
+    await user.click(
+      screen.getByRole('button', { name: /render a sample mix/i }),
+    )
 
     // Asserting on the first argument only: react-query passes its own context as a second one.
     expect(createSampleJob.mock.calls[0][0]).toEqual({
@@ -75,14 +91,21 @@ describe('sample mix', () => {
   it('surfaces a server that has the sample switched off', async () => {
     vi.spyOn(apiClient, 'isSampleMixEnabled').mockReturnValue(true)
     vi.spyOn(apiClient, 'createSampleJob').mockRejectedValue(
-      new apiClient.ApiError('The sample mix is not enabled on this instance.', 404),
+      new apiClient.ApiError(
+        'The sample mix is not enabled on this instance.',
+        404,
+      ),
     )
     const user = userEvent.setup()
     renderApp()
 
-    await user.click(screen.getByRole('button', { name: /render a sample mix/i }))
+    await user.click(
+      screen.getByRole('button', { name: /render a sample mix/i }),
+    )
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/not enabled on this instance/i)
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /not enabled on this instance/i,
+    )
   })
 })
 
@@ -104,15 +127,21 @@ describe('upload limits', () => {
     })
     renderApp()
 
-    expect(await screen.findByText(/up to 60 MB, up to 15 minutes/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/up to 60 MB, up to 15 minutes/i),
+    ).toBeInTheDocument()
     expect(screen.getByText(/JPG or PNG \(up to 10 MB\)/i)).toBeInTheDocument()
   })
 
   it('falls back to the self-hosted defaults when the limits cannot be fetched', async () => {
     vi.spyOn(apiClient, 'isSampleMixEnabled').mockReturnValue(false)
-    vi.spyOn(apiClient, 'getLimits').mockRejectedValue(new apiClient.ApiError('nope', 500))
+    vi.spyOn(apiClient, 'getLimits').mockRejectedValue(
+      new apiClient.ApiError('nope', 500),
+    )
     renderApp()
 
-    expect(await screen.findByText(/up to 2\.0 GB, up to 6 hours/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/up to 2\.0 GB, up to 6 hours/i),
+    ).toBeInTheDocument()
   })
 })

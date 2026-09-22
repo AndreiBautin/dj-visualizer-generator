@@ -120,25 +120,31 @@ public class FileSystemJobFileStorageTests : IDisposable
     }
 
     [Fact]
-    public async Task GetOutputFilePathAsync_Returns_Null_When_No_Video_Has_Been_Rendered()
+    public async Task GetRenderedVideoAsync_Returns_Null_When_No_Video_Has_Been_Rendered()
     {
         var sut = CreateSut();
 
-        var path = await sut.GetOutputFilePathAsync(JobId.New(), CancellationToken.None);
+        var video = await sut.GetRenderedVideoAsync(JobId.New(), CancellationToken.None);
 
-        path.Should().BeNull();
+        video.Should().BeNull();
     }
 
+    /// <summary>
+    /// The size matters as much as the path: it is what gets charged against the egress budget,
+    /// so a wrong or zero value would let the instance serve past its cap without noticing.
+    /// </summary>
     [Fact]
-    public async Task GetOutputFilePathAsync_Returns_The_Path_When_A_Video_Exists()
+    public async Task GetRenderedVideoAsync_Returns_The_Path_And_Size_When_A_Video_Exists()
     {
         var sut = CreateSut();
         var jobId = JobId.New();
         var preparedPath = await sut.PrepareOutputFilePathAsync(jobId, CancellationToken.None);
         await File.WriteAllBytesAsync(preparedPath, [1, 2, 3]);
 
-        var path = await sut.GetOutputFilePathAsync(jobId, CancellationToken.None);
+        var video = await sut.GetRenderedVideoAsync(jobId, CancellationToken.None);
 
-        path.Should().Be(preparedPath);
+        video.Should().NotBeNull();
+        video!.FilePath.Should().Be(preparedPath);
+        video.SizeBytes.Should().Be(3);
     }
 }

@@ -139,8 +139,7 @@ The one genuinely non-obvious piece, in
 4. `-stream_loop -1` that clip to the audio's real duration with **`-c:v copy`** — the encoded
    bytes are repackaged, not re-encoded.
 
-Render cost is therefore near-independent of mix length: a six-hour set costs about what a
-five-minute one does. The rotation period is snapped to a whole number of frames
+Video encoding is reduced to one rotation. Audio processing, muxing, output size and transfer still grow with duration. The rotation period is snapped to a whole number of frames
 (`FfmpegArgumentsBuilder.SnapRotationPeriodToFrames`) so the loop wraps with no visible jump.
 
 ## Configuration and errors
@@ -159,3 +158,11 @@ The upload limits have a single source of truth: `GET /limits` publishes the ins
 values and the SPA renders its hints and pre-checks from them, because the demo's limits are far
 smaller than a self-hosted instance's and a hardcoded frontend would promise uploads the server
 rejects.
+
+## Enforced single-instance and media access contract
+
+`FileSystemInstanceLease` holds an exclusive OS handle per API/worker role. `InstanceLeaseService` acquires it before workers start. A second process using the same jobs directory fails startup. This is local filesystem coordination, not a distributed lock.
+
+`JobDownloadGate` serializes download admission through persistence; transfer occurs after releasing it. Writes use unique temp files. Readers permit atomic rename on Windows. `/jobs/{id}/preview` supports ranges without incrementing saves; `/download` serves an attachment and increments saves. Both reserve a whole file per request against process-local egress, conservatively overcounting range responses and aborted transfers.
+
+`scripts/architecture.mjs` enforces dependency direction in `npm run verify`. One worker owns processing updates. Cleanup can race with expiring file transfers; ephemeral storage loss on host restart remains a demo limitation.

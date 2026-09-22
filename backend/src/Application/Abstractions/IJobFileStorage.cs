@@ -18,6 +18,6 @@ public interface IJobFileStorage
     /// <summary>Ensures the job's output folder exists and returns the path the renderer should write video.mp4 to.</summary>
     Task<string> PrepareOutputFilePathAsync(JobId jobId, CancellationToken cancellationToken);
 
-    /// <summary>Returns the path to the job's rendered video if it exists on disk, otherwise null.</summary>
-    Task<string?> GetOutputFilePathAsync(JobId jobId, CancellationToken cancellationToken);
+    /// <summary>Returns the job's rendered video - path and size - if it exists on disk, otherwise null.</summary>
+    Task<RenderedVideo?> GetRenderedVideoAsync(JobId jobId, CancellationToken cancellationToken);
 }

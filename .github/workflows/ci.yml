@@ -6,85 +6,32 @@ on:
   pull_request:
 
 jobs:
-  backend:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "9.0.x"
-
-      - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
-
-      # --locked-mode fails on any drift between the lock file and the project files, rather than
-      # silently resolving a different version than the one that was tested.
-      - name: Restore
-        run: dotnet restore backend/DjVisualizer.sln --locked-mode
-
-      - name: Build
-        run: dotnet build backend/DjVisualizer.sln --no-restore -c Release
-
-      - name: Test
-        run: dotnet test backend/DjVisualizer.sln --no-build -c Release
-
-      - name: Audit NuGet dependencies
-        run: |
-          dotnet list backend/DjVisualizer.sln package --vulnerable --include-transitive 2>&1 | tee audit.txt
-          if grep -qiE '\|\s+(High|Critical)\s+\|' audit.txt; then
-            echo "::error::High or critical severity NuGet vulnerabilities found"; exit 1
-          fi
-
-  frontend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Typecheck
-        run: npx tsc -b
-
-      - name: Unit tests
-        run: npm run test
-
-      - name: Build (default config)
-        run: npm run build
-
-      # The deployed bundle is built with a different base URL and the sample button enabled.
-      # Building it here means a failure in that configuration surfaces in CI rather than at
-      # deploy time.
-      - name: Build (single-container config)
-        env:
-          VITE_API_BASE_URL: ""
-          VITE_SAMPLE_ENABLED: "true"
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
+      - run: npm ci --prefix frontend
+      - run: npm run verify
+      - name: Audit dependencies
         run: |
-          npm run build
-          if grep -q '"/api"' dist/assets/*.js; then
-            echo "::error::single-container bundle still targets /api"; exit 1
-          fi
-
-      - name: Audit npm dependencies
-        # Gated at high so low-severity noise in build-time transitive packages does not train
-        # anyone to ignore this step.
-        run: npm audit --audit-level=high
+          dotnet list backend/DjVisualizer.sln package --vulnerable --include-transitive --format json > nuget-audit.json
+          node scripts/audit-nuget.mjs nuget-audit.json
+          npm audit --prefix frontend --audit-level=high
 
   secrets:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read # gitleaks-action lists the PR's commits on a pull_request run
     steps:
       - uses: actions/checkout@v4
         with:
@@ -96,6 +43,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   docker:
+    needs: [verify, secrets]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

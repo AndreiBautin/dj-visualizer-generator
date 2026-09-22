@@ -5,7 +5,9 @@ import * as apiClient from '../api/client'
 import { BuildFooter } from './BuildFooter'
 
 function renderFooter() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   return render(
     <QueryClientProvider client={queryClient}>
       <BuildFooter />
@@ -48,7 +50,9 @@ describe('BuildFooter', () => {
   })
 
   it('survives a server that does not have the endpoint at all', async () => {
-    vi.spyOn(apiClient, 'getVersion').mockRejectedValue(new apiClient.ApiError('not found', 404))
+    vi.spyOn(apiClient, 'getVersion').mockRejectedValue(
+      new apiClient.ApiError('not found', 404),
+    )
     vi.spyOn(apiClient, 'buildSha').mockReturnValue('fallback')
     renderFooter()
 

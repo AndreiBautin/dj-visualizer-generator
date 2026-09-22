@@ -50,7 +50,9 @@ function pngChunk(type: string, data: Buffer): Buffer {
 }
 
 function buildTinyPng(size = 32): Buffer {
-  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+  const signature = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  ])
 
   const ihdr = Buffer.alloc(13)
   ihdr.writeUInt32BE(size, 0)
@@ -83,7 +85,9 @@ function buildTinyPng(size = 32): Buffer {
   ])
 }
 
-test('upload a short mix, watch it render, and download the mp4', async ({ page }) => {
+test('upload a short mix, watch it render, and download the mp4', async ({
+  page,
+}) => {
   const workDir = mkdtempSync(join(tmpdir(), 'djvisualizer-e2e-'))
   const audioPath = join(workDir, 'mix.wav')
   const artworkPath = join(workDir, 'cover.png')
@@ -93,7 +97,11 @@ test('upload a short mix, watch it render, and download the mp4', async ({ page 
   await page.goto('/')
 
   await page.getByLabel('Track title').fill('E2E Happy Path Mix')
-  await page.getByLabel('720p').check()
+  // force: true - the radio is `peer sr-only` (RenderSettings.tsx), so its own visible sibling
+  // <span> sits on top of it and intercepts the pointer event a plain .check() sends. A real user
+  // clicks that span and the browser's native wrapping-label association checks the input; force
+  // skips Playwright's actionability check on the (correctly) invisible input and does the same.
+  await page.getByLabel('720p').check({ force: true })
   await page.getByLabel('Audio file').setInputFiles(audioPath)
   await page.getByLabel('Artwork').setInputFiles(artworkPath)
 
@@ -112,7 +120,8 @@ test('upload a short mix, watch it render, and download the mp4', async ({ page 
   await page.keyboard.press('ArrowRight')
   // step is 0.5, so two presses from the 3s default lands on 4s.
   await expect(page.getByText(/4\.0s per spin/i)).toBeVisible()
-  await page.getByLabel('Mono').check()
+  // force: true - same sr-only-radio-under-a-visible-span shape as the preset picker above.
+  await page.getByLabel('Mono').check({ force: true })
 
   await page.getByRole('button', { name: 'Generate Video' }).click()
 
@@ -128,5 +137,7 @@ test('upload a short mix, watch it render, and download the mp4', async ({ page 
   expect(download.suggestedFilename()).toMatch(/\.mp4$/)
 
   await page.getByRole('button', { name: /another/i }).click()
-  await expect(page.getByRole('button', { name: 'Generate Video' })).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Generate Video' }),
+  ).toBeVisible()
 })

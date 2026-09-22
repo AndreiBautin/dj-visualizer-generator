@@ -125,6 +125,7 @@ public sealed class JobsController(
             : Path.Combine(environment.ContentRootPath, configuredPath);
 
     [HttpGet("{jobId}")]
+    [EnableRateLimiting("job-status")]
     public async Task<IActionResult> GetStatus(string jobId, CancellationToken cancellationToken)
     {
         var result = await getJobStatusUseCase.ExecuteAsync(jobId, cancellationToken);
@@ -132,7 +133,16 @@ public sealed class JobsController(
         return result.IsSuccess ? Ok(result.Value) : MapError(result.Error!);
     }
 
+    /// <summary>
+    /// Serves the rendered video. Rate limited like job creation is, because this is the app's
+    /// only expensive <em>response</em>: the file is already on disk, so re-fetching it costs no
+    /// CPU and unbounded bandwidth. The per-job ceiling lives in the domain
+    /// (<see cref="Domain.Jobs.Job.MaxDownloads"/>) and the instance-wide one in
+    /// <see cref="Application.Abstractions.IEgressBudget"/>; this attribute is only the per-caller
+    /// layer of the three.
+    /// </summary>
     [HttpGet("{jobId}/download")]
+    [EnableRateLimiting("job-download")]
     public async Task<IActionResult> Download(string jobId, CancellationToken cancellationToken)
     {
         var result = await getJobDownloadUseCase.ExecuteAsync(jobId, cancellationToken);
@@ -143,6 +153,21 @@ public sealed class JobsController(
 
         var stream = System.IO.File.OpenRead(result.Value!.FilePath);
         return File(stream, "video/mp4", result.Value.FileName);
+    }
+
+    // Preview requests never spend the saved-file allowance. Range requests are supported;
+    // each request conservatively reserves a whole file against the instance egress budget.
+    [HttpGet("{jobId}/preview")]
+    [EnableRateLimiting("job-download")]
+    public async Task<IActionResult> Preview(string jobId, CancellationToken cancellationToken)
+    {
+        var result = await getJobDownloadUseCase.ExecutePreviewAsync(jobId, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return MapError(result.Error!);
+        }
+
+        return File(System.IO.File.OpenRead(result.Value!.FilePath), "video/mp4", enableRangeProcessing: true);
     }
 
     private IActionResult MapError(Error error) => error.Code switch
@@ -161,6 +186,16 @@ public sealed class JobsController(
             Detail = error.Message,
         })
         { StatusCode = StatusCodes.Status409Conflict },
+        // 429 rather than 403: the caller is not forbidden, they have used up an allowance. Same
+        // status the rate limiter returns, so a client needs one branch for "you asked too often"
+        // rather than two.
+        ErrorCodes.Exhausted => new ObjectResult(new ProblemDetails
+        {
+            Title = "Too Many Requests",
+            Status = StatusCodes.Status429TooManyRequests,
+            Detail = error.Message,
+        })
+        { StatusCode = StatusCodes.Status429TooManyRequests },
         ErrorCodes.Unavailable => new ObjectResult(new ProblemDetails
         {
             Title = "Service Unavailable",
