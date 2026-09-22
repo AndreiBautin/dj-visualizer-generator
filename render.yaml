@@ -26,7 +26,7 @@ services:
     dockerfilePath: ./docker/Dockerfile.singlecontainer
     dockerContext: .
     healthCheckPath: /health
-    autoDeploy: true
+    autoDeployTrigger: checksPass
     envVars:
       # --- Limits tuned for a 512 MB / 0.1 CPU instance with an ephemeral disk ---------------
       # The self-hosted defaults (2 GB audio, 6 hours, 3 GB free-disk floor) are impossible here:
@@ -59,19 +59,9 @@ services:
       # app serves. Left uncapped, one accepted render is unbounded egress: the finished video
       # sits on disk for the retention window and re-serving it costs nothing but bytes.
       #
-      # 3 GB per 24 hours is ~90 GB in a 30-day month, comfortably under Render's 100 GB free
-      # allowance, so overage is unreachable rather than merely unlikely. At ~0.5 MB of video per
-      # second of audio, that is roughly 100 minutes of rendered mix served per day - far more
-      # than a portfolio demo sees, and a hard stop if it ever sees more. Past it, downloads
-      # answer 503 until the window rolls; rendering keeps working.
-      #
-      # A single 45-minute download (the new duration ceiling above) is itself ~1.35 GB - about
-      # 45% of this budget in one download. That is an accepted trade for supporting real mix
-      # lengths: a handful of full-length demo downloads a day is expected traffic, not abuse;
-      # this cap still exists to stop a scripted loop from being the thing that empties it.
-      #
-      # Zero (the default) means unlimited, which is what a self-hosted instance wants: on your
-      # own hardware bandwidth is not metered and a cap would only break a legitimate download.
+      # Process-local reservation guardrail, reset on restart; not a monthly billing ceiling.
+      # Preview ranges reserve a whole file conservatively. Provider account controls remain
+      # necessary. Zero is unlimited for local/self-hosted use.
       - key: Jobs__MaxEgressBytesPerWindow
         value: "3221225472" # 3 GB
       - key: Jobs__EgressWindowHours

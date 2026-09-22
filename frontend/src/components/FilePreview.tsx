@@ -24,7 +24,11 @@ export function FilePreview({ file, onRemove }: FilePreviewProps) {
   return (
     <div className={`flex items-center gap-3 p-3 ${SURFACE_RAISED}`}>
       {imageUrl ? (
-        <img src={imageUrl} alt={file.name} className="h-12 w-12 rounded object-cover" />
+        <img
+          src={imageUrl}
+          alt={file.name}
+          className="h-12 w-12 rounded object-cover"
+        />
       ) : (
         <div className="flex h-12 w-12 items-center justify-center rounded bg-white/10 text-xs text-white/60">
           FILE

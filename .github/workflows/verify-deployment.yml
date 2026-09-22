@@ -1,53 +1,25 @@
 name: Verify deployment
-
-# Checks the LIVE site, which is a different claim from "CI passed" or "the deploy step went
-# green". It fetches the real URL, asserts on the response, and drives a real render to
-# completion.
-#
-# Reads the URL from the PRODUCTION_URL repository variable. Until that is set the job skips
-# cleanly rather than failing, so this file is harmless before the first deploy.
-#   gh variable set PRODUCTION_URL --body "https://your-service.onrender.com"
-
 on:
-  push:
-    branches: [main]
-  # Daily, so a demo that has quietly died is noticed before a reviewer finds it. Deliberately
-  # NOT a frequent cron to keep the instance warm: at ~10-minute intervals that would consume
-  # essentially the whole 750-hour monthly free allowance and a large share of the Actions
-  # minutes, to save a visitor one cold start.
   schedule:
     - cron: "0 7 * * *"
   workflow_dispatch:
-
-# Only ever verify the newest deploy. Without this, a push landing while an earlier run is mid-
-# render restarts the instance underneath it - and because the disk is ephemeral, the in-flight
-# job disappears and the older run reports a failure that says nothing about the app's health.
+permissions:
+  contents: read
 concurrency:
   group: verify-deployment
   cancel-in-progress: true
-
 jobs:
-  verify:
+  verify-live:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Check whether a deployment URL is configured
-        id: config
+        with:
+          ref: ${{ github.sha }}
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Verify expected revision and real media output
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+          EXPECTED_SHA: ${{ github.sha }}
         run: |
-          if [ -n "${{ vars.PRODUCTION_URL }}" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::PRODUCTION_URL is not set, so there is nothing to verify yet. Set it with: gh variable set PRODUCTION_URL --body https://<service>.onrender.com"
-          fi
-
-      # Render deploys from the same push that triggers this workflow, so without a pause this
-      # would test the previous build. A free-tier Docker build takes several minutes.
-      - name: Give the deploy time to roll out
-        if: steps.config.outputs.configured == 'true' && github.event_name == 'push'
-        run: sleep 300
-
-      - name: Verify the live deployment
-        if: steps.config.outputs.configured == 'true'
-        run: bash scripts/verify-deployment.sh "${{ vars.PRODUCTION_URL }}"
+          test -n "$PRODUCTION_URL" || { echo '::error::Set PRODUCTION_URL to enable live verification'; exit 1; }
+          bash scripts/verify-deployment.sh "$PRODUCTION_URL" "$EXPECTED_SHA"

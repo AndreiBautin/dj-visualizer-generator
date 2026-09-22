@@ -5,11 +5,24 @@ import * as apiClient from '../api/client'
 import { ProgressPanel } from './ProgressPanel'
 
 function renderWithClient(ui: React.ReactElement) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  )
 }
 
 describe('ProgressPanel', () => {
+  it('offers recovery when a job expired instead of retrying forever', async () => {
+    vi.spyOn(apiClient, 'getJobStatus').mockRejectedValue(
+      new apiClient.ApiError('Gone', 404),
+    )
+    renderWithClient(<ProgressPanel jobId="expired" onReset={vi.fn()} />)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/expired/)
+    expect(screen.getByRole('button', { name: /another/i })).toBeVisible()
+  })
+
   it('shows a checking-in message before the first status arrives', () => {
     vi.spyOn(apiClient, 'getJobStatus').mockReturnValue(new Promise(() => {}))
 
@@ -19,11 +32,15 @@ describe('ProgressPanel', () => {
   })
 
   it('shows a reassuring retry message if a status check fails', async () => {
-    vi.spyOn(apiClient, 'getJobStatus').mockRejectedValue(new Error('network down'))
+    vi.spyOn(apiClient, 'getJobStatus').mockRejectedValue(
+      new Error('network down'),
+    )
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
 
-    expect(await screen.findByText(/lost the connection for a moment.*retrying/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/lost the connection for a moment.*retrying/i),
+    ).toBeInTheDocument()
   })
 
   it('shows a queued message while the job is waiting', async () => {
@@ -50,7 +67,9 @@ describe('ProgressPanel', () => {
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
 
     expect(await screen.findByText('Queued')).toBeInTheDocument()
-    expect(screen.getByText('Waiting for a worker to pick this up...')).toBeInTheDocument()
+    expect(
+      screen.getByText('Waiting for a worker to pick this up...'),
+    ).toBeInTheDocument()
   })
 
   it('shows the render progress percentage while processing', async () => {
@@ -64,7 +83,10 @@ describe('ProgressPanel', () => {
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
 
     expect(await screen.findByText('42%')).toBeInTheDocument()
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '42')
+    expect(screen.getByRole('progressbar')).toHaveAttribute(
+      'aria-valuenow',
+      '42',
+    )
   })
 
   it('renders the queued bar as indeterminate rather than stuck at 0%', async () => {
@@ -139,7 +161,9 @@ describe('ProgressPanel', () => {
       errorMessage: null,
     })
 
-    const { unmount } = renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
+    const { unmount } = renderWithClient(
+      <ProgressPanel jobId="abc" onReset={vi.fn()} />,
+    )
     await screen.findByText('42%')
     unmount()
 
@@ -156,10 +180,9 @@ describe('ProgressPanel', () => {
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
 
-    expect(await screen.findByRole('link', { name: /download/i })).toHaveAttribute(
-      'href',
-      apiClient.downloadUrl('abc'),
-    )
+    expect(
+      await screen.findByRole('link', { name: /download/i }),
+    ).toHaveAttribute('href', apiClient.downloadUrl('abc'))
   })
 
   it('shows the error message when the job has failed', async () => {
@@ -172,6 +195,8 @@ describe('ProgressPanel', () => {
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
 
-    expect(await screen.findByText('ffmpeg exited with code 1')).toBeInTheDocument()
+    expect(
+      await screen.findByText('ffmpeg exited with code 1'),
+    ).toBeInTheDocument()
   })
 })

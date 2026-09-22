@@ -8,9 +8,21 @@ import {
 } from '../schemas/renderSettingsSchema'
 
 const CAPTION_FONT_OPTIONS = [
-  { value: 'sans-bold', label: 'Sans', previewFontFamily: "'Caption Sans', sans-serif" },
-  { value: 'serif-bold', label: 'Serif', previewFontFamily: "'Caption Serif', serif" },
-  { value: 'mono-bold', label: 'Mono', previewFontFamily: "'Caption Mono', monospace" },
+  {
+    value: 'sans-bold',
+    label: 'Sans',
+    previewFontFamily: "'Caption Sans', sans-serif",
+  },
+  {
+    value: 'serif-bold',
+    label: 'Serif',
+    previewFontFamily: "'Caption Serif', serif",
+  },
+  {
+    value: 'mono-bold',
+    label: 'Mono',
+    previewFontFamily: "'Caption Mono', monospace",
+  },
 ] as const
 
 const PRESET_OPTIONS = [
@@ -27,12 +39,18 @@ export function RenderSettings() {
     control,
     formState: { errors },
   } = useFormContext<RenderSettingsInput>()
-  const rotationSpeedSeconds = useWatch({ control, name: 'rotationSpeedSeconds' })
+  const rotationSpeedSeconds = useWatch({
+    control,
+    name: 'rotationSpeedSeconds',
+  })
 
   return (
     <fieldset className="space-y-4">
       <div>
-        <label htmlFor="title" className="block text-sm font-semibold text-white">
+        <label
+          htmlFor="title"
+          className="block text-sm font-semibold text-white"
+        >
           Track title
         </label>
         <input
@@ -49,11 +67,21 @@ export function RenderSettings() {
       </div>
 
       <div>
-        <span className="block text-sm font-semibold text-white">Video preset</span>
-        <div data-testid="preset-options" className={`mt-1 grid grid-cols-2 gap-1 p-1 ${SURFACE_SUNKEN}`}>
+        <span className="block text-sm font-semibold text-white">
+          Video preset
+        </span>
+        <div
+          data-testid="preset-options"
+          className={`mt-1 grid grid-cols-2 gap-1 p-1 ${SURFACE_SUNKEN}`}
+        >
           {PRESET_OPTIONS.map((option) => (
             <label key={option.value}>
-              <input type="radio" value={option.value} className="peer sr-only" {...register('preset')} />
+              <input
+                type="radio"
+                value={option.value}
+                className="peer sr-only"
+                {...register('preset')}
+              />
               <span className={SEGMENT_LABEL_CLASS}>{option.label}</span>
             </label>
           ))}
@@ -66,7 +94,10 @@ export function RenderSettings() {
       </div>
 
       <div>
-        <label htmlFor="rotationSpeedSeconds" className="block text-sm font-semibold text-white">
+        <label
+          htmlFor="rotationSpeedSeconds"
+          className="block text-sm font-semibold text-white"
+        >
           Rotation speed
         </label>
         <div className="mt-1 flex items-center gap-2">
@@ -83,7 +114,8 @@ export function RenderSettings() {
           <span className="text-xs text-white/50">Slow</span>
         </div>
         <p className="mt-1 text-xs text-white/60">
-          {(rotationSpeedSeconds ?? DEFAULT_ROTATION_SPEED_SECONDS).toFixed(1)}s per spin
+          {(rotationSpeedSeconds ?? DEFAULT_ROTATION_SPEED_SECONDS).toFixed(1)}s
+          per spin
         </p>
         {errors.rotationSpeedSeconds && (
           <p role="alert" className="mt-1 text-xs text-red-400">
@@ -93,12 +125,25 @@ export function RenderSettings() {
       </div>
 
       <div>
-        <span className="block text-sm font-semibold text-white">Caption font</span>
-        <div data-testid="caption-font-options" className={`mt-1 grid grid-cols-3 gap-1 p-1 ${SURFACE_SUNKEN}`}>
+        <span className="block text-sm font-semibold text-white">
+          Caption font
+        </span>
+        <div
+          data-testid="caption-font-options"
+          className={`mt-1 grid grid-cols-3 gap-1 p-1 ${SURFACE_SUNKEN}`}
+        >
           {CAPTION_FONT_OPTIONS.map((option) => (
             <label key={option.value}>
-              <input type="radio" value={option.value} className="peer sr-only" {...register('captionFont')} />
-              <span className={SEGMENT_LABEL_CLASS} style={{ fontFamily: option.previewFontFamily }}>
+              <input
+                type="radio"
+                value={option.value}
+                className="peer sr-only"
+                {...register('captionFont')}
+              />
+              <span
+                className={SEGMENT_LABEL_CLASS}
+                style={{ fontFamily: option.previewFontFamily }}
+              >
                 {option.label}
               </span>
             </label>

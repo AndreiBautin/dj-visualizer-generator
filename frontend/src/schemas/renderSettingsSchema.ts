@@ -15,10 +15,18 @@ export const renderSettingsSchema = z.object({
   preset: z.enum(['1080p', '720p'], { message: 'Choose a video preset.' }),
   rotationSpeedSeconds: z
     .number()
-    .min(MIN_ROTATION_SPEED_SECONDS, `Rotation speed must be at least ${MIN_ROTATION_SPEED_SECONDS}s.`)
-    .max(MAX_ROTATION_SPEED_SECONDS, `Rotation speed must be at most ${MAX_ROTATION_SPEED_SECONDS}s.`)
+    .min(
+      MIN_ROTATION_SPEED_SECONDS,
+      `Rotation speed must be at least ${MIN_ROTATION_SPEED_SECONDS}s.`,
+    )
+    .max(
+      MAX_ROTATION_SPEED_SECONDS,
+      `Rotation speed must be at most ${MAX_ROTATION_SPEED_SECONDS}s.`,
+    )
     .default(DEFAULT_ROTATION_SPEED_SECONDS),
-  captionFont: z.enum(CAPTION_FONTS, { message: 'Choose a caption font.' }).default('sans-bold'),
+  captionFont: z
+    .enum(CAPTION_FONTS, { message: 'Choose a caption font.' })
+    .default('sans-bold'),
 })
 
 export type RenderSettingsValues = z.output<typeof renderSettingsSchema>

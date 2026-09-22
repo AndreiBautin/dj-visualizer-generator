@@ -153,6 +153,8 @@ builder.Services.AddSingleton<IEgressBudget>(sp =>
 });
 builder.Services.AddScoped<ICreateJobUseCase, CreateJobUseCase>();
 builder.Services.AddScoped<IGetJobStatusUseCase, GetJobStatusUseCase>();
+builder.Services.AddSingleton<IHostedService>(sp => new InstanceLeaseService(ResolveJobsRootPath(sp.GetRequiredService<IOptions<JobsOptions>>().Value), "api"));
+builder.Services.AddSingleton<JobDownloadGate>();
 builder.Services.AddScoped<IGetJobDownloadUseCase, GetJobDownloadUseCase>();
 
 // Single-container hosting: the render worker's background services run in this process rather

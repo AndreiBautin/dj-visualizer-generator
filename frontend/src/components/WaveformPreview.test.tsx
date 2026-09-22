@@ -40,31 +40,45 @@ describe('WaveformPreview', () => {
   it('renders nothing while decoding is still in flight', () => {
     fakeContext.decodeAudioData.mockReturnValue(new Promise(() => {}))
 
-    const { container } = render(<WaveformPreview file={makeFile('mix.mp3', 5_000_000)} />)
+    const { container } = render(
+      <WaveformPreview file={makeFile('mix.mp3', 5_000_000)} />,
+    )
 
     expect(container.querySelector('svg')).not.toBeInTheDocument()
   })
 
   it('renders a bar per peak once decoding resolves', async () => {
-    fakeContext.decodeAudioData.mockResolvedValue(makeFakeAudioBuffer(Array.from({ length: 4800 }, () => 0.5)))
+    fakeContext.decodeAudioData.mockResolvedValue(
+      makeFakeAudioBuffer(Array.from({ length: 4800 }, () => 0.5)),
+    )
 
-    const { container } = render(<WaveformPreview file={makeFile('mix.mp3', 5_000_000)} />)
+    const { container } = render(
+      <WaveformPreview file={makeFile('mix.mp3', 5_000_000)} />,
+    )
 
-    await waitFor(() => expect(container.querySelector('svg')).toBeInTheDocument())
+    await waitFor(() =>
+      expect(container.querySelector('svg')).toBeInTheDocument(),
+    )
     expect(container.querySelectorAll('rect').length).toBeGreaterThan(0)
   })
 
   it('renders nothing if decoding fails, rather than showing an error', async () => {
-    fakeContext.decodeAudioData.mockRejectedValue(new Error('unsupported container'))
+    fakeContext.decodeAudioData.mockRejectedValue(
+      new Error('unsupported container'),
+    )
 
-    const { container } = render(<WaveformPreview file={makeFile('mix.m4a', 5_000_000, 'audio/mp4')} />)
+    const { container } = render(
+      <WaveformPreview file={makeFile('mix.m4a', 5_000_000, 'audio/mp4')} />,
+    )
 
     await waitFor(() => expect(fakeContext.decodeAudioData).toHaveBeenCalled())
     expect(container.querySelector('svg')).not.toBeInTheDocument()
   })
 
   it('only ever decodes a bounded prefix of the file, regardless of how large it is', async () => {
-    fakeContext.decodeAudioData.mockResolvedValue(makeFakeAudioBuffer([0.1, 0.2]))
+    fakeContext.decodeAudioData.mockResolvedValue(
+      makeFakeAudioBuffer([0.1, 0.2]),
+    )
     const file = makeFile('huge-mix.wav', 2_000_000_000, 'audio/wav')
     const sliceSpy = vi.spyOn(file, 'slice')
 

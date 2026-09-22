@@ -29,11 +29,15 @@ export function formatBytes(bytes: number): string {
 export function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.round((seconds % 3600) / 60)
-  if (hours >= 1) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours} hours`
+  if (hours >= 1)
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours} hours`
   return `${minutes} minutes`
 }
 
-export function validateAudioFile(file: File, maxBytes: number = MAX_AUDIO_BYTES): string | null {
+export function validateAudioFile(
+  file: File,
+  maxBytes: number = MAX_AUDIO_BYTES,
+): string | null {
   if (!hasExtension(file.name, AUDIO_EXTENSIONS)) {
     return `Unsupported audio format. Use ${AUDIO_EXTENSIONS.join(', ')}.`
   }
@@ -43,7 +47,10 @@ export function validateAudioFile(file: File, maxBytes: number = MAX_AUDIO_BYTES
   return null
 }
 
-export function validateArtworkFile(file: File, maxBytes: number = MAX_IMAGE_BYTES): string | null {
+export function validateArtworkFile(
+  file: File,
+  maxBytes: number = MAX_IMAGE_BYTES,
+): string | null {
   if (!hasExtension(file.name, IMAGE_EXTENSIONS)) {
     return `Unsupported image format. Use ${IMAGE_EXTENSIONS.join(', ')}.`
   }

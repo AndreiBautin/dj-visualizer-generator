@@ -113,7 +113,9 @@ describe('UploadCard', () => {
       />,
     )
 
-    expect(screen.getByTestId('upload-dropzone')).toHaveClass(...SURFACE_BASE.split(' '))
+    expect(screen.getByTestId('upload-dropzone')).toHaveClass(
+      ...SURFACE_BASE.split(' '),
+    )
   })
 
   it('shows an active drag state while a file is dragged over the dropzone', () => {

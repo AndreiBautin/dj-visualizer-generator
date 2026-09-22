@@ -2,13 +2,23 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
-import { ApiError, createJob, createSampleJob, isSampleMixEnabled } from './api/client'
+import {
+  ApiError,
+  createJob,
+  createSampleJob,
+  isSampleMixEnabled,
+} from './api/client'
 import { BuildFooter } from './components/BuildFooter'
 import { ProgressPanel } from './components/ProgressPanel'
 import { RenderSettings } from './components/RenderSettings'
 import { UploadCard } from './components/UploadCard'
 import { useUploadLimits } from './hooks/useUploadLimits'
-import { formatBytes, formatDuration, validateArtworkFile, validateAudioFile } from './lib/fileValidation'
+import {
+  formatBytes,
+  formatDuration,
+  validateArtworkFile,
+  validateAudioFile,
+} from './lib/fileValidation'
 import {
   renderSettingsSchema,
   type RenderSettingsInput,
@@ -25,7 +35,12 @@ function App() {
 
   const methods = useForm<RenderSettingsInput, unknown, RenderSettingsValues>({
     resolver: zodResolver(renderSettingsSchema),
-    defaultValues: { title: '', preset: '1080p', rotationSpeedSeconds: 3, captionFont: 'sans-bold' },
+    defaultValues: {
+      title: '',
+      preset: '1080p',
+      rotationSpeedSeconds: 3,
+      captionFont: 'sans-bold',
+    },
   })
 
   const createJobMutation = useMutation({ mutationFn: createJob })
@@ -106,17 +121,24 @@ function App() {
     )
   }
 
-  const canSubmit = Boolean(audioFile && artworkFile && !audioError && !artworkError) && !createJobMutation.isPending
+  const canSubmit =
+    Boolean(audioFile && artworkFile && !audioError && !artworkError) &&
+    !createJobMutation.isPending
 
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center gap-6 p-8">
       <div className="text-center">
         <h1 className="text-2xl font-semibold">DJ Visualizer Generator</h1>
-        <p className="text-white/60">Upload a mix, get a spinning-record video.</p>
+        <p className="text-white/60">
+          Upload a mix, get a spinning-record video.
+        </p>
       </div>
 
       <FormProvider {...methods}>
-        <form onSubmit={methods.handleSubmit(onSubmit)} className="w-full max-w-md space-y-4">
+        <form
+          onSubmit={methods.handleSubmit(onSubmit)}
+          className="w-full max-w-md space-y-4"
+        >
           <UploadCard
             label="Audio file"
             hint={`MP3, WAV, FLAC, or M4A (up to ${formatBytes(limits.maxAudioBytes)}, up to ${formatDuration(limits.maxDurationSeconds)})`}
@@ -148,7 +170,9 @@ function App() {
             <p role="alert" className="text-sm text-red-400">
               {(() => {
                 const error = createJobMutation.error ?? sampleJobMutation.error
-                return error instanceof ApiError ? error.message : "That upload didn't make it — mind trying again?"
+                return error instanceof ApiError
+                  ? error.message
+                  : "That upload didn't make it — mind trying again?"
               })()}
             </p>
           )}
@@ -167,13 +191,18 @@ function App() {
               <button
                 type="button"
                 onClick={handleTrySample}
-                disabled={sampleJobMutation.isPending || createJobMutation.isPending}
+                disabled={
+                  sampleJobMutation.isPending || createJobMutation.isPending
+                }
                 className="w-full rounded-lg border border-white/25 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {sampleJobMutation.isPending ? 'Starting...' : 'Render a sample mix'}
+                {sampleJobMutation.isPending
+                  ? 'Starting...'
+                  : 'Render a sample mix'}
               </button>
               <p className="text-xs text-white/40">
-                Renders a short synthesized track bundled with the app - nothing to upload.
+                Renders a short synthesized track bundled with the app - nothing
+                to upload.
               </p>
             </div>
           )}

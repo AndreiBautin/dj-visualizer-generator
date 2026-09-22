@@ -50,7 +50,9 @@ function pngChunk(type: string, data: Buffer): Buffer {
 }
 
 function buildTinyPng(size = 32): Buffer {
-  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+  const signature = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  ])
 
   const ihdr = Buffer.alloc(13)
   ihdr.writeUInt32BE(size, 0)
@@ -83,7 +85,9 @@ function buildTinyPng(size = 32): Buffer {
   ])
 }
 
-test('upload a short mix, watch it render, and download the mp4', async ({ page }) => {
+test('upload a short mix, watch it render, and download the mp4', async ({
+  page,
+}) => {
   const workDir = mkdtempSync(join(tmpdir(), 'djvisualizer-e2e-'))
   const audioPath = join(workDir, 'mix.wav')
   const artworkPath = join(workDir, 'cover.png')
@@ -128,5 +132,7 @@ test('upload a short mix, watch it render, and download the mp4', async ({ page 
   expect(download.suggestedFilename()).toMatch(/\.mp4$/)
 
   await page.getByRole('button', { name: /another/i }).click()
-  await expect(page.getByRole('button', { name: 'Generate Video' })).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Generate Video' }),
+  ).toBeVisible()
 })

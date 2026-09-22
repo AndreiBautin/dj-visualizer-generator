@@ -155,6 +155,21 @@ public sealed class JobsController(
         return File(stream, "video/mp4", result.Value.FileName);
     }
 
+    // Preview requests never spend the saved-file allowance. Range requests are supported;
+    // each request conservatively reserves a whole file against the instance egress budget.
+    [HttpGet("{jobId}/preview")]
+    [EnableRateLimiting("job-download")]
+    public async Task<IActionResult> Preview(string jobId, CancellationToken cancellationToken)
+    {
+        var result = await getJobDownloadUseCase.ExecutePreviewAsync(jobId, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return MapError(result.Error!);
+        }
+
+        return File(System.IO.File.OpenRead(result.Value!.FilePath), "video/mp4", enableRangeProcessing: true);
+    }
+
     private IActionResult MapError(Error error) => error.Code switch
     {
         ErrorCodes.Validation => BadRequestProblem(error.Message),

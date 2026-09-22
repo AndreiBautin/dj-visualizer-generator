@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { downloadUrl } from '../api/client'
+import { downloadUrl, previewUrl } from '../api/client'
 import { DownloadPanel } from './DownloadPanel'
 
 describe('DownloadPanel', () => {
@@ -12,11 +12,11 @@ describe('DownloadPanel', () => {
     expect(link).toHaveAttribute('href', downloadUrl('abc-123'))
   })
 
-  it('renders an inline player pointing at the same job download endpoint', () => {
+  it('renders an inline player pointing at the separate preview endpoint', () => {
     render(<DownloadPanel jobId="abc-123" onReset={vi.fn()} />)
 
     const video = document.querySelector('video')
-    expect(video).toHaveAttribute('src', downloadUrl('abc-123'))
+    expect(video).toHaveAttribute('src', previewUrl('abc-123'))
     expect(video).toHaveAttribute('controls')
   })
 
@@ -29,9 +29,13 @@ describe('DownloadPanel', () => {
   })
 
   it('animates in on mount, for visitors who have not asked for reduced motion', () => {
-    const { container } = render(<DownloadPanel jobId="abc-123" onReset={vi.fn()} />)
+    const { container } = render(
+      <DownloadPanel jobId="abc-123" onReset={vi.fn()} />,
+    )
 
-    expect(container.firstChild).toHaveClass('motion-safe:animate-[panel-in_220ms_ease-out]')
+    expect(container.firstChild).toHaveClass(
+      'motion-safe:animate-[panel-in_220ms_ease-out]',
+    )
   })
 
   it('calls onReset when starting another video', async () => {

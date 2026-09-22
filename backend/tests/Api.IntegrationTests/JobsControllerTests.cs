@@ -300,6 +300,47 @@ public class JobsControllerTests : IDisposable
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
+    [Fact]
+    public async Task Preview_Supports_Seeking_Without_Spending_Downloads()
+    {
+        var id = await CreateAndCompleteJobAsync(_factory, _client);
+        for (var i = 0; i < 6; i++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"/jobs/{id}/preview");
+            request.Headers.Range = new RangeHeaderValue(2, 5);
+            using var response = await _client.SendAsync(request);
+            response.StatusCode.Should().Be(HttpStatusCode.PartialContent);
+            (await response.Content.ReadAsByteArrayAsync()).Should().Equal(3, 4, 5, 6);
+            response.Content.Headers.ContentDisposition.Should().BeNull();
+        }
+        for (var i = 0; i < 5; i++)
+        {
+            using var response = await _client.GetAsync($"/jobs/{id}/download");
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+    }
+
+    [Fact]
+    public async Task Concurrent_Downloads_Admit_Exactly_Five_Requests()
+    {
+        var id = await CreateAndCompleteJobAsync(_factory, _client);
+        var responses = await Task.WhenAll(Enumerable.Range(0, 10)
+            .Select(_ => _client.GetAsync($"/jobs/{id}/download")));
+        responses.Count(r => r.StatusCode == HttpStatusCode.OK).Should().Be(5);
+        responses.Count(r => r.StatusCode == HttpStatusCode.TooManyRequests).Should().Be(5);
+        foreach (var response in responses) response.Dispose();
+    }
+
+    [Fact]
+    public async Task Preview_Still_Respects_Instance_Egress_Budget()
+    {
+        using var factory = new JobsApiFactory { ExtraConfiguration = { ["Jobs:MaxEgressBytesPerWindow"] = "10" } };
+        using var client = factory.CreateClient();
+        var id = await CreateAndCompleteJobAsync(factory, client);
+        (await client.GetAsync($"/jobs/{id}/preview")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.GetAsync($"/jobs/{id}/preview")).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+    }
+
     private static async Task<string> CreateAndCompleteJobAsync(JobsApiFactory factory, HttpClient client)
     {
         var createResponse = await client.PostAsync("/jobs", BuildValidForm());

@@ -12,7 +12,15 @@ interface UploadCardProps {
   onClear: () => void
 }
 
-export function UploadCard({ label, hint, accept, file, error, onFileSelected, onClear }: UploadCardProps) {
+export function UploadCard({
+  label,
+  hint,
+  accept,
+  file,
+  error,
+  onFileSelected,
+  onClear,
+}: UploadCardProps) {
   const inputId = useId()
   const [isDragActive, setIsDragActive] = useState(false)
   // Counts nested enter/leave pairs rather than toggling on either event alone - the dropzone
@@ -61,7 +69,10 @@ export function UploadCard({ label, hint, accept, file, error, onFileSelected, o
         isDragActive ? 'border-white/60! bg-white/10!' : 'hover:border-white/25'
       }`}
     >
-      <label htmlFor={inputId} className="cursor-pointer text-sm font-semibold text-white">
+      <label
+        htmlFor={inputId}
+        className="cursor-pointer text-sm font-semibold text-white"
+      >
         {label}
       </label>
       <input

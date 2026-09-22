@@ -10,7 +10,9 @@ function makeFile(name: string, type = ''): File {
 }
 
 function renderApp() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   return render(
     <QueryClientProvider client={queryClient}>
       <App />
@@ -22,7 +24,9 @@ describe('App', () => {
   it('renders the app title', () => {
     renderApp()
 
-    expect(screen.getByRole('heading', { name: /dj visualizer generator/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: /dj visualizer generator/i }),
+    ).toBeInTheDocument()
   })
 
   it('renders the upload form with both file pickers and the settings fields', () => {
@@ -31,17 +35,27 @@ describe('App', () => {
     expect(screen.getByText('Audio file')).toBeInTheDocument()
     expect(screen.getByText('Artwork')).toBeInTheDocument()
     expect(screen.getByLabelText(/track title/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /generate video/i })).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: /generate video/i }),
+    ).toBeDisabled()
   })
 
   it('enables the submit button once both files are selected', async () => {
     const user = userEvent.setup()
     renderApp()
 
-    await user.upload(screen.getByLabelText('Audio file', { selector: 'input' }), makeFile('mix.mp3'))
-    await user.upload(screen.getByLabelText('Artwork', { selector: 'input' }), makeFile('cover.png', 'image/png'))
+    await user.upload(
+      screen.getByLabelText('Audio file', { selector: 'input' }),
+      makeFile('mix.mp3'),
+    )
+    await user.upload(
+      screen.getByLabelText('Artwork', { selector: 'input' }),
+      makeFile('cover.png', 'image/png'),
+    )
 
-    expect(screen.getByRole('button', { name: /generate video/i })).toBeEnabled()
+    expect(
+      screen.getByRole('button', { name: /generate video/i }),
+    ).toBeEnabled()
   })
 
   it('creates a job and shows the progress panel on submit', async () => {
@@ -56,8 +70,14 @@ describe('App', () => {
     renderApp()
 
     await user.type(screen.getByLabelText(/track title/i), 'Friday Night Set')
-    await user.upload(screen.getByLabelText('Audio file', { selector: 'input' }), makeFile('mix.mp3'))
-    await user.upload(screen.getByLabelText('Artwork', { selector: 'input' }), makeFile('cover.png', 'image/png'))
+    await user.upload(
+      screen.getByLabelText('Audio file', { selector: 'input' }),
+      makeFile('mix.mp3'),
+    )
+    await user.upload(
+      screen.getByLabelText('Artwork', { selector: 'input' }),
+      makeFile('cover.png', 'image/png'),
+    )
     await user.click(screen.getByRole('button', { name: /generate video/i }))
 
     expect(await screen.findByText(/queued/i)).toBeInTheDocument()
@@ -78,15 +98,27 @@ describe('App', () => {
     // A plain network failure (fetch rejecting outright) rather than an ApiError - the case the
     // generic fallback message exists for. It should read as an invitation to retry, not as
     // interchangeable boilerplate ("Something went wrong. Please try again.").
-    vi.spyOn(apiClient, 'createJob').mockRejectedValue(new TypeError('Failed to fetch'))
+    vi.spyOn(apiClient, 'createJob').mockRejectedValue(
+      new TypeError('Failed to fetch'),
+    )
     const user = userEvent.setup()
     renderApp()
 
     await user.type(screen.getByLabelText(/track title/i), 'Friday Night Set')
-    await user.upload(screen.getByLabelText('Audio file', { selector: 'input' }), makeFile('mix.mp3'))
-    await user.upload(screen.getByLabelText('Artwork', { selector: 'input' }), makeFile('cover.png', 'image/png'))
+    await user.upload(
+      screen.getByLabelText('Audio file', { selector: 'input' }),
+      makeFile('mix.mp3'),
+    )
+    await user.upload(
+      screen.getByLabelText('Artwork', { selector: 'input' }),
+      makeFile('cover.png', 'image/png'),
+    )
     await user.click(screen.getByRole('button', { name: /generate video/i }))
 
-    expect(await screen.findByText("That upload didn't make it — mind trying again?")).toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        "That upload didn't make it — mind trying again?",
+      ),
+    ).toBeInTheDocument()
   })
 })

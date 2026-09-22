@@ -18,7 +18,7 @@ public class GetJobDownloadUseCaseTests
 
     public GetJobDownloadUseCaseTests() => _egressBudget.TryReserve(Arg.Any<long>()).Returns(true);
 
-    private GetJobDownloadUseCase CreateSut() => new(_jobRepository, _fileStorage, _egressBudget);
+    private GetJobDownloadUseCase CreateSut() => new(_jobRepository, _fileStorage, _egressBudget, new JobDownloadGate());
 
     private static Job CompletedJob()
     {

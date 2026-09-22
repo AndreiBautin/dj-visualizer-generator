@@ -8,9 +8,26 @@ namespace DjVisualizer.Application.Jobs;
 public sealed class GetJobDownloadUseCase(
     IJobRepository jobRepository,
     IJobFileStorage fileStorage,
-    IEgressBudget egressBudget) : IGetJobDownloadUseCase
+    IEgressBudget egressBudget,
+    JobDownloadGate gate) : IGetJobDownloadUseCase
 {
     public async Task<Result<JobDownloadResult>> ExecuteAsync(string jobId, CancellationToken cancellationToken)
+    {
+        await gate.Semaphore.WaitAsync(cancellationToken);
+        try
+        {
+            return await ResolveAsync(jobId, true, cancellationToken);
+        }
+        finally
+        {
+            gate.Semaphore.Release();
+        }
+    }
+
+    public Task<Result<JobDownloadResult>> ExecutePreviewAsync(string jobId, CancellationToken cancellationToken) =>
+        ResolveAsync(jobId, false, cancellationToken);
+
+    private async Task<Result<JobDownloadResult>> ResolveAsync(string jobId, bool recordDownload, CancellationToken cancellationToken)
     {
         JobId id;
         try
@@ -33,7 +50,7 @@ public sealed class GetJobDownloadUseCase(
             return Result<JobDownloadResult>.Failure(new Error(ErrorCodes.NotReady, "The video is not ready to download yet."));
         }
 
-        if (job.DownloadLimitReached)
+        if (recordDownload && job.DownloadLimitReached)
         {
             return Result<JobDownloadResult>.Failure(new Error(
                 ErrorCodes.Exhausted,
@@ -56,8 +73,11 @@ public sealed class GetJobDownloadUseCase(
                 "This instance has reached its download limit for now. Please try again later."));
         }
 
-        job.RecordDownload();
-        await jobRepository.SaveAsync(job, cancellationToken);
+        if (recordDownload)
+        {
+            job.RecordDownload();
+            await jobRepository.SaveAsync(job, cancellationToken);
+        }
 
         return Result<JobDownloadResult>.Success(
             new JobDownloadResult(video.FilePath, SanitizeFileName(job.Title.Value) + ".mp4"));

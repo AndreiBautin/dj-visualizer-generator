@@ -54,6 +54,7 @@ public static class WorkerServiceRegistration
         // dependencies are singletons too, so this is safe - it holds no per-job mutable state.
         services.AddSingleton<IProcessRenderJobUseCase, ProcessRenderJobUseCase>();
 
+        services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService>(_ => new InstanceLeaseService(resolveJobsRootPath(), "worker"));
         services.AddHostedService<JobPollingService>();
         services.AddHostedService<CleanupService>();
 

@@ -32,3 +32,6 @@ jobs-data/
 .claude/
 .DS_Store
 Thumbs.db
+
+.verification/
+.portfolio-demo/

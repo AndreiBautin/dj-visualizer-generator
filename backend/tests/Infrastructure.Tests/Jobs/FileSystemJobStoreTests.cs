@@ -24,6 +24,17 @@ public class FileSystemJobStoreTests : IDisposable
         }
     }
 
+    [Fact]
+    public void Instance_Lease_Rejects_A_Second_Owner_And_Releases_On_Dispose()
+    {
+        using (var first = new FileSystemInstanceLease(_rootPath, "worker"))
+        {
+            var second = () => new FileSystemInstanceLease(_rootPath, "worker");
+            second.Should().Throw<IOException>();
+        }
+        using var replacement = new FileSystemInstanceLease(_rootPath, "worker");
+    }
+
     private FileSystemJobStore CreateSut() => new(_rootPath, new FixedClock(Now));
 
     private sealed class FixedClock(DateTimeOffset now) : IClock

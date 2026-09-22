@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react'
 
-// Bounds memory use regardless of the file's real size (uploads here go up to 2 GB) - only this
-// many leading bytes are ever read into memory and handed to decodeAudioData. Streamable
-// containers (WAV, FLAC, most MP3) decode a valid partial waveform from a prefix like this; a
-// container that keeps its metadata at the end (some M4A files) or an unsupported codec will
-// fail to decode entirely, which is treated as "no preview" rather than an error - see below.
+// Best-effort preview of the file prefix, not the whole mix. This limits encoded input;
+// decoded PCM can be larger. Some containers cannot decode a partial file.
 const PREVIEW_BYTES = 8 * 1024 * 1024
 const BAR_COUNT = 48
 
@@ -55,7 +52,12 @@ export function WaveformPreview({ file }: WaveformPreviewProps) {
   const barWidth = 100 / peaks.length
 
   return (
-    <svg viewBox="0 0 100 24" preserveAspectRatio="none" className="h-6 w-full" aria-hidden="true">
+    <svg
+      viewBox="0 0 100 24"
+      preserveAspectRatio="none"
+      className="h-6 w-full"
+      aria-hidden="true"
+    >
       {peaks.map((peak, index) => {
         const height = Math.max(1, (peak / max) * 24)
         return (

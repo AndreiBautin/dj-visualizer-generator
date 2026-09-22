@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* The same three files the render worker burns captions with (assets/fonts/, copied into
    public/fonts/ - see docs/BACKLOG.md item 3) - so the caption-font choice previews itself in

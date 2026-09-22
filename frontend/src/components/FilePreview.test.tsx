@@ -30,14 +30,18 @@ afterEach(() => {
 
 describe('FilePreview', () => {
   it('shows the file name and a human-readable size', () => {
-    render(<FilePreview file={makeFile('mix.mp3', 5_242_880)} onRemove={vi.fn()} />)
+    render(
+      <FilePreview file={makeFile('mix.mp3', 5_242_880)} onRemove={vi.fn()} />,
+    )
 
     expect(screen.getByText('mix.mp3')).toBeInTheDocument()
     expect(screen.getByText(/5 MB/i)).toBeInTheDocument()
   })
 
   it('uses the shared raised-surface treatment, since it sits on top of the dropzone', () => {
-    const { container } = render(<FilePreview file={makeFile('mix.mp3', 1024)} onRemove={vi.fn()} />)
+    const { container } = render(
+      <FilePreview file={makeFile('mix.mp3', 1024)} onRemove={vi.fn()} />,
+    )
 
     expect(container.firstChild).toHaveClass(...SURFACE_RAISED.split(' '))
   })
@@ -53,19 +57,36 @@ describe('FilePreview', () => {
   })
 
   it('renders an image thumbnail for image files', () => {
-    render(<FilePreview file={makeFile('cover.png', 1024, 'image/png')} onRemove={vi.fn()} />)
+    render(
+      <FilePreview
+        file={makeFile('cover.png', 1024, 'image/png')}
+        onRemove={vi.fn()}
+      />,
+    )
 
     expect(screen.getByRole('img', { name: /cover.png/i })).toBeInTheDocument()
   })
 
   it('renders a waveform preview for audio files', async () => {
-    render(<FilePreview file={makeFile('mix.mp3', 1024, 'audio/mpeg')} onRemove={vi.fn()} />)
+    render(
+      <FilePreview
+        file={makeFile('mix.mp3', 1024, 'audio/mpeg')}
+        onRemove={vi.fn()}
+      />,
+    )
 
-    await waitFor(() => expect(document.querySelector('svg')).toBeInTheDocument())
+    await waitFor(() =>
+      expect(document.querySelector('svg')).toBeInTheDocument(),
+    )
   })
 
   it('does not render a waveform preview for image files', () => {
-    render(<FilePreview file={makeFile('cover.png', 1024, 'image/png')} onRemove={vi.fn()} />)
+    render(
+      <FilePreview
+        file={makeFile('cover.png', 1024, 'image/png')}
+        onRemove={vi.fn()}
+      />,
+    )
 
     expect(document.querySelector('svg')).not.toBeInTheDocument()
   })

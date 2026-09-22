@@ -11,9 +11,11 @@ describe('createJob', () => {
   })
 
   it('posts multipart form data and returns the job id', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ jobId: 'abc-123' }), { status: 201 }),
-    )
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ jobId: 'abc-123' }), { status: 201 }),
+      )
     vi.stubGlobal('fetch', fetchMock)
 
     const result = await createJob({
@@ -36,9 +38,12 @@ describe('createJob', () => {
   })
 
   it('throws an ApiError with the problem detail message on failure', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockImplementation(async () => new Response(JSON.stringify({ detail: 'Title must not be empty.' }), { status: 400 }))
+    const fetchMock = vi.fn().mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ detail: 'Title must not be empty.' }), {
+          status: 400,
+        }),
+    )
     vi.stubGlobal('fetch', fetchMock)
 
     const request = {
@@ -60,8 +65,18 @@ describe('getJobStatus', () => {
   })
 
   it('returns the parsed job status', async () => {
-    const body = { jobId: 'abc-123', status: 'Processing', progress: 42, errorMessage: null }
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 200 })))
+    const body = {
+      jobId: 'abc-123',
+      status: 'Processing',
+      progress: 42,
+      errorMessage: null,
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(new Response(JSON.stringify(body), { status: 200 })),
+    )
 
     const result = await getJobStatus('abc-123')
 
@@ -71,7 +86,11 @@ describe('getJobStatus', () => {
   it('throws an ApiError when the job is not found', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: 'No job exists.' }), { status: 404 })),
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ detail: 'No job exists.' }), {
+          status: 404,
+        }),
+      ),
     )
 
     await expect(getJobStatus('missing')).rejects.toThrow(ApiError)

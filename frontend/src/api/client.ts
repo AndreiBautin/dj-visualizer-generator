@@ -47,7 +47,9 @@ async function parseErrorDetail(response: Response): Promise<string> {
   return `Request failed with status ${response.status}.`
 }
 
-export async function createJob(request: CreateJobRequest): Promise<CreateJobResponse> {
+export async function createJob(
+  request: CreateJobRequest,
+): Promise<CreateJobResponse> {
   const formData = new FormData()
   formData.set('Title', request.title)
   formData.set('Preset', request.preset)
@@ -56,7 +58,10 @@ export async function createJob(request: CreateJobRequest): Promise<CreateJobRes
   formData.set('Audio', request.audioFile)
   formData.set('Artwork', request.artworkFile)
 
-  const response = await fetch(`${BASE_URL}/jobs`, { method: 'POST', body: formData })
+  const response = await fetch(`${BASE_URL}/jobs`, {
+    method: 'POST',
+    body: formData,
+  })
   if (!response.ok) {
     throw new ApiError(await parseErrorDetail(response), response.status)
   }
@@ -89,7 +94,9 @@ export interface CreateSampleJobRequest {
  * pipeline run without finding a DJ set and waiting on a large upload. Enabled per deployment;
  * a server with the demo switched off answers 404, which surfaces as a normal ApiError.
  */
-export async function createSampleJob(request: CreateSampleJobRequest = {}): Promise<CreateJobResponse> {
+export async function createSampleJob(
+  request: CreateSampleJobRequest = {},
+): Promise<CreateJobResponse> {
   const response = await fetch(`${BASE_URL}/jobs/sample`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -152,3 +159,6 @@ export async function getVersion(): Promise<{ commit: string | null }> {
 
   return (await response.json()) as { commit: string | null }
 }
+
+export const previewUrl = (jobId: string) =>
+  `${BASE_URL}/jobs/${encodeURIComponent(jobId)}/preview`

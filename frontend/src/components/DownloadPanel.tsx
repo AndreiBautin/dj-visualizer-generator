@@ -1,4 +1,4 @@
-import { downloadUrl } from '../api/client'
+import { downloadUrl, previewUrl } from '../api/client'
 
 interface DownloadPanelProps {
   jobId: string
@@ -9,15 +9,10 @@ export function DownloadPanel({ jobId, onReset }: DownloadPanelProps) {
   return (
     <div className="flex flex-col items-center gap-4 text-center motion-safe:animate-[panel-in_220ms_ease-out]">
       <p className="text-lg font-semibold text-white">Your video is ready.</p>
-      {/*
-        preload="none": the download endpoint is rate-limited and counts each request against
-        the job's small download allowance (Job.MaxDownloads) - fetching eagerly the moment this
-        panel mounts would spend one before the visitor ever presses play.
-      */}
       <video
         controls
         preload="none"
-        src={downloadUrl(jobId)}
+        src={previewUrl(jobId)}
         className="w-full max-w-md rounded-lg bg-black"
       />
       <a
@@ -34,9 +29,14 @@ export function DownloadPanel({ jobId, onReset }: DownloadPanelProps) {
         would pull a multi-hundred-megabyte file through memory to improve an error message.
       */}
       <p className="text-xs text-white/50">
-        This link works for a few downloads and is deleted a short while after rendering.
+        You can save this file five times. Previewing does not use those saves.
+        Files expire automatically.
       </p>
-      <button type="button" onClick={onReset} className="text-sm text-white/60 hover:text-white">
+      <button
+        type="button"
+        onClick={onReset}
+        className="text-sm text-white/60 hover:text-white"
+      >
         Create another video
       </button>
     </div>

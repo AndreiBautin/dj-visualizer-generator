@@ -31,17 +31,29 @@ export default defineConfig({
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          {
+            src: '/icons/icon-maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
       },
       workbox: {
         // The API responses (job status, downloads) must never be served from cache - only the
         // built SPA shell and its assets are precached.
-        navigateFallbackDenylist: [/^\/jobs\//, /^\/health/, /^\/version/, /^\/limits/],
+        navigateFallbackDenylist: [
+          /^\/jobs\//,
+          /^\/health/,
+          /^\/version/,
+          /^\/limits/,
+        ],
       },
     }),
   ],
   server: {
+    port: 5173,
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://localhost:5080',
