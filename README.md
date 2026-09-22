@@ -2,7 +2,7 @@
 
 Turn audio and cover art into a spinning-record MP4. Built with .NET 9, React, TypeScript and FFmpeg, with asynchronous rendering, progress, preview and download. No login is required; possession of a job URL grants access until its files expire.
 
-**Demo status (2026-09-21):** the [hosted demo](https://dj-visualizer.onrender.com) is suspended. Local startup works independently; do not share the hosted link as a working demo until the release checklist is verified.
+Live: [dj-visualizer.onrender.com](https://dj-visualizer.onrender.com). Free instance — the first request after 15 minutes idle can take up to a minute to wake it.
 
 ## Run
 

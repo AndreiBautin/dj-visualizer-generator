@@ -6,7 +6,7 @@
 
 ## Three-minute demonstration
 
-Start the bundled sample, explain settings and progress, play and seek the result, then save it. Show `ProcessRenderJobUseCase` and a real FFmpeg test. Explain the single-instance boundary. Verify the hosted site before a call; keep a local sample ready. The last assessed public status was suspended.
+Start the bundled sample, explain settings and progress, play and seek the result, then save it. Show `ProcessRenderJobUseCase` and a real FFmpeg test. Explain the single-instance boundary. It's live and was last verified end-to-end (real render, download, decode) on 2026-09-22 — open it before a call anyway, since a free instance sleeps after 15 minutes idle and the first request can take up to a minute; keep a local sample ready regardless.
 
 ## Decisions to explain
 
@@ -21,4 +21,4 @@ Start the bundled sample, explain settings and progress, play and seek the resul
 
 The filesystem is not a distributed queue. More workers require atomic claims and durable coordination. Egress budgets reset after restart and overcount partial/aborted responses. Long mixes produce large files even with cheap encoding. Free hosting may sleep or restart; enterprise availability is not implied.
 
-This complements the résumé's .NET/React, asynchronous integration and production-stabilization experience. Demonstrate those habits in a smaller inspectable system. Do not claim the separate AI listening experiment works in Spinner, total render cost is constant, or a suspended URL is live.
+This complements the résumé's .NET/React, asynchronous integration and production-stabilization experience. Demonstrate those habits in a smaller inspectable system. Do not claim the separate AI listening experiment works in Spinner, or that total render cost is constant.

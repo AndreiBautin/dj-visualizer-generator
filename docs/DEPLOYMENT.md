@@ -2,7 +2,7 @@
 
 ## Existing host and current status
 
-The configured public URL is https://dj-visualizer.onrender.com. The 2026-09-21 assessment observed an owner-suspended service. That does not establish why. Do not claim the public demo works until the exact deployed revision completes a real render.
+The public URL is https://dj-visualizer.onrender.com. It was suspended (by its owner) as of the 2026-09-21 assessment; resumed and verified live since — `scripts/verify-deployment.sh` passed 9/9 against the exact deployed commit, including a real render, download and ffprobe/ffmpeg decode.
 
 Keep the existing Render free web service; do not provision paid services or add a payment method. The single container serves React and hosts the same worker library used by Docker Compose. No database or persistent disk is required for this disposable demo. Static hosting cannot run FFmpeg; a multi-service deployment adds infrastructure without helping the single-worker demo.
 
