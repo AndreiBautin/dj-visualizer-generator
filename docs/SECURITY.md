@@ -15,7 +15,7 @@ mitigation:
 | SQL injection | No database, no SQL, no ORM |
 | CSRF | No cookies and no ambient authority — a forged request can only create a job the attacker already could |
 | Session fixation / hijacking | No sessions |
-| Privilege escalation, IDOR across users | No users, no roles, no ownership |
+| Ownership authorization | Not implemented: a random job URL grants access until expiry |
 | Password handling, credential stuffing | No credentials anywhere in the system |
 | XSS via stored user content | Captions are drawn into a video by ffmpeg, never rendered as HTML |
 
@@ -283,3 +283,11 @@ resolving something that was never tested.
    set together per deployment. A mismatch degrades gracefully — the button appears and the server
    answers 404, which the UI surfaces as an error — but it is two switches where one would be
    better.
+
+## Portfolio hardening (2026-09-21)
+
+Preview supports ranges without consuming saved downloads; both endpoints are rate/budget limited. Each preview reserves a whole file conservatively, not exact transferred bytes. Download admission is serialized through persistence. OS leases reject additional API/worker processes sharing a jobs root; unique temp files prevent write collisions.
+
+The process-local budget resets on restart and is not a monthly billing guarantee. Provider controls and monitoring are separate. Random job URLs grant access without ownership checks; do not use public fixtures for private media.
+
+NuGet audit uses structured JSON and regression tests proving High/Critical findings fail. CI audits npm and scans history with Gitleaks. See PORTFOLIO_DEMO_READINESS.md for current verification; historical findings above do not prove the present release is green.

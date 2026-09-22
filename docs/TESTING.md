@@ -1,162 +1,27 @@
 # Testing
 
-## Numbers
+## One gate
 
-| Suite | Before | After productionization | After egress hardening |
-|---|---|---|---|
-| Domain.Tests | 52 | 52 | 58 |
-| Application.Tests | 29 | 39 | 44 |
-| Infrastructure.Tests | 89 | 95 | 115 |
-| Api.IntegrationTests | 17 | 58 | 65 |
-| Worker.Tests | 10 | 10 | 10 |
-| **Backend total** | **197** | **254** | **292** |
-| Frontend (vitest) | 53 | 64 | 64 |
-| **Total** | **250** | **318** | **356** |
+Install locked frontend packages with `npm ci --prefix frontend`, then run `npm run verify` at the repository root. Node 24, .NET 9 SDK, FFmpeg and ffprobe must be on PATH. Install the pre-push hook with `npm run prepare`.
 
-The last column is [SECURITY.md](SECURITY.md) F-5 — the download limits. Most of those tests are
-about a *limit* rather than a feature, which is the unusual part: each one names the specific way
-the guard could be wrong (an off-by-one on the allowance, a counter that never persists, a
-reservation charged for a request that transfers nothing, a budget that overflows into
-re-authorising everything).
+The gate runs project-boundary checks, guardrail regression tests, frontend lint, .NET/Prettier format checks, strict backend build, backend tests, frontend tests, and both default and standalone typed frontend builds. It requires five backend TRX reports and rejects skipped tests. The media availability probe drains process output and has a bounded timeout; an unavailable dependency must not silently approve a release.
 
-All passing, zero skipped. ffmpeg is installed locally and in CI, so the `[RequiresFfmpegFact]` /
-`[RequiresFfmpegTheory]` tests run for real rather than auto-skipping.
+## What the tests protect
 
-Playwright covers the browser happy path against the full docker-compose stack in CI.
+- Domain: validation and legal job transitions.
+- Application: orchestration and failure handling using ports.
+- Infrastructure: real file persistence, upload signatures, rendering arguments, real FFmpeg output, egress arithmetic, and exclusive instance leases.
+- API: binding, safe errors, sample configuration, range responses, preview budget enforcement and concurrent download admission. Ten simultaneous download requests must admit exactly five.
+- Frontend: file/settings validation, progress/recovery states, sample submission, previews and accessible controls. An expired job offers recovery instead of endless polling.
+- Browser: synthetic upload through real rendering and download. Run `E2E_BASE_URL=http://localhost:5080 npm --prefix frontend run test:e2e` against standalone mode, or the default 5173 compose stack. Playwright's Chromium must be installed.
+- Release: Docker image smoke checks and a live expected-commit check that downloads and decodes a sample MP4.
 
-## The suite was green locally and red in CI
+Current totals and actual run results are recorded in PORTFOLIO_DEMO_READINESS.md. Historical counts are not a substitute for executing the gate.
 
-Worth stating plainly, because it is the most useful thing this repository's test history shows:
-**every CI run before this work failed**, while the same tests passed on the development machine.
-Three separate causes, and none of them would have been found by reading code.
+## Deliberately not tested
 
-1. **`Path.GetInvalidFileNameChars()` is platform-dependent** — about forty characters on Windows,
-   two on Linux. Two tests asserted the Windows result. They passed locally and failed in CI, and
-   the *deployed* behaviour was the one nobody had tested. Now covered by a theory over characters
-   that are legal on Linux and illegal on Windows, so a Linux run fails if it ever comes back.
-2. **The drawtext escaping was wrong**, underneath two unit tests that asserted escaping was
-   applied without asking ffmpeg whether it was accepted.
-3. **The e2e slider interaction was impossible to satisfy** — Playwright's `click()` on a range
-   input moves the thumb to the clicked point, so a centre click on the 2–15s slider landed near
-   8.5s and the assertion for 4.0s could never hold. Fixed by focusing instead of clicking, and by
-   asserting the starting value so a future change to the default or step fails loudly.
+Pixel-perfect FFmpeg snapshots are brittle across encoder/platform builds; inspect a real output visually. Timing is recorded as a measurement, not a pass/fail assertion on shared hardware. Multiple workers are unsupported and rejected by a lease; a distributed queue is outside this product. Hosted load/cost limits need separate measurements on actual hardware. We test our integration with FFmpeg and ASP.NET, not their internal implementations.
 
-The pattern in all three: a test that asserts *what the code did* rather than *what the system
-accepted* will hold a bug in place indefinitely.
+## Helpers
 
-## Strategy per layer
-
-**Domain** — pure unit tests, no doubles. Value objects reject what they should
-(`JobTitle` empty/overlong, `RotationSpeed` out of range, `VideoPreset` and `CaptionFont` unknown
-names) and `Job` refuses illegal state transitions. This is where input validity is *defined*, so
-it is where it is most densely tested.
-
-**Application** — use cases against `NSubstitute` fakes of the interfaces they declare. Tests
-assert orchestration: that a failed artwork save deletes the audio already written, that progress
-is persisted as it is reported, that cancellation leaves a job `Processing` rather than marking it
-failed.
-
-**Infrastructure** — real filesystem in temp directories, real ffmpeg. `FileSystemJobStore`,
-`FileSignatureValidator` and the ffmpeg argument/filter-graph builders are tested directly. The
-builders are pure string functions specifically so the exact command line is assertable without
-running anything.
-
-**Api** — `WebApplicationFactory` over the real pipeline with only `IAudioProbe` stubbed (so a
-16-byte fixture can stand in for an hour of audio). Status codes, `ProblemDetails` shapes, security
-headers and rate limiting are exercised end to end.
-
-**Frontend** — Testing Library against real user interactions. The API client is spied on; nothing
-below it is mocked.
-
-## What is prioritised, and why
-
-Tests were added where the productionization created a property that must not silently regress.
-
-**Trust boundaries.** `FileSignatureValidator` per format; an `.mp3` whose bytes are `MZ` is
-rejected end to end; a path-traversal filename is neutralised; oversize uploads are cut off mid-
-stream.
-
-**Things that must not be destroyed.** `CleanupService` is tested from the "must not delete"
-side — a job inside its retention window survives, a `Processing` job inside the stale threshold is
-not failed.
-
-**The security fixes.**
-`RenderAsync_Handles_Titles_Containing_Filtergraph_Metacharacters` renders with **real ffmpeg**
-for six hostile captions. This is the most important test in the suite, because the vulnerability
-it covers ([SECURITY.md](SECURITY.md) F-1) shipped *underneath two passing unit tests* that
-asserted escaping was applied without ever asking ffmpeg whether it was correct. The lesson is
-encoded in the test's location: it lives with the renderer, not the string builder.
-
-`ExecuteAsync_Does_Not_Leak_Renderer_Diagnostics_Into_The_Job_Error_Message` asserts the stored
-message contains no diagnostic text, no server path, and not even the words `ffmpeg` or `ffprobe`.
-
-**The demo-data guarantee.** `DemoAssetSafetyTests` scans both bundled fixtures for emails, URLs,
-phone numbers, credential patterns, private-key blocks and home-directory paths, and checks
-container metadata structurally — no PNG text chunks, and only ffmpeg's own `TSSE` frame in the
-MP3's ID3v2 tag. If someone swaps in a real track, CI fails.
-
-**Configuration cannot crash or lie.** `JobsOptionsFactoryTests` covers the spellings of true and
-false people actually type, and asserts that an unrecognised value falls back **and warns** rather
-than being guessed. A malformed byte count must not be read as zero — `UploadLimits` rejects a
-non-positive limit, so that would only move the crash a few lines later. Every malformed value is
-reported, not just the first.
-
-**The deployed configuration specifically.** The sample endpoint is off by default, 404s when
-disabled, 503s without disclosing server paths when its assets are missing, and honours render
-settings. `/limits` reflects configuration rather than compiled-in defaults. The SPA states the
-server's limits and falls back to the built-in ones when that request fails.
-
-## What is deliberately not tested
-
-- **Visual correctness of the video.** No test asserts the disc is round or the caption is
-  centred. Pixel comparison against ffmpeg output across versions and platforms is brittle enough
-  to become noise. It is verified by extracting a frame and *looking* at it, which was done during
-  this work — including with a caption containing an apostrophe, colon and percent sign.
-- **ffmpeg itself.** Tests assert the arguments and filter graphs produced, and that a real render
-  succeeds and probes as the right codec, dimensions and duration. They do not test the encoder.
-- **Render performance.** Timings in the docs are measured by hand and reported as measurements,
-  not asserted. A timing assertion on shared CI hardware is a flaky test.
-- **Concurrent workers.** The design assumes one worker instance. Testing a race that the
-  architecture states it does not support would be testing fiction; the assumption is documented
-  instead.
-- **The three-container compose stack, in unit tests.** It is covered by the Playwright e2e job in
-  CI, which is the only place it is a real system.
-- **Kestrel, ASP.NET model binding, React, TanStack Query.** Framework behaviour.
-- **Concurrent downloads of the *same* job racing the download counter.** `GetJobDownloadUseCase`
-  reads the job, increments, and writes it back; two simultaneous requests for one job id can both
-  read the same count and one increment is lost. Not tested, and not fixed, because the fix is
-  wrong for the shape of the store: locking a JSON file per job would put a lock on the read path
-  of every status poll to bound an overshoot of a handful of downloads. The limit is a cost
-  control, not an entitlement — a few extra downloads of one job change nothing, and the
-  instance-wide egress budget (which *is* locked, and is the limit the hosting bill depends on)
-  has no such race. Asserting on a lost update here would pin behaviour we have deliberately
-  chosen not to guarantee.
-
-## Running them
-
-```bash
-dotnet test backend/DjVisualizer.sln
-```
-
-```bash
-npm --prefix frontend run test
-```
-
-```bash
-npm --prefix frontend run test:e2e
-```
-
-The e2e run needs the stack up (`docker compose up --build -d`).
-
-## Test helpers worth knowing
-
-- **`RequiresFfmpegFactAttribute` / `RequiresFfmpegTheoryAttribute`** — auto-skip when ffmpeg is
-  absent, so the suite stays green on a machine without it while running for real in CI. The theory
-  variant was added for the filter-graph injection cases.
-- **`JobsApiFactory`** — `WebApplicationFactory` with a temp jobs root that is deleted on dispose,
-  a stubbed `IAudioProbe` with a settable duration, and init-only properties for the demo switch
-  and asset paths, so the enabled, disabled and missing-assets cases are each a separate factory.
-- **`SilentWavBuilder`** — generates a valid WAV of a given duration in memory, so audio tests need
-  no binary fixtures in the repository.
-- **`StubAudioProbe`** — returns a caller-supplied duration, which is what lets a 16-byte fixture
-  stand in for a six-hour set.
+`JobsApiFactory` isolates test storage and substitutes duration probing for API tests. `SilentWavBuilder` synthesizes media. RequiresFfmpeg attributes support focused developer tests, but the full gate rejects their skips. Public fixtures are generated by `scripts/generate-demo-assets.sh`.

@@ -1,3 +1,7 @@
+# Backlog status
+
+The eight frontend polish items below were implemented in commit 55727a6. Other feature ideas remain outside portfolio readiness scope. See PORTFOLIO_DEMO_READINESS.md for current work.
+
 # Backlog: good to great
 
 Not committed to, not sequenced by sprint — a ranked list of what would make this app
