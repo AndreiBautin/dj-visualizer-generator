@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { formatBytes } from '../lib/fileValidation'
+import { SURFACE_RAISED } from '../lib/surfaces'
+import { WaveformPreview } from './WaveformPreview'
 
 interface FilePreviewProps {
   file: File
@@ -20,9 +22,13 @@ export function FilePreview({ file, onRemove }: FilePreviewProps) {
   }, [file])
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3">
+    <div className={`flex items-center gap-3 p-3 ${SURFACE_RAISED}`}>
       {imageUrl ? (
-        <img src={imageUrl} alt={file.name} className="h-12 w-12 rounded object-cover" />
+        <img
+          src={imageUrl}
+          alt={file.name}
+          className="h-12 w-12 rounded object-cover"
+        />
       ) : (
         <div className="flex h-12 w-12 items-center justify-center rounded bg-white/10 text-xs text-white/60">
           FILE
@@ -31,6 +37,7 @@ export function FilePreview({ file, onRemove }: FilePreviewProps) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-white">{file.name}</p>
         <p className="text-xs text-white/60">{formatBytes(file.size)}</p>
+        {file.type.startsWith('audio/') && <WaveformPreview file={file} />}
       </div>
       <button
         type="button"

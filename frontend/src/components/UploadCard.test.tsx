@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { SURFACE_BASE } from '../lib/surfaces'
 import { UploadCard } from './UploadCard'
 
 function makeFile(name: string, type = ''): File {
@@ -98,6 +99,92 @@ describe('UploadCard', () => {
     await user.click(screen.getByRole('button', { name: /remove/i }))
 
     expect(onClear).toHaveBeenCalledOnce()
+  })
+
+  it('uses the shared base-surface treatment, not an ad-hoc bg-white/5', () => {
+    render(
+      <UploadCard
+        label="Audio file"
+        hint="hint"
+        accept=".mp3"
+        file={null}
+        onFileSelected={vi.fn()}
+        onClear={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId('upload-dropzone')).toHaveClass(
+      ...SURFACE_BASE.split(' '),
+    )
+  })
+
+  it('shows an active drag state while a file is dragged over the dropzone', () => {
+    render(
+      <UploadCard
+        label="Audio file"
+        hint="hint"
+        accept=".mp3"
+        file={null}
+        onFileSelected={vi.fn()}
+        onClear={vi.fn()}
+      />,
+    )
+
+    const dropzone = screen.getByTestId('upload-dropzone')
+    expect(dropzone).toHaveAttribute('data-drag-active', 'false')
+
+    fireEvent.dragEnter(dropzone, { dataTransfer: { files: [] } })
+    expect(dropzone).toHaveAttribute('data-drag-active', 'true')
+
+    fireEvent.dragLeave(dropzone, { dataTransfer: { files: [] } })
+    expect(dropzone).toHaveAttribute('data-drag-active', 'false')
+  })
+
+  it('does not flicker out of the active drag state when the drag passes over a child element', () => {
+    render(
+      <UploadCard
+        label="Audio file"
+        hint="hint"
+        accept=".mp3"
+        file={null}
+        onFileSelected={vi.fn()}
+        onClear={vi.fn()}
+      />,
+    )
+
+    const dropzone = screen.getByTestId('upload-dropzone')
+    const label = screen.getByText('Audio file')
+
+    // A real drag re-fires enter/leave as the pointer crosses child element boundaries inside
+    // the dropzone - a naive "leave clears active" handler would flicker the highlight off every
+    // time that happens, which is what a plain boolean toggle would do here.
+    fireEvent.dragEnter(dropzone, { dataTransfer: { files: [] } })
+    fireEvent.dragEnter(label, { dataTransfer: { files: [] } })
+    fireEvent.dragLeave(dropzone, { dataTransfer: { files: [] } })
+
+    expect(dropzone).toHaveAttribute('data-drag-active', 'true')
+  })
+
+  it('clears the active drag state once a file is dropped', () => {
+    const onFileSelected = vi.fn()
+    render(
+      <UploadCard
+        label="Audio file"
+        hint="hint"
+        accept=".mp3"
+        file={null}
+        onFileSelected={onFileSelected}
+        onClear={vi.fn()}
+      />,
+    )
+
+    const dropzone = screen.getByTestId('upload-dropzone')
+    const file = makeFile('mix.mp3')
+
+    fireEvent.dragEnter(dropzone, { dataTransfer: { files: [file] } })
+    fireEvent.drop(dropzone, { dataTransfer: { files: [file] } })
+
+    expect(dropzone).toHaveAttribute('data-drag-active', 'false')
   })
 
   it('renders a validation error when provided', () => {

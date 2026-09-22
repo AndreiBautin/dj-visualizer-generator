@@ -32,7 +32,7 @@ public sealed class FileSystemJobStore : IJobRepository, IJobQueue
             return null;
         }
 
-        await using var stream = File.OpenRead(statusFilePath);
+        await using var stream = new FileStream(statusFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
         var dto = await JsonSerializer.DeserializeAsync<JobDto>(stream, SerializerOptions, cancellationToken)
             ?? throw new InvalidOperationException($"status.json for job {id} was empty or malformed.");
 
@@ -58,7 +58,7 @@ public sealed class FileSystemJobStore : IJobRepository, IJobQueue
             JobDto? dto;
             try
             {
-                await using var stream = File.OpenRead(statusFilePath);
+                await using var stream = new FileStream(statusFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                 dto = await JsonSerializer.DeserializeAsync<JobDto>(stream, SerializerOptions, cancellationToken);
             }
             catch (JsonException)
@@ -101,7 +101,7 @@ public sealed class FileSystemJobStore : IJobRepository, IJobQueue
             JobDto? dto;
             try
             {
-                await using var stream = File.OpenRead(statusFilePath);
+                await using var stream = new FileStream(statusFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                 dto = await JsonSerializer.DeserializeAsync<JobDto>(stream, SerializerOptions, cancellationToken);
             }
             catch (JsonException)
@@ -135,7 +135,7 @@ public sealed class FileSystemJobStore : IJobRepository, IJobQueue
         Directory.CreateDirectory(jobDirectory);
 
         var statusFilePath = GetStatusFilePath(job.Id);
-        var tempFilePath = statusFilePath + ".tmp";
+        var tempFilePath = Path.Combine(jobDirectory, Path.GetRandomFileName() + ".tmp");
 
         var dto = ToDto(job);
         await using (var stream = File.Create(tempFilePath))
@@ -158,7 +158,8 @@ public sealed class FileSystemJobStore : IJobRepository, IJobQueue
         job.Progress,
         job.ErrorMessage,
         job.CreatedAt,
-        job.UpdatedAt);
+        job.UpdatedAt,
+        job.DownloadCount);
 
     private static Job ToDomain(JobDto dto) => Job.Rehydrate(
         JobId.Parse(dto.Id),
@@ -175,5 +176,6 @@ public sealed class FileSystemJobStore : IJobRepository, IJobQueue
         dto.Progress,
         dto.ErrorMessage,
         dto.CreatedAt,
-        dto.UpdatedAt);
+        dto.UpdatedAt,
+        dto.DownloadCount);
 }

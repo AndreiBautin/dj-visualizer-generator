@@ -14,6 +14,21 @@ public sealed class Job
     public string? ErrorMessage { get; private set; }
     public DateTimeOffset CreatedAt { get; }
     public DateTimeOffset UpdatedAt { get; private set; }
+    public int DownloadCount { get; private set; }
+
+    /// <summary>
+    /// How many times a completed job's video may be fetched before the id stops working.
+    /// </summary>
+    /// <remarks>
+    /// A job id is a bearer token with no owner (docs/SECURITY.md), so without a ceiling one
+    /// accepted render permits unbounded egress: the file sits on disk for the whole retention
+    /// window and re-serving it costs no CPU, only bandwidth. Five is comfortably above what a
+    /// visitor needs - the download, a retry, a second device - and far below the point where
+    /// scripting the re-fetch is worth anyone's time.
+    /// </remarks>
+    public const int MaxDownloads = 5;
+
+    public bool DownloadLimitReached => DownloadCount >= MaxDownloads;
 
     private Job(
         JobId id,
@@ -25,7 +40,8 @@ public sealed class Job
         int progress,
         string? errorMessage,
         DateTimeOffset createdAt,
-        DateTimeOffset updatedAt)
+        DateTimeOffset updatedAt,
+        int downloadCount)
     {
         Id = id;
         Title = title;
@@ -37,6 +53,7 @@ public sealed class Job
         ErrorMessage = errorMessage;
         CreatedAt = createdAt;
         UpdatedAt = updatedAt;
+        DownloadCount = downloadCount;
     }
 
     public static Job Create(
@@ -45,7 +62,7 @@ public sealed class Job
         RotationSpeed rotationSpeed,
         CaptionFont captionFont,
         DateTimeOffset now) =>
-        new(JobId.New(), title, preset, rotationSpeed, captionFont, JobStatus.Queued, progress: 0, errorMessage: null, createdAt: now, updatedAt: now);
+        new(JobId.New(), title, preset, rotationSpeed, captionFont, JobStatus.Queued, progress: 0, errorMessage: null, createdAt: now, updatedAt: now, downloadCount: 0);
 
     public static Job Rehydrate(
         JobId id,
@@ -57,8 +74,9 @@ public sealed class Job
         int progress,
         string? errorMessage,
         DateTimeOffset createdAt,
-        DateTimeOffset updatedAt) =>
-        new(id, title, preset, rotationSpeed, captionFont, status, progress, errorMessage, createdAt, updatedAt);
+        DateTimeOffset updatedAt,
+        int downloadCount = 0) =>
+        new(id, title, preset, rotationSpeed, captionFont, status, progress, errorMessage, createdAt, updatedAt, downloadCount);
 
     public void Start(DateTimeOffset now)
     {
@@ -97,6 +115,28 @@ public sealed class Job
         Status = JobStatus.Failed;
         ErrorMessage = reason;
         UpdatedAt = now;
+    }
+
+    /// <summary>Counts one delivery of the rendered video against <see cref="MaxDownloads"/>.</summary>
+    /// <remarks>
+    /// Takes no timestamp, and deliberately does <em>not</em> touch <see cref="UpdatedAt"/>.
+    /// Retention sweeps key on that timestamp, so bumping it here would let anyone holding the id
+    /// keep a job - and its video - alive indefinitely by re-downloading inside the retention
+    /// window. That is the exact opposite of what this limit is for.
+    /// </remarks>
+    public void RecordDownload()
+    {
+        if (Status != JobStatus.Completed)
+        {
+            throw new InvalidJobStateTransitionException(Status.ToString(), "download");
+        }
+
+        if (DownloadLimitReached)
+        {
+            throw new DownloadLimitExceededException(MaxDownloads);
+        }
+
+        DownloadCount++;
     }
 
     private void EnsureTransitionAllowed(JobStatus target, string attemptedAction)

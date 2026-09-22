@@ -7,10 +7,17 @@
 # Every value below is literal - no envVar uses `sync: false` - so the blueprint asks no
 # questions when it is applied. Connect it once and it configures itself.
 #
-# On cost: `plan: free` is the only plan named here, so this cannot silently provision a paid
-# instance. If Render ever rejects that value it fails the blueprint with an explicit error
-# rather than falling back to a billable plan. With no payment method on file Render suspends a
-# free service that exceeds its limits instead of charging for the overage.
+# On cost, in the order the money could actually move:
+#
+#   1. `plan: free` is the only plan named here, so this cannot silently provision a paid
+#      instance. If Render ever rejects that value it fails the blueprint with an explicit error
+#      rather than falling back to a billable plan.
+#   2. `Jobs__MaxEgressBytesPerWindow` below caps served video below the plan's included
+#      bandwidth. Bandwidth is the only metered thing an anonymous visitor can spend here, and
+#      before that cap existed a single scripted loop over one finished job's download URL could
+#      have emptied a month's allowance in an afternoon.
+#   3. With no payment method on file Render suspends a free service that exceeds its limits
+#      instead of charging for the overage - the backstop, not the plan.
 services:
   - type: web
     name: dj-visualizer
@@ -19,20 +26,46 @@ services:
     dockerfilePath: ./docker/Dockerfile.singlecontainer
     dockerContext: .
     healthCheckPath: /health
-    autoDeploy: true
+    autoDeployTrigger: checksPass
     envVars:
       # --- Limits tuned for a 512 MB / 0.1 CPU instance with an ephemeral disk ---------------
       # The self-hosted defaults (2 GB audio, 6 hours, 3 GB free-disk floor) are impossible here:
       # the free instance would refuse every job on the disk check alone. These are the demo's
       # limits, not the application's - docker-compose still runs the full-size defaults.
+      #
+      # 10 minutes turned out too short to be worth demoing - a real DJ mix runs 30-45+ minutes,
+      # and rejecting the thing the app exists to render made the demo pointless. Raised to 45
+      # minutes (2700 s) with the audio cap widened to match (a compressed 45-minute mix at a
+      # generous bitrate) and MinFreeDiskBytes raised to the worst-case output size at ~0.5 MB of
+      # video per second of audio (see the egress comment below) plus the upload itself, so an
+      # instance that is actually too full to finish the render is rejected with a clean 503 at
+      # creation time rather than failing partway through a mux with no disk left. The real
+      # ceiling on this free instance's ephemeral disk is undocumented and unverified against a
+      # real 45-minute render - watch the first few live renders at this length.
       - key: Jobs__MaxAudioBytes
-        value: "62914560" # 60 MB
+        value: "125829120" # 120 MB
       - key: Jobs__MaxImageBytes
         value: "10485760" # 10 MB
       - key: Jobs__MaxDurationSeconds
-        value: "900" # 15 minutes
+        value: "2700" # 45 minutes
       - key: Jobs__MinFreeDiskBytes
-        value: "104857600" # 100 MB
+        value: "1610612736" # 1.5 GB
+
+      # --- Bandwidth ceiling ------------------------------------------------------------------
+      # The one limit here that is about the bill rather than about the box.
+      #
+      # Compute on this plan is not metered - it is a fixed, free instance, so CPU abuse can only
+      # make the demo slow. Bandwidth is metered, and downloads are the only large responses the
+      # app serves. Left uncapped, one accepted render is unbounded egress: the finished video
+      # sits on disk for the retention window and re-serving it costs nothing but bytes.
+      #
+      # Process-local reservation guardrail, reset on restart; not a monthly billing ceiling.
+      # Preview ranges reserve a whole file conservatively. Provider account controls remain
+      # necessary. Zero is unlimited for local/self-hosted use.
+      - key: Jobs__MaxEgressBytesPerWindow
+        value: "3221225472" # 3 GB
+      - key: Jobs__EgressWindowHours
+        value: "24"
 
       # --- Render worker ---------------------------------------------------------------------
       # ultrafast, not the self-hosted veryfast: at roughly a tenth of a core, encode speed

@@ -22,7 +22,9 @@ describe('validateAudioFile', () => {
   })
 
   it('rejects a file over the maximum audio size', () => {
-    expect(validateAudioFile(makeFile('mix.mp3', MAX_AUDIO_BYTES + 1))).toMatch(/too large/i)
+    expect(validateAudioFile(makeFile('mix.mp3', MAX_AUDIO_BYTES + 1))).toMatch(
+      /too large/i,
+    )
   })
 
   it('accepts each supported audio extension', () => {
@@ -38,11 +40,15 @@ describe('validateArtworkFile', () => {
   })
 
   it('rejects an unsupported extension', () => {
-    expect(validateArtworkFile(makeFile('cover.gif', 1024))).toMatch(/unsupported/i)
+    expect(validateArtworkFile(makeFile('cover.gif', 1024))).toMatch(
+      /unsupported/i,
+    )
   })
 
   it('rejects a file over the maximum image size', () => {
-    expect(validateArtworkFile(makeFile('cover.png', MAX_IMAGE_BYTES + 1))).toMatch(/too large/i)
+    expect(
+      validateArtworkFile(makeFile('cover.png', MAX_IMAGE_BYTES + 1)),
+    ).toMatch(/too large/i)
   })
 
   it('accepts each supported image extension', () => {

@@ -10,6 +10,10 @@ frontend/playwright-report/
 frontend/test-results/
 frontend/blob-report/
 
+# run-standalone.bat copies the frontend build here at run time (mirrors the Dockerfile's
+# COPY --from=frontend /src/dist ./wwwroot) - rebuilt every run, never committed.
+backend/src/Api/wwwroot/
+
 # Env
 .env
 
@@ -28,3 +32,6 @@ jobs-data/
 .claude/
 .DS_Store
 Thumbs.db
+
+.verification/
+.portfolio-demo/

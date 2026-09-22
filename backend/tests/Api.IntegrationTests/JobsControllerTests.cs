@@ -230,6 +230,138 @@ public class JobsControllerTests : IDisposable
         (await response.Content.ReadAsByteArrayAsync()).Should().BeEquivalentTo(videoBytes);
     }
 
+    /// <summary>
+    /// End to end, because the per-job limit is only worth anything if the count survives the
+    /// round trip through status.json - a counter that incremented in memory and was never
+    /// persisted would pass a use-case test and reset on every request in production.
+    /// </summary>
+    [Fact]
+    public async Task Get_Download_Stops_Serving_The_Video_Once_The_Per_Job_Limit_Is_Reached()
+    {
+        var createResponse = await _client.PostAsync("/jobs", BuildValidForm());
+        var created = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var jobId = created.GetProperty("jobId").GetString()!;
+        await CompleteJobWithFakeVideoAsync(jobId);
+
+        for (var i = 0; i < DjVisualizer.Domain.Jobs.Job.MaxDownloads; i++)
+        {
+            var allowed = await _client.GetAsync($"/jobs/{jobId}/download");
+            allowed.StatusCode.Should().Be(HttpStatusCode.OK, $"download {i + 1} is within the allowance");
+        }
+
+        var refused = await _client.GetAsync($"/jobs/{jobId}/download");
+
+        refused.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+    }
+
+    /// <summary>
+    /// The instance-wide cap, which is the one that bounds the hosting bill: the per-job limit and
+    /// the per-IP rate limit both scale with the number of jobs and callers, so neither of them
+    /// caps a total.
+    /// </summary>
+    [Fact]
+    public async Task Get_Download_Returns_ServiceUnavailable_Once_The_Instance_Egress_Budget_Is_Spent()
+    {
+        using var factory = new JobsApiFactory
+        {
+            // Exactly one video's worth (CreateAndCompleteJobAsync writes 10 bytes), so the first
+            // download succeeds and spends the window's entire budget.
+            ExtraConfiguration = { ["Jobs:MaxEgressBytesPerWindow"] = "10" },
+        };
+        using var client = factory.CreateClient();
+
+        var jobId = await CreateAndCompleteJobAsync(factory, client);
+        var first = await client.GetAsync($"/jobs/{jobId}/download");
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // A different job, so this can only be the instance-wide budget refusing - not the
+        // per-job limit, which the first job has barely touched.
+        var secondJobId = await CreateAndCompleteJobAsync(factory, client);
+        var refused = await client.GetAsync($"/jobs/{secondJobId}/download");
+
+        refused.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+    }
+
+    /// <summary>
+    /// Zero means unlimited, and it is the default every self-hosted instance runs with. If that
+    /// ever inverted, a private deployment would refuse every download on a limit its operator
+    /// never set.
+    /// </summary>
+    [Fact]
+    public async Task Get_Download_Is_Not_Capped_When_No_Egress_Budget_Is_Configured()
+    {
+        var createResponse = await _client.PostAsync("/jobs", BuildValidForm());
+        var created = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var jobId = created.GetProperty("jobId").GetString()!;
+        await CompleteJobWithFakeVideoAsync(jobId);
+
+        var response = await _client.GetAsync($"/jobs/{jobId}/download");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Preview_Supports_Seeking_Without_Spending_Downloads()
+    {
+        var id = await CreateAndCompleteJobAsync(_factory, _client);
+        for (var i = 0; i < 6; i++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"/jobs/{id}/preview");
+            request.Headers.Range = new RangeHeaderValue(2, 5);
+            using var response = await _client.SendAsync(request);
+            response.StatusCode.Should().Be(HttpStatusCode.PartialContent);
+            (await response.Content.ReadAsByteArrayAsync()).Should().Equal(3, 4, 5, 6);
+            response.Content.Headers.ContentDisposition.Should().BeNull();
+        }
+        for (var i = 0; i < 5; i++)
+        {
+            using var response = await _client.GetAsync($"/jobs/{id}/download");
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+    }
+
+    [Fact]
+    public async Task Concurrent_Downloads_Admit_Exactly_Five_Requests()
+    {
+        var id = await CreateAndCompleteJobAsync(_factory, _client);
+        var responses = await Task.WhenAll(Enumerable.Range(0, 10)
+            .Select(_ => _client.GetAsync($"/jobs/{id}/download")));
+        responses.Count(r => r.StatusCode == HttpStatusCode.OK).Should().Be(5);
+        responses.Count(r => r.StatusCode == HttpStatusCode.TooManyRequests).Should().Be(5);
+        foreach (var response in responses) response.Dispose();
+    }
+
+    [Fact]
+    public async Task Preview_Still_Respects_Instance_Egress_Budget()
+    {
+        using var factory = new JobsApiFactory { ExtraConfiguration = { ["Jobs:MaxEgressBytesPerWindow"] = "10" } };
+        using var client = factory.CreateClient();
+        var id = await CreateAndCompleteJobAsync(factory, client);
+        (await client.GetAsync($"/jobs/{id}/preview")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.GetAsync($"/jobs/{id}/preview")).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+    }
+
+    private static async Task<string> CreateAndCompleteJobAsync(JobsApiFactory factory, HttpClient client)
+    {
+        var createResponse = await client.PostAsync("/jobs", BuildValidForm());
+        var created = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var jobId = created.GetProperty("jobId").GetString()!;
+
+        using var scope = factory.Services.CreateScope();
+        var jobRepository = scope.ServiceProvider.GetRequiredService<DjVisualizer.Application.Abstractions.IJobRepository>();
+        var fileStorage = scope.ServiceProvider.GetRequiredService<DjVisualizer.Application.Abstractions.IJobFileStorage>();
+        var id = DjVisualizer.Domain.Jobs.JobId.Parse(jobId);
+
+        var job = await jobRepository.FindAsync(id, CancellationToken.None);
+        job!.Start(DateTimeOffset.UtcNow);
+        job.Complete(DateTimeOffset.UtcNow);
+        await jobRepository.SaveAsync(job, CancellationToken.None);
+
+        var outputPath = await fileStorage.PrepareOutputFilePathAsync(id, CancellationToken.None);
+        await File.WriteAllBytesAsync(outputPath, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        return jobId;
+    }
+
     private async Task<byte[]> CompleteJobWithFakeVideoAsync(string jobId)
     {
         using var scope = _factory.Services.CreateScope();

@@ -6,7 +6,7 @@
 #
 # Exits non-zero on the first failure. Safe to run against a free instance that has spun down:
 # the first request is given a long timeout to cover the cold start.
-set -uo pipefail
+set -euo pipefail
 
 BASE="${1:-}"
 if [ -z "$BASE" ]; then
@@ -14,6 +14,17 @@ if [ -z "$BASE" ]; then
   exit 2
 fi
 BASE="${BASE%/}"
+
+EXPECTED="${2:?Pass the expected git commit as the second argument}"
+EXPECTED="${EXPECTED:0:7}"
+for _ in $(seq 1 120); do
+  ACTUAL=$(curl -fsS --max-time 10 "$BASE/version" 2>/dev/null | grep -o '"commit":"[^"]*"' | cut -d'"' -f4 || true)
+  [ "$ACTUAL" = "$EXPECTED" ] && break
+  sleep 5
+done
+[ "$ACTUAL" = "$EXPECTED" ] || { echo "Expected $EXPECTED, found $ACTUAL" >&2; exit 1; }
+command -v ffmpeg >/dev/null
+command -v ffprobe >/dev/null
 
 PASS=0
 FAIL=0
@@ -118,7 +129,9 @@ else
     if curl -fsS --max-time 300 -o "$TMP" "$BASE/jobs/$JOB/download"; then
       SIZE=$(wc -c < "$TMP" | tr -d ' ')
       if [ "$SIZE" -gt 100000 ]; then
-        ok "downloaded a ${SIZE}-byte mp4"
+        ffprobe -v error -show_entries stream=codec_name,width,height -of json "$TMP"
+        ffmpeg -v error -xerror -i "$TMP" -f null -
+        ok "downloaded and decoded a ${SIZE}-byte mp4"
       else
         bad "download was only ${SIZE} bytes"
       fi

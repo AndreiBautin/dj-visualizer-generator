@@ -9,3 +9,5 @@
 *.mp4 binary
 *.ttf binary
 *.ico binary
+
+*.bat text eol=crlf

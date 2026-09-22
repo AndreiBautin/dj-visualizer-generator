@@ -30,6 +30,8 @@ public static class JobsOptionsFactory
             MaxImageBytes = ParsePositiveLong(section["MaxImageBytes"], defaults.MaxImageBytes, "Jobs:MaxImageBytes", collected),
             MaxDurationSeconds = ParsePositiveInt(section["MaxDurationSeconds"], defaults.MaxDurationSeconds, "Jobs:MaxDurationSeconds", collected),
             MinFreeDiskBytes = ParsePositiveLong(section["MinFreeDiskBytes"], defaults.MinFreeDiskBytes, "Jobs:MinFreeDiskBytes", collected),
+            MaxEgressBytesPerWindow = ParseNonNegativeLong(section["MaxEgressBytesPerWindow"], defaults.MaxEgressBytesPerWindow, "Jobs:MaxEgressBytesPerWindow", collected),
+            EgressWindowHours = ParsePositiveInt(section["EgressWindowHours"], defaults.EgressWindowHours, "Jobs:EgressWindowHours", collected),
         };
 
         warnings = collected;
@@ -74,6 +76,29 @@ public static class JobsOptionsFactory
         if (!long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) || parsed <= 0)
         {
             warnings.Add($"{key}: '{raw}' is not a positive whole number; using {fallback}.");
+            return fallback;
+        }
+
+        return parsed;
+    }
+
+    /// <summary>
+    /// As <see cref="ParsePositiveLong"/>, but 0 is a meaningful value rather than a rejected one:
+    /// for the egress budget it means "unlimited". A malformed value must therefore fall back to
+    /// the configured default rather than to 0, which would read as "serve nothing" or "serve
+    /// everything" depending on the setting - both of them wrong, and neither of them noticed.
+    /// </summary>
+    internal static long ParseNonNegativeLong(string? raw, long fallback, string key, List<string> warnings)
+    {
+        var value = raw?.Trim();
+        if (string.IsNullOrEmpty(value))
+        {
+            return fallback;
+        }
+
+        if (!long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) || parsed < 0)
+        {
+            warnings.Add($"{key}: '{raw}' is not a whole number of zero or more; using {fallback}.");
             return fallback;
         }
 

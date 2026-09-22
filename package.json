@@ -1,0 +1,10 @@
+{
+  "name": "spinner",
+  "private": true,
+  "scripts": {
+    "verify": "node scripts/verify.mjs",
+    "lint": "node scripts/architecture.mjs",
+    "format:check": "node scripts/format.mjs",
+    "prepare": "git config core.hooksPath .githooks"
+  }
+}
