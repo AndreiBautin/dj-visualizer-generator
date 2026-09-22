@@ -18,7 +18,7 @@ BASE="${BASE%/}"
 EXPECTED="${2:?Pass the expected git commit as the second argument}"
 EXPECTED="${EXPECTED:0:7}"
 for _ in $(seq 1 120); do
-  ACTUAL=$(curl -fsS --max-time 10 "$BASE/version" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit", ""))' 2>/dev/null || true)
+  ACTUAL=$(curl -fsS --max-time 10 "$BASE/version" 2>/dev/null | grep -o '"commit":"[^"]*"' | cut -d'"' -f4 || true)
   [ "$ACTUAL" = "$EXPECTED" ] && break
   sleep 5
 done

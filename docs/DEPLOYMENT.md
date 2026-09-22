@@ -26,7 +26,7 @@ Do not trigger live verification as a required check before deployment: that cre
 bash scripts/verify-deployment.sh https://dj-visualizer.onrender.com "$(git rev-parse HEAD)"
 ```
 
-The script requires curl, Python 3, ffprobe and ffmpeg. It checks the page, health, headers, deep links, limits, sample submission, completion and actual MP4 decoding. Browser playback/seek and console checks complement this script.
+The script requires curl, ffprobe and ffmpeg — no Python. It checks the page, health, headers, deep links, limits, sample submission, completion and actual MP4 decoding. Browser playback/seek and console checks complement this script.
 
 ## Operations and limits
 
