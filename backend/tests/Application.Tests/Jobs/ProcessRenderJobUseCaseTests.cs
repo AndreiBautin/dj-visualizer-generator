@@ -4,6 +4,7 @@ using DjVisualizer.Domain.Jobs;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 
 namespace DjVisualizer.Application.Tests.Jobs;
 
@@ -19,6 +20,7 @@ public class ProcessRenderJobUseCaseTests
     private readonly IVideoRenderer _videoRenderer = Substitute.For<IVideoRenderer>();
     private readonly IJobRepository _jobRepository = Substitute.For<IJobRepository>();
     private readonly IClock _clock = Substitute.For<IClock>();
+    private readonly IOpsEventSink _ops = Substitute.For<IOpsEventSink>();
 
     public ProcessRenderJobUseCaseTests()
     {
@@ -26,8 +28,8 @@ public class ProcessRenderJobUseCaseTests
         _fileStorage.PrepareOutputFilePathAsync(Arg.Any<JobId>(), Arg.Any<CancellationToken>()).Returns(OutputPath);
     }
 
-    private ProcessRenderJobUseCase CreateSut() =>
-        new(_inputFileLocator, _audioProbe, _fileStorage, _videoRenderer, _jobRepository, _clock, NullLogger<ProcessRenderJobUseCase>.Instance);
+    private ProcessRenderJobUseCase CreateSut(IOpsEventSink? ops = null) =>
+        new(_inputFileLocator, _audioProbe, _fileStorage, _videoRenderer, _jobRepository, _clock, NullLogger<ProcessRenderJobUseCase>.Instance, ops ?? _ops);
 
     private static Job CreateProcessingJob()
     {
@@ -67,6 +69,7 @@ public class ProcessRenderJobUseCaseTests
             Arg.Any<CancellationToken>());
         // Progress is reported at 50, then 100 during rendering, then the job is saved once more as Completed (still 100).
         observedProgressAtEachSave.Should().Equal(50, 100, 100);
+        await _ops.DidNotReceiveWithAnyArgs().PublishAsync(default!, default);
     }
 
     private static async Task ReportProgress(RenderProgressCallback onProgress, params int[] percentages)
@@ -88,6 +91,9 @@ public class ProcessRenderJobUseCaseTests
         job.Status.Should().Be(JobStatus.Failed);
         await _videoRenderer.DidNotReceiveWithAnyArgs().RenderAsync(default!, default!, default);
         await _jobRepository.Received(1).SaveAsync(Arg.Is<Job>(j => j!.Status == JobStatus.Failed), Arg.Any<CancellationToken>());
+        await _ops.Received(1).PublishAsync(
+            Arg.Is<OpsEvent>(e => e!.Service == "dj-worker" && e.Level == "error" && e.Message.Contains(job.Id.ToString(), StringComparison.Ordinal)),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -103,6 +109,9 @@ public class ProcessRenderJobUseCaseTests
         job.Status.Should().Be(JobStatus.Failed);
         job.ErrorMessage.Should().Be(ProcessRenderJobUseCase.AudioUnreadableMessage);
         await _videoRenderer.DidNotReceiveWithAnyArgs().RenderAsync(default!, default!, default);
+        await _ops.Received(1).PublishAsync(
+            Arg.Is<OpsEvent>(e => e!.Message.Contains(ProcessRenderJobUseCase.AudioUnreadableMessage, StringComparison.Ordinal)),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -119,6 +128,22 @@ public class ProcessRenderJobUseCaseTests
 
         job.Status.Should().Be(JobStatus.Failed);
         job.ErrorMessage.Should().Be(ProcessRenderJobUseCase.RenderFailedMessage);
+        await _ops.Received(1).PublishAsync(
+            Arg.Is<OpsEvent>(e => e!.Message.Contains(ProcessRenderJobUseCase.RenderFailedMessage, StringComparison.Ordinal)),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Still_Fails_The_Job_When_The_Ops_Sink_Throws()
+    {
+        var job = CreateProcessingJob();
+        _inputFileLocator.LocateAsync(job.Id, Arg.Any<CancellationToken>()).Returns((JobInputFiles?)null);
+        _ops.PublishAsync(Arg.Any<OpsEvent>(), Arg.Any<CancellationToken>()).ThrowsAsync(new HttpRequestException("ops down"));
+
+        await CreateSut().ExecuteAsync(job, CancellationToken.None);
+
+        job.Status.Should().Be(JobStatus.Failed);
+        await _jobRepository.Received(1).SaveAsync(Arg.Is<Job>(j => j!.Status == JobStatus.Failed), Arg.Any<CancellationToken>());
     }
 
     /// <summary>
@@ -127,7 +152,7 @@ public class ProcessRenderJobUseCaseTests
     /// server paths and the internal filter graph - none of that may reach a caller.
     /// </summary>
     [Theory]
-    [InlineData(@"ffmpeg exited with code 1: Error opening C:\Users\dj\jobs\a1\input\audio.mp3")]
+    [InlineData(@"ffmpeg exited with code 1: Error opening C:\\Users\\dj\\jobs\\a1\\input\\audio.mp3")]
     [InlineData("ffprobe failed: /data/jobs/9f2/input/audio.mp3: Invalid data found")]
     public async Task ExecuteAsync_Does_Not_Leak_Renderer_Diagnostics_Into_The_Job_Error_Message(string diagnosticDetail)
     {
@@ -165,5 +190,6 @@ public class ProcessRenderJobUseCaseTests
         await act.Should().ThrowAsync<OperationCanceledException>();
         job.Status.Should().Be(JobStatus.Processing);
         await _jobRepository.DidNotReceiveWithAnyArgs().SaveAsync(default!, default);
+        await _ops.DidNotReceiveWithAnyArgs().PublishAsync(default!, default);
     }
 }
