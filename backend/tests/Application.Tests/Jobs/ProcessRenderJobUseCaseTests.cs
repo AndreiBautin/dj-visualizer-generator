@@ -152,7 +152,7 @@ public class ProcessRenderJobUseCaseTests
     /// server paths and the internal filter graph - none of that may reach a caller.
     /// </summary>
     [Theory]
-    [InlineData(@"ffmpeg exited with code 1: Error opening C:\\Users\\dj\\jobs\\a1\\input\\audio.mp3")]
+    [InlineData(@"ffmpeg exited with code 1: Error opening C:\Users\dj\jobs\a1\input\audio.mp3")]
     [InlineData("ffprobe failed: /data/jobs/9f2/input/audio.mp3: Invalid data found")]
     public async Task ExecuteAsync_Does_Not_Leak_Renderer_Diagnostics_Into_The_Job_Error_Message(string diagnosticDetail)
     {
