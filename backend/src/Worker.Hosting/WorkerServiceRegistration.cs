@@ -1,6 +1,7 @@
 using DjVisualizer.Application.Abstractions;
 using DjVisualizer.Application.Jobs;
 using DjVisualizer.Domain.Jobs;
+using DjVisualizer.Infrastructure.Ops;
 using DjVisualizer.Infrastructure.Rendering;
 using DjVisualizer.Infrastructure.Uploads;
 using DjVisualizer.Worker.Configuration;
@@ -49,6 +50,8 @@ public static class WorkerServiceRegistration
             return new FfmpegVideoRenderer(fontFilePaths, workerOptions.VideoCodec, workerOptions.X264Preset);
         });
 
+        RegisterOpsSink(services, configuration);
+
         // Singleton, not scoped: JobPollingService is itself a singleton hosted service and
         // consumes this directly (no per-request scope exists in a Worker), and all of its own
         // dependencies are singletons too, so this is safe - it holds no per-job mutable state.
@@ -59,5 +62,33 @@ public static class WorkerServiceRegistration
         services.AddHostedService<CleanupService>();
 
         return services;
+    }
+
+    private static void RegisterOpsSink(IServiceCollection services, IConfiguration configuration)
+    {
+        var options = new IncidentBrainOpsOptions
+        {
+            IncidentBrainUrl = configuration["Ops:IncidentBrainUrl"],
+            IngestKey = configuration["Ops:IngestKey"],
+            Service = string.IsNullOrWhiteSpace(configuration["Ops:Service"])
+                ? "dj-worker"
+                : configuration["Ops:Service"]!,
+        };
+
+        if (string.IsNullOrWhiteSpace(options.IncidentBrainUrl) || string.IsNullOrWhiteSpace(options.IngestKey))
+        {
+            services.AddSingleton<IOpsEventSink, NoOpOpsEventSink>();
+            return;
+        }
+
+        services.AddSingleton<IOpsEventSink>(_ =>
+        {
+            var http = new HttpClient
+            {
+                BaseAddress = new Uri(options.IncidentBrainUrl!.TrimEnd('/') + "/"),
+                Timeout = TimeSpan.FromSeconds(3),
+            };
+            return new IncidentBrainOpsSink(http, options);
+        });
     }
 }
