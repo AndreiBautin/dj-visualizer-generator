@@ -11,7 +11,8 @@ public sealed class ProcessRenderJobUseCase(
     IVideoRenderer videoRenderer,
     IJobRepository jobRepository,
     IClock clock,
-    ILogger<ProcessRenderJobUseCase> logger) : IProcessRenderJobUseCase
+    ILogger<ProcessRenderJobUseCase> logger,
+    IOpsEventSink? opsEventSink = null) : IProcessRenderJobUseCase
 {
     // A job's ErrorMessage is served verbatim to whoever polls GET /jobs/{id}, so it must stay
     // free of diagnostic detail: ffmpeg and ffprobe report failures with the full command line,
@@ -87,5 +88,29 @@ public sealed class ProcessRenderJobUseCase(
     {
         job.Fail(reason, clock.UtcNow);
         await jobRepository.SaveAsync(job, CancellationToken.None);
+        await PublishFailureAsync(job, reason);
+    }
+
+    private async Task PublishFailureAsync(Job job, string reason)
+    {
+        if (opsEventSink is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await opsEventSink.PublishAsync(
+                new OpsEvent(
+                    "dj-worker",
+                    "error",
+                    $"job {job.Id} failed: {reason}",
+                    clock.UtcNow.UtcDateTime),
+                CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Ops ingest threw after failing job {JobId}; ignored.", job.Id);
+        }
     }
 }
