@@ -4,6 +4,8 @@ When a render job fails, the worker posts one log line to Incident Intelligence.
 
 This is opt-in. Empty config is a no-op. The public demo stays standalone.
 
+Verified end to end against both live deployments: ten repeated render failures produced one stable incident on the IIP dashboard, no duplicates across analysis ticks. Both public deployments keep this off (`Ops__IncidentBrainUrl`/`Ops__IngestKey` unset here, `Ingest__ApiKey` unset on IIP) so the public demo never carries this app's real production data into an unauthenticated dashboard elsewhere. The `dj-ingest-live-instance` branch (both repos) is where it's live, for a private, authenticated instance.
+
 ## What gets sent
 
 On `ProcessRenderJobUseCase` fail (missing files, unreadable audio, ffmpeg error):
