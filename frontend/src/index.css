@@ -5,8 +5,8 @@
    the app reads as one designed surface instead of the un-opinionated black/white/gray Tailwind
    leaves you with untouched. */
 @theme {
-  --color-accent: oklch(70% 0.19 40);
-  --color-accent-content: oklch(15% 0.02 40);
+  --color-accent: oklch(62% 0.19 235);
+  --color-accent-content: oklch(98% 0.01 235);
 }
 
 /* The same three files the render worker burns captions with (assets/fonts/, copied into
