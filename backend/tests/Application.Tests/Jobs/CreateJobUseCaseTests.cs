@@ -4,6 +4,7 @@ using DjVisualizer.Application.Jobs;
 using DjVisualizer.Domain.Jobs;
 using DjVisualizer.Domain.Uploads;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 namespace DjVisualizer.Application.Tests.Jobs;
@@ -19,7 +20,8 @@ public class CreateJobUseCaseTests
     private readonly IDiskSpaceChecker _diskSpaceChecker = Substitute.For<IDiskSpaceChecker>();
     private readonly UploadLimits _limits = new(maxAudioBytes: 1000, maxImageBytes: 1000, maxDurationSeconds: 21_600, minFreeDiskBytes: 1000);
 
-    private CreateJobUseCase CreateSut() => new(_jobQueue, _fileStorage, _audioProbe, _diskSpaceChecker, _limits, _clock);
+    private CreateJobUseCase CreateSut() =>
+        new(_jobQueue, _fileStorage, _audioProbe, _diskSpaceChecker, _limits, _clock, NullLogger<CreateJobUseCase>.Instance);
 
     private static CreateJobRequest ValidRequest() => new(
         Title: "Friday Night Set",
@@ -196,5 +198,32 @@ public class CreateJobUseCaseTests
         result.IsSuccess.Should().BeFalse();
         result.Error!.Code.Should().Be(ErrorCodes.Failure);
         await _fileStorage.Received(1).DeleteJobFilesAsync(Arg.Any<JobId>(), Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// This Result's error is served verbatim by the create-job endpoint, so it is a trust boundary
+    /// on the way out - the same rule ProcessRenderJobUseCase already enforces for the worker path.
+    /// ffprobe reports failures with the full command line, which embeds an absolute server path;
+    /// none of that may reach a caller. Reported live as a real leak: a corrupt-but-magic-byte-valid
+    /// WAV produced a 502 with raw ffprobe stderr, including a /tmp job directory path, in the
+    /// response body.
+    /// </summary>
+    [Fact]
+    public async Task ExecuteAsync_Does_Not_Leak_Probe_Diagnostics_Into_The_Failure_Message()
+    {
+        const string diagnosticDetail =
+            "ffprobe exited with code 1: /tmp/djvisualizer-jobs/9f2c/input/audio.wav: Invalid data found when processing input";
+        _fileStorage.SaveAudioAsync(Arg.Any<JobId>(), Arg.Any<Stream>(), "mix.mp3", Arg.Any<CancellationToken>())
+            .Returns(Result<SavedFile>.Success(new SavedFile("/data/jobs/x/input/audio.mp3", 500)));
+        _fileStorage.SaveArtworkAsync(Arg.Any<JobId>(), Arg.Any<Stream>(), "cover.jpg", Arg.Any<CancellationToken>())
+            .Returns(Result<SavedFile>.Success(new SavedFile("/data/jobs/x/input/artwork.jpg", 200)));
+        _audioProbe.GetDurationAsync("/data/jobs/x/input/audio.mp3", Arg.Any<CancellationToken>())
+            .Returns<TimeSpan>(_ => throw new AudioProbeException(diagnosticDetail));
+
+        var result = await CreateSut().ExecuteAsync(ValidRequest(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Message.Should().Be(CreateJobUseCase.AudioUnreadableMessage);
+        result.Error!.Message.Should().NotContainAny("/tmp", "/data/jobs", "ffprobe");
     }
 }

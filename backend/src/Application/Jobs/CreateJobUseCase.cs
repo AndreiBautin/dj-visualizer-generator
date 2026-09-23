@@ -3,6 +3,7 @@ using DjVisualizer.Application.Common;
 using DjVisualizer.Domain.Exceptions;
 using DjVisualizer.Domain.Jobs;
 using DjVisualizer.Domain.Uploads;
+using Microsoft.Extensions.Logging;
 
 namespace DjVisualizer.Application.Jobs;
 
@@ -12,8 +13,16 @@ public sealed class CreateJobUseCase(
     IAudioProbe audioProbe,
     IDiskSpaceChecker diskSpaceChecker,
     UploadLimits limits,
-    IClock clock) : ICreateJobUseCase
+    IClock clock,
+    ILogger<CreateJobUseCase> logger) : ICreateJobUseCase
 {
+    // Same trust-boundary rule ProcessRenderJobUseCase already states: this Result's error is
+    // served verbatim to the caller, and ffprobe reports failures with the full command line,
+    // which embeds an absolute server path. The raw exception is logged instead, where an
+    // operator can see it and a caller cannot.
+    public const string AudioUnreadableMessage =
+        "The audio file could not be read. It may be corrupt or in an unsupported format.";
+
     public async Task<Result<CreateJobResult>> ExecuteAsync(CreateJobRequest request, CancellationToken cancellationToken)
     {
         if (diskSpaceChecker.GetAvailableFreeBytes() < limits.MinFreeDiskBytes)
@@ -89,8 +98,9 @@ public sealed class CreateJobUseCase(
         }
         catch (AudioProbeException ex)
         {
+            logger.LogError(ex, "Probing audio failed for job {JobId}.", job.Id);
             await fileStorage.DeleteJobFilesAsync(job.Id, cancellationToken);
-            return Result<CreateJobResult>.Failure(Error.Failure(ex.Message));
+            return Result<CreateJobResult>.Failure(Error.Failure(AudioUnreadableMessage));
         }
 
         if (duration > TimeSpan.FromSeconds(limits.MaxDurationSeconds))
