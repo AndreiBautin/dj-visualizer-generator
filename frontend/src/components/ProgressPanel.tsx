@@ -106,10 +106,10 @@ export function ProgressPanel({ jobId, onReset }: ProgressPanelProps) {
         className="h-2 w-64 overflow-hidden rounded-full bg-white/10"
       >
         {isIndeterminate ? (
-          <div className="h-full w-1/3 rounded-full bg-white/60 motion-safe:animate-[progress-sweep_1.4s_ease-in-out_infinite]" />
+          <div className="h-full w-1/3 rounded-full bg-accent/70 motion-safe:animate-[progress-sweep_1.4s_ease-in-out_infinite]" />
         ) : (
           <div
-            className="h-full bg-white transition-all"
+            className="h-full bg-accent transition-all"
             style={{ width: `${data.progress}%` }}
           />
         )}

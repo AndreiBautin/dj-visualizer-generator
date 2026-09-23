@@ -1,5 +1,14 @@
 @import 'tailwindcss';
 
+/* One accent, used everywhere something is the primary action or the thing currently happening
+   (the CTA, the progress fill, a selected segmented option, the drag-active dropzone state) - so
+   the app reads as one designed surface instead of the un-opinionated black/white/gray Tailwind
+   leaves you with untouched. */
+@theme {
+  --color-accent: oklch(70% 0.19 40);
+  --color-accent-content: oklch(15% 0.02 40);
+}
+
 /* The same three files the render worker burns captions with (assets/fonts/, copied into
    public/fonts/ - see docs/BACKLOG.md item 3) - so the caption-font choice previews itself in
    its actual typeface instead of naming itself in the UI's own font. */

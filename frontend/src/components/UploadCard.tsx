@@ -66,7 +66,7 @@ export function UploadCard({
         // important modifier) deterministically overrides those two specific utilities for the
         // active-drag state instead of leaving two same-property classes to fight over cascade
         // order.
-        isDragActive ? 'border-white/60! bg-white/10!' : 'hover:border-white/25'
+        isDragActive ? 'border-accent/70! bg-accent/10!' : 'hover:border-white/25'
       }`}
     >
       <label

@@ -113,8 +113,11 @@ function App() {
 
   if (jobId) {
     return (
-      <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center gap-6 p-8">
-        <h1 className="text-2xl font-semibold">DJ Visualizer Generator</h1>
+      <main className="relative min-h-screen overflow-hidden bg-black text-white flex flex-col items-center justify-center gap-6 p-8">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklch,var(--color-accent)_18%,transparent),transparent_60%)]" />
+        <h1 className="relative text-2xl font-semibold tracking-tight">
+          <span className="text-accent">●</span> DJ Visualizer Generator
+        </h1>
         <ProgressPanel jobId={jobId} onReset={handleReset} />
         <BuildFooter />
       </main>
@@ -126,9 +129,12 @@ function App() {
     !createJobMutation.isPending
 
   return (
-    <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center gap-6 p-8">
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold">DJ Visualizer Generator</h1>
+    <main className="relative min-h-screen overflow-hidden bg-black text-white flex flex-col items-center justify-center gap-6 p-8">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklch,var(--color-accent)_18%,transparent),transparent_60%)]" />
+      <div className="relative text-center">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          <span className="text-accent">●</span> DJ Visualizer Generator
+        </h1>
         <p className="text-white/60">
           Upload a mix, get a spinning-record video.
         </p>
@@ -180,7 +186,7 @@ function App() {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="w-full rounded-lg bg-white px-6 py-3 text-sm font-semibold text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="w-full rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-accent-content shadow-md shadow-black/30 transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100"
           >
             {createJobMutation.isPending ? 'Uploading...' : 'Generate Video'}
           </button>

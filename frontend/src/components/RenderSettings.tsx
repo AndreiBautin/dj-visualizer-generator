@@ -31,7 +31,7 @@ const PRESET_OPTIONS = [
 ] as const
 
 const SEGMENT_LABEL_CLASS =
-  'block cursor-pointer rounded-md px-3 py-2 text-center text-sm text-white/70 transition-colors peer-checked:bg-white peer-checked:font-semibold peer-checked:text-black hover:text-white'
+  'block cursor-pointer rounded-md px-3 py-2 text-center text-sm text-white/70 transition-colors peer-checked:bg-accent peer-checked:font-semibold peer-checked:text-accent-content hover:text-white'
 
 export function RenderSettings() {
   const {
@@ -56,7 +56,7 @@ export function RenderSettings() {
         <input
           id="title"
           type="text"
-          className={`mt-1 w-full px-3 py-2 text-white outline-none focus:border-white/50 ${SURFACE_SUNKEN}`}
+          className={`mt-1 w-full px-3 py-2 text-white outline-none focus:border-accent/60 ${SURFACE_SUNKEN}`}
           {...register('title')}
         />
         {errors.title && (
@@ -108,7 +108,7 @@ export function RenderSettings() {
             min={MIN_ROTATION_SPEED_SECONDS}
             max={MAX_ROTATION_SPEED_SECONDS}
             step={0.5}
-            className="w-full accent-white"
+            className="w-full accent-accent"
             {...register('rotationSpeedSeconds', { valueAsNumber: true })}
           />
           <span className="text-xs text-white/50">Slow</span>

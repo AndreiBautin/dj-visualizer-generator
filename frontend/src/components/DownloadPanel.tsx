@@ -18,7 +18,7 @@ export function DownloadPanel({ jobId, onReset }: DownloadPanelProps) {
       <a
         href={downloadUrl(jobId)}
         download
-        className="rounded-lg bg-white px-6 py-3 text-sm font-semibold text-black hover:bg-white/90"
+        className="rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-accent-content shadow-md shadow-black/30 transition-colors hover:brightness-110"
       >
         Download MP4
       </a>
