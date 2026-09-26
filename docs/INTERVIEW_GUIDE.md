@@ -6,7 +6,7 @@
 
 ## Three-minute demonstration
 
-Start the bundled sample, explain settings and progress, play and seek the result, then save it. Show `ProcessRenderJobUseCase` and a real FFmpeg test. Explain the single-instance boundary. It's live and was last verified end-to-end (real render, download, decode) on 2026-09-22 — open it before a call anyway, since a free instance sleeps after 15 minutes idle and the first request can take up to a minute; keep a local sample ready regardless.
+Start the bundled sample, explain settings and progress, play and seek the result, then save it. Show `ProcessRenderJobUseCase` and a real FFmpeg test. Explain the single-instance boundary. It's live and was last verified end-to-end (real render, download, decode) on 2026-09-26 — open it before a call anyway, since a free instance sleeps after 15 minutes idle and the first request can take up to a minute; keep a local sample ready regardless.
 
 ## Decisions to explain
 

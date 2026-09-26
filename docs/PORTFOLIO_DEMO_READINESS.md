@@ -1,5 +1,31 @@
 # Spinner: senior developer portfolio demo readiness
 
+## Current result — 2026-09-26
+
+The existing product is ready for a portfolio walkthrough. The [public demo](https://dj-visualizer.onrender.com/) and [public source](https://github.com/AndreiBautin/dj-visualizer-generator) are available. AI listening and critique remain outside this application scope.
+
+Verified application revision: `ba87b36a3174ed9530f452b715e06de063ccae69`.
+
+- Root `npm run verify` passed: architecture boundaries, lint, formatting, typed Release builds, **301 backend tests with zero skips**, **91 frontend tests**, the audit-gate regression test, and default/standalone frontend builds.
+- [CI for this revision](https://github.com/AndreiBautin/dj-visualizer-generator/actions/runs/35809412680) succeeded. [Expected-revision deployment verification](https://github.com/AndreiBautin/dj-visualizer-generator/actions/runs/36240998193) succeeded.
+- A fresh public browser session on September 26 submitted the bundled sample, observed render progress and completion, played the result, sought back using the native timeline, and downloaded the MP4. The video reached readyState 4 with advancing playback time; the browser console recorded no errors.
+- The downloaded sample was independently probed and completely decoded with FFmpeg: **24.000 seconds, 1920×1080 H.264 video, AAC audio, 19,741,611 bytes**, no decode errors.
+- The local pre-push hook is enabled and its executable bit is tracked. The architecture gate rejected a deliberately reversed Domain-to-Infrastructure dependency; the original project file was restored afterward.
+
+### Gaps closed
+
+Preview now supports ranges separately from counted saves. Concurrent save admission is serialized, file writes use unique temporary files, and process leases enforce the single API/worker boundary. The root gate requires media tools and rejects skipped backend tests. CI uses the same gate, deployment waits for successful checks, and the live verifier requires the expected commit and decodes rendered media. Startup, architecture, testing, security and interview documentation describe the implemented system.
+
+### Deliberate limits
+
+The free host sleeps, so open the demo before an interview and keep a downloaded sample available. Storage and coordination remain single-instance and ephemeral. The egress budget is process-local and resets on restart; range requests conservatively reserve the entire file. Job URLs are bearer capabilities, not authenticated ownership. Production load at the maximum upload/duration limits and physical-device accessibility were not established by this verification. Exhausted download links can still show an API error response; that edge case is documented rather than represented as polished UI. Incident ingest is intentionally disabled on the public demo.
+
+The assessment below is preserved as a **historical September 21 baseline**, not the current deployment status or remaining task list.
+
+---
+
+## Historical assessment — 2026-09-21
+
 Assessment date: 2026-09-21. Source inspected: commit `55727a6`.
 
 ## Verdict and scope

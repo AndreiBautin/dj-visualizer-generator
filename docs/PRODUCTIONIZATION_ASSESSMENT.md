@@ -1,6 +1,8 @@
 # Productionization assessment
 
-## Portfolio walker status (2026-09-04)
+Historical assessments follow. For the current verified release, resolved gaps and remaining limits, see [portfolio demo readiness](PORTFOLIO_DEMO_READINESS.md). As of 2026-09-26 the repository is public and the live sample has been rendered, played, sought and downloaded successfully.
+
+## Historical portfolio walker status (2026-09-04)
 
 This repo is already in portfolio shape. Live demo is up at https://dj-visualizer.onrender.com. README, architecture doc with request trace, tests (318+), CI with audit and secret scan, LICENSE (MIT), .env.example, and the rest of the checklist are present.
 
