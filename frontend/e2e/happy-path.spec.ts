@@ -111,15 +111,15 @@ test('upload a short mix, watch it render, and download the mp4', async ({
   // React's change-detection ignores it), matching how a real user nudges the slider.
   //
   // focus(), NOT click(): clicking a range input moves the thumb to the clicked point, so a
-  // centre click lands near the middle of the 2-15s range and the arrow presses then start from
-  // an unpredictable value rather than the 3s default.
+  // centre click lands near the middle of the 12-90s range and the arrow presses then start from
+  // an unpredictable value rather than the 18s default.
   const rotationSlider = page.getByLabel(/rotation speed/i)
   await rotationSlider.focus()
-  await expect(page.getByText(/3\.0s per spin/i)).toBeVisible()
+  await expect(page.getByText(/^18s per spin/i)).toBeVisible()
   await page.keyboard.press('ArrowRight')
   await page.keyboard.press('ArrowRight')
-  // step is 0.5, so two presses from the 3s default lands on 4s.
-  await expect(page.getByText(/4\.0s per spin/i)).toBeVisible()
+  // step is 1, so two presses from the 18s default lands on 20s.
+  await expect(page.getByText(/^20s per spin/i)).toBeVisible()
   // force: true - same sr-only-radio-under-a-visible-span shape as the preset picker above.
   await page.getByLabel('Mono').check({ force: true })
 
