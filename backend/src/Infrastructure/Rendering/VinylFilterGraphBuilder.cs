@@ -5,81 +5,101 @@ namespace DjVisualizer.Infrastructure.Rendering;
 
 /// <summary>
 /// Builds the ffmpeg filter_complex graphs for the spinning-record visual, split into passes so
-/// the expensive per-pixel <c>geq</c>/blur math runs exactly once instead of on every output
-/// frame:
+/// the expensive per-pixel <c>geq</c> math runs exactly once instead of on every output frame:
 ///
-/// Pass 1 (<see cref="BuildStaticVinylGraph"/>): crops the artwork to a circle with a white
-/// border and renders it as a single static image.
+/// Pass 1 (<see cref="BuildStaticVinylGraph"/>): draws the record - a grooved black disc with a
+/// soft highlight, the artwork as its centre label, and the spindle hole - as one static image.
 ///
-/// Pass 2 (<see cref="BuildAmbientBackgroundGraph"/>): a separate static image - the same artwork
-/// scaled to fill the frame, heavily blurred and darkened into an ambient glow, replacing a flat
-/// black background.
+/// Pass 2 (<see cref="BuildBackgroundGraph"/>): the backdrop, also a single static image - black
+/// with a faint accent glow toward the top-left, the same as the app's own page.
 ///
-/// Pass 3 (<see cref="BuildRotatingCompositeGraph"/>): loops the vinyl image, applying only the
-/// (much cheaper) continuous rotation and a soft drop shadow, composites it over the ambient
-/// background (input 1), and overlays the title bottom-center.
+/// Pass 3 (<see cref="BuildRotatingCompositeGraph"/>): loops the record image, applying only the
+/// (much cheaper) continuous rotation, composites it over the backdrop (input 1), and overlays
+/// the title bottom-center.
 ///
-/// The geometry and the rotate filter's angle sign follow ffmpeg's documented behavior and have
-/// been visually verified against real renders (still frames extracted and inspected showed the
-/// expected circular crop, border, shadow, ambient background, and centering).
+/// <para><b>The record is the homepage's record.</b> The video used to crop the artwork to a
+/// full disc with a white border over a blurred full-frame copy of it. Asked for as "make the
+/// video identical to the spinning preview on the homepage": every proportion here is taken from
+/// <c>VinylRecord.tsx</c> - label at 40% of the record, spindle hole at 6%, grooves on a period of
+/// four CSS pixels of a 22rem record, the highlight at 35%/30% - so the two cannot be told apart
+/// except by size. Change one and change the other.</para>
 /// </summary>
 internal static class VinylFilterGraphBuilder
 {
     private const double DiameterRatio = 0.74;
-    private const double BorderRatio = 0.016;
-    private const int MinBorderWidth = 6;
     private const double FontSizeRatio = 0.044;
     private const double BottomMarginRatio = 0.09;
 
-    // Shadow proportions are relative to the ring diameter so the "floating disc" effect looks
-    // consistent across presets rather than a fixed pixel offset looking oversized on 720p or
-    // negligible on 1080p.
-    private const double ShadowOffsetXRatio = 0.026;
-    private const double ShadowOffsetYRatio = 0.033;
-    private const double ShadowBlurRadiusRatio = 0.018;
-    private const int MinShadowBlurRadius = 4;
+    /// <summary>The homepage record is 22rem - 352 CSS pixels - and its gradients are written in
+    /// pixels of that, so the render scales each by <c>diameter / 352</c>.</summary>
+    private const double PreviewDiameterPx = 352;
 
-    private const int AmbientBlurSigma = 40;
-    private const double AmbientBrightness = -0.15;
-    private const double AmbientSaturation = 0.6;
+    private const double LabelRatio = 0.40; // inset 30%
+    private const double HoleRatio = 0.06; // inset 47%
+    private const double HighlightInsetRatio = 0.88; // inset 6%
 
-    private readonly record struct Geometry(
-        int Diameter,
-        int RingDiameter,
-        int FontSize,
-        int BottomMargin,
-        int ShadowOffsetX,
-        int ShadowOffsetY,
-        int ShadowBlurRadius);
+    // The page's accent, oklch(62% 0.19 235), is sRGB (0, 147, 230); its glow is 14% of that at
+    // 20%/20%, fading out at 55% of the distance to the far corner.
+    private const int GlowGreen = 21;
+    private const int GlowBlue = 32;
+
+    private readonly record struct Geometry(int Diameter, int FontSize, int BottomMargin);
 
     /// <summary>
-    /// A soft, blurred, darkened full-frame version of the artwork itself, replacing a flat black
-    /// background with an ambient glow of the artwork's own colors (in the style of Spotify
-    /// Canvas / Apple Music's "now playing" background) - rendered once as a static image, just
-    /// like <see cref="BuildStaticVinylGraph"/>, so it costs nothing per output frame.
+    /// The backdrop: black with the accent glow the app's page has, rendered once as a still. It
+    /// reads no input - it used to be the artwork blurred to fill the frame.
     /// </summary>
-    public static string BuildAmbientBackgroundGraph(VideoPreset preset)
+    public static string BuildBackgroundGraph(VideoPreset preset)
     {
-        var stages = new[]
-        {
-            $"[0:v]scale={preset.Width}:{preset.Height}:force_original_aspect_ratio=increase,crop={preset.Width}:{preset.Height}",
-            $"gblur=sigma={AmbientBlurSigma}",
-            $"eq=brightness={AmbientBrightness.ToString(CultureInfo.InvariantCulture)}:saturation={AmbientSaturation.ToString(CultureInfo.InvariantCulture)}[background]",
-        };
+        var w = preset.Width;
+        var h = preset.Height;
+        var reach = Format(Math.Sqrt((0.8 * w * 0.8 * w) + (0.8 * h * 0.8 * h)) * 0.55);
+        var falloff = $"max(0,1-hypot(X-{Format(0.2 * w)},Y-{Format(0.2 * h)})/{reach})";
 
-        return string.Join(",", stages);
+        return $"color=c=black:s={w}x{h},format=rgb24,geq=r='0':g='{GlowGreen}*{falloff}':b='{GlowBlue}*{falloff}'[background]";
     }
 
     public static string BuildStaticVinylGraph(VideoPreset preset)
     {
-        var g = ComputeGeometry(preset);
+        var d = ComputeGeometry(preset).Diameter;
+        var px = d / PreviewDiameterPx;
+        var radius = Format(d / 2.0);
+        var r = $"hypot(X-{radius},Y-{radius})";
+
+        // repeating-radial-gradient(#0a0a0a 0, #0a0a0a 2px, #1c1c1c 3px, #0a0a0a 4px).
+        var step = Format(px);
+        var m = $"mod({r},4*{step})";
+        var groove = $"if(lt({m},2*{step}),10,if(lt({m},3*{step}),10+18*({m}-2*{step})/{step},28-18*({m}-3*{step})/{step}))";
+
+        // The highlight - white at 6%, at 35%/30% of the record inset by 6%, gone at 60% of the
+        // distance to that box's far corner - plus the 1px white-at-6% edge.
+        var inner = HighlightInsetRatio * d;
+        var offset = (1 - HighlightInsetRatio) / 2 * d;
+        var hx = Format(offset + (0.35 * inner));
+        var hy = Format(offset + (0.30 * inner));
+        var reach = Format(0.6 * Math.Sqrt((0.65 * 0.65) + (0.70 * 0.70)) * inner);
+        var light = $"if(lte({r},{Format(inner / 2)}),max(0,1-hypot(X-{hx},Y-{hy})/{reach}),0)+if(gt({r},{radius}-{step}),1,0)";
+        var shade = $"({groove})+(255-({groove}))*0.06*min(1,{light})";
+        var discAlpha = $"clip(255*({radius}-{r}+0.5),0,255)";
+
+        var label = (int)Math.Round(d * LabelRatio);
+        var labelRadius = Format(label / 2.0);
+
+        var hole = (int)Math.Round(d * HoleRatio);
+        var ring = Math.Max(1, (int)Math.Round(2 * px));
+        var holeCanvas = hole + (2 * ring);
+        var holeCentre = Format(holeCanvas / 2.0);
+        var hr = $"hypot(X-{holeCentre},Y-{holeCentre})";
+        var inHole = $"lte({hr},{Format(hole / 2.0)})";
 
         var stages = new[]
         {
-            $"[0:v]scale={g.Diameter}:{g.Diameter}:force_original_aspect_ratio=increase,crop={g.Diameter}:{g.Diameter},format=rgba[artwork_sq]",
-            $"[artwork_sq]geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lte(hypot(X-{g.Diameter}/2,Y-{g.Diameter}/2),{g.Diameter}/2),255,0)'[artwork_circle]",
-            $"color=c=white:s={g.RingDiameter}x{g.RingDiameter},format=rgba,geq=r=255:g=255:b=255:a='if(between(hypot(X-{g.RingDiameter}/2,Y-{g.RingDiameter}/2),{g.Diameter}/2,{g.RingDiameter}/2),255,0)'[ring]",
-            "[ring][artwork_circle]overlay=(W-w)/2:(H-h)/2:format=auto[vinyl_static]",
+            $"color=c=black:s={d}x{d},format=rgba,geq=r='{shade}':g='{shade}':b='{shade}':a='{discAlpha}'[disc]",
+            $"[0:v]scale={label}:{label}:force_original_aspect_ratio=increase,crop={label}:{label},format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='clip(255*({labelRadius}-hypot(X-{labelRadius},Y-{labelRadius})+0.5),0,255)'[label]",
+            // The spindle hole, ringed in white at 15% as the homepage's box-shadow draws it.
+            $"color=c=black:s={holeCanvas}x{holeCanvas},format=rgba,geq=r='if({inHole},0,255)':g='if({inHole},0,255)':b='if({inHole},0,255)':a='if({inHole},255,if(lte({hr},{holeCentre}),38,0))'[hole]",
+            "[disc][label]overlay=(W-w)/2:(H-h)/2:format=auto[with_label]",
+            "[with_label][hole]overlay=(W-w)/2:(H-h)/2:format=auto[vinyl_static]",
         };
 
         return string.Join(";", stages);
@@ -105,18 +125,12 @@ internal static class VinylFilterGraphBuilder
 
         var stages = new[]
         {
-            $"[0:v]rotate={angularVelocity}*t:c=black@0.0:ow={g.RingDiameter}:oh={g.RingDiameter}[vinyl_rotating]",
-            // A soft shadow gives the disc a sense of depth instead of looking pasted flat onto
-            // the background. `split` reuses the frame already rotated above instead of paying
-            // for a second rotate pass; lutrgb forces a uniform dark-gray fill (a pure black
-            // shadow would be invisible against the black background) and boxblur (a cheap
-            // separable blur, unlike geq) softens its edge.
-            "[vinyl_rotating]split=2[vinyl_main][vinyl_shadow_src]",
-            $"[vinyl_shadow_src]format=rgba,lutrgb=r=30:g=30:b=30,colorchannelmixer=aa=0.55,boxblur=luma_radius={g.ShadowBlurRadius}:luma_power=2:chroma_radius={g.ShadowBlurRadius}:chroma_power=2:alpha_radius={g.ShadowBlurRadius}:alpha_power=2[vinyl_shadow]",
-            // Input 1 is the pre-rendered ambient background (see BuildAmbientBackgroundGraph) -
-            // already sized to the full frame, so this is a cheap overlay, not a live generator.
-            $"[1:v][vinyl_shadow]overlay=(W-w)/2+{g.ShadowOffsetX}:(H-h)/2+{g.ShadowOffsetY}[with_shadow]",
-            "[with_shadow][vinyl_main]overlay=(W-w)/2:(H-h)/2:shortest=1[with_vinyl]",
+            // Positive angles turn clockwise, as the homepage's CSS spin does.
+            $"[0:v]rotate={angularVelocity}*t:c=black@0.0:ow={g.Diameter}:oh={g.Diameter}[vinyl_rotating]",
+            // Input 1 is the pre-rendered backdrop (see BuildBackgroundGraph) - already sized to
+            // the full frame, so this is a cheap overlay, not a live generator. There is no drop
+            // shadow: the homepage's is black on black and the record reads the same without one.
+            "[1:v][vinyl_rotating]overlay=(W-w)/2:(H-h)/2:shortest=1[with_vinyl]",
             // expansion=none disables drawtext's %{...} text-expansion pass, so a title is drawn
             // literally instead of being interpreted (e.g. "%{gmtime}" stays as typed).
             $"[with_vinyl]drawtext=fontfile='{escapedFontFile}':textfile='{escapedTitleFile}':expansion=none:fontcolor=white:fontsize={g.FontSize}:x=(w-text_w)/2:y=h-{g.BottomMargin}:shadowcolor=black@0.5:shadowx=2:shadowy=2[final]",
@@ -125,18 +139,12 @@ internal static class VinylFilterGraphBuilder
         return string.Join(";", stages);
     }
 
-    private static Geometry ComputeGeometry(VideoPreset preset)
-    {
-        var diameter = (int)Math.Round(preset.Height * DiameterRatio);
-        var borderWidth = Math.Max(MinBorderWidth, (int)Math.Round(diameter * BorderRatio));
-        var ringDiameter = diameter + (2 * borderWidth);
-        var fontSize = (int)Math.Round(preset.Height * FontSizeRatio);
-        var bottomMargin = (int)Math.Round(preset.Height * BottomMarginRatio);
-        var shadowOffsetX = (int)Math.Round(ringDiameter * ShadowOffsetXRatio);
-        var shadowOffsetY = (int)Math.Round(ringDiameter * ShadowOffsetYRatio);
-        var shadowBlurRadius = Math.Max(MinShadowBlurRadius, (int)Math.Round(ringDiameter * ShadowBlurRadiusRatio));
-        return new Geometry(diameter, ringDiameter, fontSize, bottomMargin, shadowOffsetX, shadowOffsetY, shadowBlurRadius);
-    }
+    private static Geometry ComputeGeometry(VideoPreset preset) => new(
+        (int)Math.Round(preset.Height * DiameterRatio),
+        (int)Math.Round(preset.Height * FontSizeRatio),
+        (int)Math.Round(preset.Height * BottomMarginRatio));
+
+    private static string Format(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 
     /// <summary>
     /// Escapes an <em>application-controlled</em> filesystem path for use inside a single-quoted

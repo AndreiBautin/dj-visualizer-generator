@@ -85,7 +85,7 @@ describe('App', () => {
       {
         title: 'Friday Night Set',
         preset: '1080p',
-        rotationSpeedSeconds: 3,
+        rotationSpeedSeconds: 18,
         captionFont: 'sans-bold',
         audioFile: expect.any(File),
         artworkFile: expect.any(File),

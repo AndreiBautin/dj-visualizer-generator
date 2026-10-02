@@ -29,11 +29,11 @@ It needs only ffmpeg and the OFL-licensed fonts already in `assets/fonts/`.
 
 ## Why it exercises the app rather than just filling it
 
-- **24 seconds** is long enough to cross the loop boundary. The renderer produces one rotation
+- **24 seconds** is long enough to cross the loop boundary at the default 18-second turn. The renderer produces one rotation
   period and loops it, so a clip shorter than the rotation would never demonstrate the part most
   likely to be wrong.
-- **A radial gradient with strong colour** makes the circular crop, the white border ring, the
-  drop shadow and the blurred ambient background all visible at a glance. A flat-colour image
+- **A radial gradient with strong colour** makes the circular label and its rotation visible at a
+  glance against the black grooved disc. A flat-colour image
   would render "correctly" while showing nothing.
 - **Square 1000×1000** is the shape real cover art is, so the crop path is the real one.
 - **Audible content, not silence.** A silent demo video looks broken even when it is not.

@@ -28,11 +28,12 @@ public class FfmpegArgumentsBuilderTests
     }
 
     [Fact]
-    public void BuildAmbientBackgroundArguments_Outputs_A_Single_Frame_To_The_Background_Image_Path()
+    public void BuildBackgroundArguments_Outputs_A_Single_Frame_To_The_Background_Image_Path()
     {
-        var args = FfmpegArgumentsBuilder.BuildAmbientBackgroundArguments(Request, "filtergraph", "/jobs/x/.background.png");
+        var args = FfmpegArgumentsBuilder.BuildBackgroundArguments("filtergraph", "/jobs/x/.background.png");
 
-        args.Should().ContainInConsecutiveOrder("-i", "/jobs/x/input/artwork.png");
+        // The backdrop is drawn, not derived from the artwork: no input file at all.
+        args.Should().NotContain("-i");
         args.Should().ContainInConsecutiveOrder("-map", "[background]");
         args.Should().ContainInConsecutiveOrder("-frames:v", "1");
         args.Last().Should().Be("/jobs/x/.background.png");

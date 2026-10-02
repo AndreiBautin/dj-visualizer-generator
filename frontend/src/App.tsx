@@ -21,6 +21,7 @@ import {
   validateAudioFile,
 } from './lib/fileValidation'
 import {
+  DEFAULT_ROTATION_SPEED_SECONDS,
   renderSettingsSchema,
   type RenderSettingsInput,
   type RenderSettingsValues,
@@ -36,7 +37,9 @@ function LiveVinylRecord({ artworkFile }: { artworkFile: File | null }) {
     <VinylRecord
       artworkFile={artworkFile}
       rotationSpeedSeconds={
-        typeof rotationSpeedSeconds === 'number' ? rotationSpeedSeconds : 3
+        typeof rotationSpeedSeconds === 'number'
+          ? rotationSpeedSeconds
+          : DEFAULT_ROTATION_SPEED_SECONDS
       }
     />
   )
@@ -55,7 +58,7 @@ function App() {
     defaultValues: {
       title: '',
       preset: '1080p',
-      rotationSpeedSeconds: 3,
+      rotationSpeedSeconds: DEFAULT_ROTATION_SPEED_SECONDS,
       captionFont: 'sans-bold',
     },
   })

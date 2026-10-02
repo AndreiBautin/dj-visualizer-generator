@@ -107,14 +107,14 @@ export function RenderSettings() {
             type="range"
             min={MIN_ROTATION_SPEED_SECONDS}
             max={MAX_ROTATION_SPEED_SECONDS}
-            step={0.5}
+            step={1}
             className="w-full accent-accent"
             {...register('rotationSpeedSeconds', { valueAsNumber: true })}
           />
           <span className="text-xs text-white/50">Slow</span>
         </div>
         <p className="mt-1 text-xs text-white/60">
-          {(rotationSpeedSeconds ?? DEFAULT_ROTATION_SPEED_SECONDS).toFixed(1)}s
+          {(rotationSpeedSeconds ?? DEFAULT_ROTATION_SPEED_SECONDS).toFixed(0)}s
           per spin
         </p>
         {errors.rotationSpeedSeconds && (

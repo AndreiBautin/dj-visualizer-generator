@@ -14,8 +14,8 @@ public class RenderProgressScaleTests
     [Fact]
     public void The_Phases_Cover_The_Bar_In_Order_Without_Gaps_Or_Overlap()
     {
-        RenderProgressScale.StaticVinylComplete.Should().BeLessThan(RenderProgressScale.AmbientBackgroundComplete);
-        RenderProgressScale.AmbientBackgroundComplete.Should().Be(RenderProgressScale.LoopSegmentStart);
+        RenderProgressScale.StaticVinylComplete.Should().BeLessThan(RenderProgressScale.BackgroundComplete);
+        RenderProgressScale.BackgroundComplete.Should().Be(RenderProgressScale.LoopSegmentStart);
         RenderProgressScale.LoopSegmentEnd.Should().Be(RenderProgressScale.MuxStart);
         RenderProgressScale.MuxStart.Should().BeLessThan(100);
     }

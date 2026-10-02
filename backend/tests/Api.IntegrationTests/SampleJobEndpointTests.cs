@@ -97,7 +97,7 @@ public class SampleJobEndpointTests : IDisposable
         {
             title = "Custom Sample Title",
             preset = "1080p",
-            rotationSpeedSeconds = 4.0,
+            rotationSpeedSeconds = 24.0,
             captionFont = "mono-bold",
         });
 

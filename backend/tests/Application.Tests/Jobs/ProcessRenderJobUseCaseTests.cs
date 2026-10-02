@@ -31,7 +31,7 @@ public class ProcessRenderJobUseCaseTests
 
     private static Job CreateProcessingJob()
     {
-        var job = Job.Create(JobTitle.Create("Friday Night Set"), VideoPreset.FullHd1080p, RotationSpeed.Create(4.5), CaptionFont.SerifBold, Now);
+        var job = Job.Create(JobTitle.Create("Friday Night Set"), VideoPreset.FullHd1080p, RotationSpeed.Create(27), CaptionFont.SerifBold, Now);
         job.Start(Now);
         return job;
     }
@@ -61,7 +61,7 @@ public class ProcessRenderJobUseCaseTests
                 r.Preset == VideoPreset.FullHd1080p &&
                 r.Title == "Friday Night Set" &&
                 r.Duration == TimeSpan.FromMinutes(45) &&
-                r.RotationPeriodSeconds == 4.5 &&
+                r.RotationPeriodSeconds == 27 &&
                 r.CaptionFont == CaptionFont.SerifBold),
             Arg.Any<RenderProgressCallback>(),
             Arg.Any<CancellationToken>());

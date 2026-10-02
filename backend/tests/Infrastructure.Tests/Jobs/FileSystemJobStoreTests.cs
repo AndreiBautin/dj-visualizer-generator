@@ -81,14 +81,14 @@ public class FileSystemJobStoreTests : IDisposable
         var job = Job.Create(
             JobTitle.Create("Friday Night Set"),
             VideoPreset.FullHd1080p,
-            RotationSpeed.Create(5.5),
+            RotationSpeed.Create(33),
             CaptionFont.SerifBold,
             Now);
 
         await sut.EnqueueAsync(job, CancellationToken.None);
         var found = await sut.FindAsync(job.Id, CancellationToken.None);
 
-        found!.RotationSpeed.SecondsPerRotation.Should().Be(5.5);
+        found!.RotationSpeed.SecondsPerRotation.Should().Be(33);
         found.CaptionFont.Should().Be(CaptionFont.SerifBold);
     }
 
@@ -303,7 +303,7 @@ public class FileSystemJobStoreTests : IDisposable
               "Id": "{{jobId}}",
               "Title": "Friday Night Set",
               "Preset": "1080p",
-              "RotationSpeedSecondsPerRotation": 6,
+              "RotationSpeedSecondsPerRotation": 24,
               "CaptionFont": "sans-bold",
               "Status": "Completed",
               "Progress": 100,

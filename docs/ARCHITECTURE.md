@@ -130,11 +130,12 @@ reason: referencing the executable made both entry points' `appsettings.json` co
 The one genuinely non-obvious piece, in
 [`FfmpegVideoRenderer`](../backend/src/Infrastructure/Rendering/FfmpegVideoRenderer.cs):
 
-1. Circular-cropped, white-bordered artwork → **one static PNG**. The per-pixel `geq` mask runs
-   once rather than on every frame.
-2. Blurred, darkened artwork → **one static PNG** used as an ambient background.
-3. **Exactly one rotation period** of the disc spinning over that background with the caption —
-   roughly 60 frames. The rotation is perfectly periodic, so these are the only visually unique
+1. The record — grooved black disc, the artwork as its centre label, the spindle hole — →
+   **one static PNG**. The per-pixel `geq` math runs once rather than on every frame. It is
+   the homepage's `VinylRecord` drawn in ffmpeg: every proportion comes from that component.
+2. The backdrop — black with the page's accent glow — → **one static PNG**.
+3. **Exactly one rotation period** of the record spinning over that backdrop with the caption —
+   540 frames at the default 18 seconds a turn, the same speed the homepage preview spins. The rotation is perfectly periodic, so these are the only visually unique
    frames that exist.
 4. `-stream_loop -1` that clip to the audio's real duration with **`-c:v copy`** — the encoded
    bytes are repackaged, not re-encoded.

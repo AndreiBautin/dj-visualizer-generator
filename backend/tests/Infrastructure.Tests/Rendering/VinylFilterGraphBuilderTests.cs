@@ -8,24 +8,39 @@ public class VinylFilterGraphBuilderTests
 {
     private const string FontFilePath = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
 
+    /// <summary>
+    /// The record is the homepage's VinylRecord: label at 40% of the disc, spindle hole at 6%.
+    /// 1080p: disc 0.74 * 1080 = 799, label 320, hole 48 inside a ring two preview pixels wide.
+    /// </summary>
     [Fact]
-    public void BuildStaticVinylGraph_Sizes_The_Circular_Artwork_And_Border_For_1080p()
+    public void BuildStaticVinylGraph_Draws_The_Homepage_Record_At_1080p()
     {
         var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.FullHd1080p);
 
-        graph.Should().Contain("[0:v]scale=799:799:force_original_aspect_ratio=increase,crop=799:799");
-        graph.Should().Contain("s=825x825"); // ring: diameter (799) + 2 * border (13)
+        graph.Should().Contain("color=c=black:s=799x799");
+        graph.Should().Contain("[0:v]scale=320:320:force_original_aspect_ratio=increase,crop=320:320");
+        graph.Should().Contain("s=58x58"); // hole 48 + 2 * ring 5
         graph.Should().EndWith("[vinyl_static]");
     }
 
     [Fact]
-    public void BuildStaticVinylGraph_Sizes_The_Circular_Artwork_And_Border_For_720p()
+    public void BuildStaticVinylGraph_Draws_The_Homepage_Record_At_720p()
     {
         var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.Hd720p);
 
-        graph.Should().Contain("[0:v]scale=533:533:force_original_aspect_ratio=increase,crop=533:533");
-        graph.Should().Contain("s=551x551"); // ring: diameter (533) + 2 * border (9)
+        graph.Should().Contain("color=c=black:s=533x533");
+        graph.Should().Contain("[0:v]scale=213:213:force_original_aspect_ratio=increase,crop=213:213");
         graph.Should().EndWith("[vinyl_static]");
+    }
+
+    [Fact]
+    public void BuildStaticVinylGraph_Cuts_Grooves_Into_The_Disc_And_Labels_It_With_The_Artwork()
+    {
+        var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.FullHd1080p);
+
+        // The grooves repeat on a radius period; the label goes over the disc, the hole over both.
+        graph.Should().Contain("mod(hypot(");
+        graph.Should().MatchRegex(@"\[disc\]\[label\]overlay=.*\[with_label\]\[hole\]overlay=");
     }
 
     [Fact]
@@ -33,7 +48,7 @@ public class VinylFilterGraphBuilderTests
     {
         var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.FullHd1080p);
 
-        // The whole point of the two-pass split: geq/mask work happens once here, not per output frame.
+        // The whole point of the pass split: geq work happens once here, not per output frame.
         graph.Should().NotContain("rotate=");
         graph.Should().NotContain("drawtext=");
     }
@@ -61,7 +76,7 @@ public class VinylFilterGraphBuilderTests
     {
         var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.FullHd1080p, "Title", FontFilePath, rotationPeriodSeconds: 2.0);
 
-        graph.Should().Contain("ow=825:oh=825"); // rotate canvas matches the ring diameter
+        graph.Should().Contain("ow=799:oh=799"); // rotate canvas matches the record
         graph.Should().Contain("fontsize=48");
         graph.Should().Contain("y=h-97");
     }
@@ -71,7 +86,7 @@ public class VinylFilterGraphBuilderTests
     {
         var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.Hd720p, "Title", FontFilePath, rotationPeriodSeconds: 2.0);
 
-        graph.Should().Contain("ow=551:oh=551");
+        graph.Should().Contain("ow=533:oh=533");
         graph.Should().Contain("fontsize=32");
         graph.Should().Contain("y=h-65");
     }
@@ -81,52 +96,41 @@ public class VinylFilterGraphBuilderTests
     {
         var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.Hd720p, "Title", FontFilePath, rotationPeriodSeconds: 2.0);
 
-        // Input 1 is the pre-rendered ambient background image (see BuildAmbientBackgroundGraph) -
-        // no live color=black generator here, and no per-frame background computation.
-        graph.Should().Contain("[1:v][vinyl_shadow]overlay=");
+        // Input 1 is the pre-rendered backdrop (see BuildBackgroundGraph) - no live generator
+        // here, and no per-frame background computation.
+        graph.Should().Contain("[1:v][vinyl_rotating]overlay=");
         graph.Should().NotContain("color=c=black");
     }
 
     [Fact]
-    public void BuildAmbientBackgroundGraph_Fills_The_Frame_For_1080p()
+    public void BuildBackgroundGraph_Fills_The_Frame_For_1080p()
     {
-        var graph = VinylFilterGraphBuilder.BuildAmbientBackgroundGraph(VideoPreset.FullHd1080p);
+        var graph = VinylFilterGraphBuilder.BuildBackgroundGraph(VideoPreset.FullHd1080p);
 
-        graph.Should().Contain("[0:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080");
-        graph.Should().Contain("gblur=");
+        graph.Should().StartWith("color=c=black:s=1920x1080");
         graph.Should().EndWith("[background]");
     }
 
     [Fact]
-    public void BuildAmbientBackgroundGraph_Fills_The_Frame_For_720p()
+    public void BuildBackgroundGraph_Fills_The_Frame_For_720p()
     {
-        var graph = VinylFilterGraphBuilder.BuildAmbientBackgroundGraph(VideoPreset.Hd720p);
+        var graph = VinylFilterGraphBuilder.BuildBackgroundGraph(VideoPreset.Hd720p);
 
-        graph.Should().Contain("[0:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720");
-        graph.Should().Contain("gblur=");
+        graph.Should().StartWith("color=c=black:s=1280x720");
         graph.Should().EndWith("[background]");
     }
 
+    /// <summary>
+    /// The backdrop is the app's page, not the artwork: it reads no input, and its glow is centred
+    /// where the page's is, at 20%/20% of the frame.
+    /// </summary>
     [Fact]
-    public void BuildAmbientBackgroundGraph_Darkens_And_Desaturates_So_It_Does_Not_Compete_With_The_Disc()
+    public void BuildBackgroundGraph_Is_The_Page_Glow_Rather_Than_The_Artwork()
     {
-        var graph = VinylFilterGraphBuilder.BuildAmbientBackgroundGraph(VideoPreset.Hd720p);
+        var graph = VinylFilterGraphBuilder.BuildBackgroundGraph(VideoPreset.FullHd1080p);
 
-        graph.Should().Contain("eq=");
-        graph.Should().MatchRegex(@"brightness=-0\.\d");
-    }
-
-    [Fact]
-    public void BuildRotatingCompositeGraph_Draws_A_Soft_Shadow_Behind_The_Disc_Without_Recomputing_The_Rotation()
-    {
-        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.Hd720p, "Title", FontFilePath, rotationPeriodSeconds: 2.0);
-
-        // split reuses the already-rotated frame for the shadow copy instead of rotating twice.
-        graph.Should().Contain("[vinyl_rotating]split=2[vinyl_main][vinyl_shadow_src]");
-        graph.Should().Contain("boxblur=");
-        graph.Should().Contain("colorchannelmixer=");
-        // The shadow layer must be composited before (underneath) the disc itself.
-        graph.Should().MatchRegex(@"\[vinyl_shadow\].*overlay=.*\[with_shadow\].*\[with_shadow\]\[vinyl_main\]overlay=");
+        graph.Should().NotContain("[0:v]");
+        graph.Should().Contain("hypot(X-384,Y-216)");
     }
 
     [Fact]

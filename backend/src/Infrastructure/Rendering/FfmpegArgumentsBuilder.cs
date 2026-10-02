@@ -22,10 +22,10 @@ internal static class FfmpegArgumentsBuilder
         vinylImagePath,
     ];
 
-    public static IReadOnlyList<string> BuildAmbientBackgroundArguments(RenderRequest request, string filterGraph, string backgroundImagePath) =>
+    /// <summary>The backdrop graph is its own source, so this pass reads no input file.</summary>
+    public static IReadOnlyList<string> BuildBackgroundArguments(string filterGraph, string backgroundImagePath) =>
     [
         "-y",
-        "-i", request.ArtworkFilePath,
         "-filter_complex", filterGraph,
         "-map", "[background]",
         "-frames:v", "1",

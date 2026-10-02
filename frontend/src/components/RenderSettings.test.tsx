@@ -21,7 +21,7 @@ function TestForm({
     defaultValues: {
       title: '',
       preset: '1080p',
-      rotationSpeedSeconds: 3,
+      rotationSpeedSeconds: 18,
       captionFont: 'sans-bold',
     },
   })
@@ -92,16 +92,16 @@ describe('RenderSettings', () => {
     expect(submitted).toEqual({
       title: 'Friday Night Set',
       preset: '720p',
-      rotationSpeedSeconds: 3,
+      rotationSpeedSeconds: 18,
       captionFont: 'sans-bold',
     })
   })
 
-  it('renders a rotation speed control defaulting to 3 seconds per spin', () => {
+  it('renders a rotation speed control defaulting to 18 seconds per spin', () => {
     render(<TestForm onSubmit={() => {}} />)
 
-    expect(screen.getByLabelText(/rotation speed/i)).toHaveValue('3')
-    expect(screen.getByText(/3(\.0)?s per spin/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/rotation speed/i)).toHaveValue('18')
+    expect(screen.getByText(/^18s per spin/i)).toBeInTheDocument()
   })
 
   it('labels the rotation speed slider ends so direction is unambiguous', () => {
@@ -122,10 +122,10 @@ describe('RenderSettings', () => {
       window.HTMLInputElement.prototype,
       'value',
     )!.set!
-    nativeValueSetter.call(slider, '5')
+    nativeValueSetter.call(slider, '30')
     slider.dispatchEvent(new Event('input', { bubbles: true }))
 
-    expect(await screen.findByText(/5(\.0)?s per spin/i)).toBeInTheDocument()
+    expect(await screen.findByText(/^30s per spin/i)).toBeInTheDocument()
   })
 
   it('renders caption font options defaulting to Sans', () => {

@@ -22,13 +22,13 @@ namespace DjVisualizer.Infrastructure.Rendering;
 /// </remarks>
 internal static class RenderProgressScale
 {
-    /// <summary>Reported once the circular artwork still is written.</summary>
+    /// <summary>Reported once the record still is written.</summary>
     public const int StaticVinylComplete = 5;
 
-    /// <summary>Reported once the blurred ambient background still is written.</summary>
-    public const int AmbientBackgroundComplete = 10;
+    /// <summary>Reported once the backdrop still is written.</summary>
+    public const int BackgroundComplete = 10;
 
-    public const int LoopSegmentStart = AmbientBackgroundComplete;
+    public const int LoopSegmentStart = BackgroundComplete;
 
     /// <summary>The rotation pass encodes a known duration, so it reports real progress across
     /// this span rather than only marking its completion.</summary>

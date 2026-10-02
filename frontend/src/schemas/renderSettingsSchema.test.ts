@@ -41,7 +41,7 @@ describe('renderSettingsSchema', () => {
   it('defaults rotation speed and caption font when omitted', () => {
     const result = renderSettingsSchema.parse({ title: 'Set', preset: '1080p' })
 
-    expect(result.rotationSpeedSeconds).toBe(3)
+    expect(result.rotationSpeedSeconds).toBe(18)
     expect(result.captionFont).toBe('sans-bold')
   })
 
@@ -49,13 +49,13 @@ describe('renderSettingsSchema', () => {
     const result = renderSettingsSchema.safeParse({
       title: 'Set',
       preset: '1080p',
-      rotationSpeedSeconds: 5.5,
+      rotationSpeedSeconds: 33,
     })
 
     expect(result.success).toBe(true)
   })
 
-  it.each([0.5, 15.5])(
+  it.each([11.5, 90.5])(
     'rejects a rotation speed outside the allowed range (%s)',
     (value) => {
       const result = renderSettingsSchema.safeParse({

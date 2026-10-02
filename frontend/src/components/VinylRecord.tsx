@@ -3,16 +3,17 @@ import { useEffect, useState } from 'react'
 interface VinylRecordProps {
   /** The artwork the visitor has selected, if any - shown as the record's center label. */
   artworkFile: File | null
-  /** Seconds for one full rotation. Mirrors the actual render settings once available, so the
-   * decorative record and the video it is standing in for spin at the same speed. */
+  /** Seconds for one full rotation - the same number the render uses, so the record here and
+   * the video it stands in for turn at the same speed. It was multiplied by six here and not
+   * in the render, so a "3s per spin" setting spun for 18s on this page and 3s in the video. */
   rotationSpeedSeconds: number
 }
 
 /**
- * A slowly spinning record, rendered from CSS rather than an image - the same shape the render
- * worker produces, standing in for it before a visitor has generated anything. Shows their own
- * artwork as the label once selected, so the decoration becomes a preview rather than staying
- * generic the whole time they're filling in the form.
+ * A slowly spinning record, rendered from CSS rather than an image - and the render worker draws
+ * this exact record (VinylFilterGraphBuilder takes every proportion from here), so it is a true
+ * preview: change one and change the other. Shows the visitor's own artwork as the label once
+ * selected, so it previews their video rather than staying generic while they fill in the form.
  */
 export function VinylRecord({
   artworkFile,
@@ -39,7 +40,7 @@ export function VinylRecord({
         className="absolute inset-0 rounded-full motion-safe:animate-[spin_var(--vinyl-duration)_linear_infinite]"
         style={
           {
-            '--vinyl-duration': `${rotationSpeedSeconds * 6}s`,
+            '--vinyl-duration': `${rotationSpeedSeconds}s`,
             background:
               'repeating-radial-gradient(circle at center, #0a0a0a 0, #0a0a0a 2px, #1c1c1c 3px, #0a0a0a 4px)',
             boxShadow:

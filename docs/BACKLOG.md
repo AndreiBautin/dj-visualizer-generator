@@ -93,7 +93,7 @@ timestamp, instead of one static title for the whole mix.
   entry.
 
 ### 5. A second visual theme
-Right now there is one look: circular artwork, blurred glow background, title below. A
+Right now there is one look: the homepage's vinyl record with the artwork as its label, title below. A
 second theme (e.g. a cassette-tape reel, or a flat album-grid style with a progress bar)
 picked from the same radio-button pattern as preset/font today.
 

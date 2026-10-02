@@ -83,7 +83,7 @@ describe('sample mix', () => {
     expect(createSampleJob.mock.calls[0][0]).toEqual({
       title: 'My Sample',
       preset: '1080p',
-      rotationSpeedSeconds: 3,
+      rotationSpeedSeconds: 18,
       captionFont: 'sans-bold',
     })
   })

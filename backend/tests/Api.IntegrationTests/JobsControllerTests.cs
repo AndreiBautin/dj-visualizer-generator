@@ -80,7 +80,7 @@ public class JobsControllerTests : IDisposable
     [Fact]
     public async Task Post_Jobs_Accepts_A_Custom_RotationSpeed_And_CaptionFont()
     {
-        var response = await _client.PostAsync("/jobs", BuildValidForm(rotationSpeedSeconds: 5.0, captionFont: "mono-bold"));
+        var response = await _client.PostAsync("/jobs", BuildValidForm(rotationSpeedSeconds: 30.0, captionFont: "mono-bold"));
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
     }

@@ -65,13 +65,13 @@ public class CreateJobUseCaseTests
             .Returns(Result<SavedFile>.Success(new SavedFile("/data/jobs/x/input/artwork.jpg", 200)));
         _audioProbe.GetDurationAsync("/data/jobs/x/input/audio.mp3", Arg.Any<CancellationToken>())
             .Returns(TimeSpan.FromMinutes(90));
-        var request = ValidRequest() with { RotationSpeedSeconds = 6.0, CaptionFontName = "mono-bold" };
+        var request = ValidRequest() with { RotationSpeedSeconds = 24.0, CaptionFontName = "mono-bold" };
 
         var result = await CreateSut().ExecuteAsync(request, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         await _jobQueue.Received(1).EnqueueAsync(
-            Arg.Is<Job>(j => j!.RotationSpeed.SecondsPerRotation == 6.0 && j.CaptionFont == CaptionFont.MonoBold),
+            Arg.Is<Job>(j => j!.RotationSpeed.SecondsPerRotation == 24.0 && j.CaptionFont == CaptionFont.MonoBold),
             Arg.Any<CancellationToken>());
     }
 

@@ -10,11 +10,10 @@ namespace DjVisualizer.Infrastructure.Rendering;
 /// Renders in four ffmpeg passes rather than one continuous encode, because most of the work a
 /// naive single-pass render would do is redundant:
 ///
-/// 1. Crop the artwork to a circle with a white border - a single static image (the expensive
-///    per-pixel <c>geq</c> mask math runs exactly once, not per frame).
-/// 2. Render a soft, blurred, darkened full-frame version of the same artwork as an ambient
-///    background - also a single static image, so the blur costs nothing per output frame.
-/// 3. Render exactly one rotation period of the disc (with its shadow) spinning over that
+/// 1. Draw the record - grooved disc, the artwork as its label, the spindle hole - as a single
+///    static image (the expensive per-pixel <c>geq</c> math runs exactly once, not per frame).
+/// 2. Draw the backdrop - black with the page's accent glow - also as one static image.
+/// 3. Render exactly one rotation period of the record spinning over that
 ///    background, with the title overlaid - the rotation is perfectly periodic, so these are the
 ///    *only* visually unique frames that ever need generating, regardless of how long the final
 ///    video is. The requested period is snapped to a whole number of frames so the loop wraps
@@ -71,8 +70,8 @@ public sealed class FfmpegVideoRenderer(
             await RenderStaticVinylAsync(request, vinylImagePath, cancellationToken);
             await ReportAsync(RenderProgressScale.StaticVinylComplete, cancellationToken);
 
-            await RenderAmbientBackgroundAsync(request, backgroundImagePath, cancellationToken);
-            await ReportAsync(RenderProgressScale.AmbientBackgroundComplete, cancellationToken);
+            await RenderBackgroundAsync(request, backgroundImagePath, cancellationToken);
+            await ReportAsync(RenderProgressScale.BackgroundComplete, cancellationToken);
 
             await RenderLoopSegmentAsync(request, fontFilePath, titleFilePath, vinylImagePath, backgroundImagePath, loopSegmentPath, ReportAsync, cancellationToken);
             await MuxFinalVideoAsync(request, loopSegmentPath, ReportAsync, cancellationToken);
@@ -100,10 +99,10 @@ public sealed class FfmpegVideoRenderer(
         await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: false), cancellationToken, onOutputLine: null);
     }
 
-    private async Task RenderAmbientBackgroundAsync(RenderRequest request, string backgroundImagePath, CancellationToken cancellationToken)
+    private async Task RenderBackgroundAsync(RenderRequest request, string backgroundImagePath, CancellationToken cancellationToken)
     {
-        var filterGraph = VinylFilterGraphBuilder.BuildAmbientBackgroundGraph(request.Preset);
-        var arguments = FfmpegArgumentsBuilder.BuildAmbientBackgroundArguments(request, filterGraph, backgroundImagePath);
+        var filterGraph = VinylFilterGraphBuilder.BuildBackgroundGraph(request.Preset);
+        var arguments = FfmpegArgumentsBuilder.BuildBackgroundArguments(filterGraph, backgroundImagePath);
         await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: false), cancellationToken, onOutputLine: null);
     }
 
