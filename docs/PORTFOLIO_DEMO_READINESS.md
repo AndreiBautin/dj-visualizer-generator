@@ -18,7 +18,7 @@ Preview now supports ranges separately from counted saves. Concurrent save admis
 
 ### Deliberate limits
 
-The free host sleeps, so open the demo before an interview and keep a downloaded sample available. Storage and coordination remain single-instance and ephemeral. The egress budget is process-local and resets on restart; range requests conservatively reserve the entire file. Job URLs are bearer capabilities, not authenticated ownership. Production load at the maximum upload/duration limits and physical-device accessibility were not established by this verification. Exhausted download links can still show an API error response; that edge case is documented rather than represented as polished UI. Incident ingest is intentionally disabled on the public demo.
+The free host sleeps, so open the demo before an interview and keep a downloaded sample available. Storage and coordination remain single-instance and ephemeral. The egress budget is process-local and resets on restart; range requests conservatively reserve the entire file. Job URLs are bearer capabilities, not authenticated ownership. Production load at the maximum upload/duration limits and physical-device accessibility were not established by this verification. Exhausted download links can still show an API error response; that edge case is documented rather than represented as polished UI.
 
 The assessment below is preserved as a **historical September 21 baseline**, not the current deployment status or remaining task list.
 
