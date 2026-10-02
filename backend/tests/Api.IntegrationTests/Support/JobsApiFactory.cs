@@ -76,9 +76,20 @@ public sealed class JobsApiFactory : WebApplicationFactory<Program>
 
         _disposing = true;
         base.Dispose(disposing);
-        if (Directory.Exists(JobsRootPath))
+
+        // The host can let go of its file handles a moment after it reports disposed - on Windows
+        // a delete in that window fails with a sharing violation, which failed the pre-push gate
+        // about one push in two. A short retry waits it out; a real leak still fails after it.
+        for (var attempt = 1; Directory.Exists(JobsRootPath); attempt++)
         {
-            Directory.Delete(JobsRootPath, recursive: true);
+            try
+            {
+                Directory.Delete(JobsRootPath, recursive: true);
+            }
+            catch (IOException) when (attempt < 20)
+            {
+                Thread.Sleep(50);
+            }
         }
     }
 }
