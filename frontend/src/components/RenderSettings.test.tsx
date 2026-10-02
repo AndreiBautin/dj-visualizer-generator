@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { FormProvider, useForm } from 'react-hook-form'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { SURFACE_SUNKEN } from '../lib/surfaces'
 import {
   renderSettingsSchema,
@@ -71,13 +71,15 @@ describe('RenderSettings', () => {
     expect(screen.getByLabelText('720p')).not.toBeChecked()
   })
 
-  it('shows a validation error when submitted with an empty title', async () => {
+  it('submits with an empty title, since the caption is optional', async () => {
     const user = userEvent.setup()
-    render(<TestForm onSubmit={() => {}} />)
+    const onSubmit = vi.fn()
+    render(<TestForm onSubmit={onSubmit} />)
 
     await user.click(screen.getByRole('button', { name: 'Submit' }))
 
-    expect(await screen.findByText(/title is required/i)).toBeInTheDocument()
+    expect(onSubmit.mock.calls[0]?.[0]).toMatchObject({ title: '' })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('submits the entered title, preset, rotation speed, and caption font', async () => {

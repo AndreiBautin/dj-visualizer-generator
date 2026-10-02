@@ -20,9 +20,9 @@ public class GetJobDownloadUseCaseTests
 
     private GetJobDownloadUseCase CreateSut() => new(_jobRepository, _fileStorage, _egressBudget, new JobDownloadGate());
 
-    private static Job CompletedJob()
+    private static Job CompletedJob(string title = "Friday Night: Deep House Set")
     {
-        var job = Job.Create(JobTitle.Create("Friday Night: Deep House Set"), VideoPreset.FullHd1080p, RotationSpeed.Default, CaptionFont.Default, Now);
+        var job = Job.Create(JobTitle.Create(title), VideoPreset.FullHd1080p, RotationSpeed.Default, CaptionFont.Default, Now);
         job.Start(Now);
         job.Complete(Now);
         return job;
@@ -86,6 +86,18 @@ public class GetJobDownloadUseCaseTests
         result.IsSuccess.Should().BeTrue();
         result.Value!.FilePath.Should().Be("/data/jobs/x/output/video.mp4");
         result.Value.FileName.Should().Be("Friday Night_ Deep House Set.mp4");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Names_An_Untitled_Video_After_The_App()
+    {
+        var job = CompletedJob(title: "");
+        _jobRepository.FindAsync(job.Id, Arg.Any<CancellationToken>()).Returns(job);
+        _fileStorage.GetRenderedVideoAsync(job.Id, Arg.Any<CancellationToken>()).Returns(new RenderedVideo("/data/jobs/x/output/video.mp4", VideoBytes));
+
+        var result = await CreateSut().ExecuteAsync(job.Id.ToString(), CancellationToken.None);
+
+        result.Value!.FileName.Should().Be("dj-visualizer.mp4");
     }
 
     /// <summary>

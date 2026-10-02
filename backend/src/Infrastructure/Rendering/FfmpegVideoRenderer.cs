@@ -48,7 +48,12 @@ public sealed class FfmpegVideoRenderer(
             // The caption is handed to drawtext as a file rather than inlined into the filter
             // graph - see VinylFilterGraphBuilder.BuildRotatingCompositeGraph for why. UTF-8
             // without a BOM: drawtext would otherwise render the BOM as a visible glyph.
-            await File.WriteAllTextAsync(titleFilePath, request.Title, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), cancellationToken);
+            // A title is optional; with none there is no caption file and no drawtext stage.
+            var hasCaption = !string.IsNullOrWhiteSpace(request.Title);
+            if (hasCaption)
+            {
+                await File.WriteAllTextAsync(titleFilePath, request.Title, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), cancellationToken);
+            }
 
             // One gate for every progress report, across all four passes. It enforces the two
             // properties the caller depends on: values never go backwards (each pass maps into a
@@ -73,7 +78,7 @@ public sealed class FfmpegVideoRenderer(
             await RenderBackgroundAsync(request, backgroundImagePath, cancellationToken);
             await ReportAsync(RenderProgressScale.BackgroundComplete, cancellationToken);
 
-            await RenderLoopSegmentAsync(request, fontFilePath, titleFilePath, vinylImagePath, backgroundImagePath, loopSegmentPath, ReportAsync, cancellationToken);
+            await RenderLoopSegmentAsync(request, fontFilePath, hasCaption ? titleFilePath : null, vinylImagePath, backgroundImagePath, loopSegmentPath, ReportAsync, cancellationToken);
             await MuxFinalVideoAsync(request, loopSegmentPath, ReportAsync, cancellationToken);
 
             // The mux reports against the audio's duration, which ffmpeg can undershoot by a
@@ -109,7 +114,7 @@ public sealed class FfmpegVideoRenderer(
     private async Task RenderLoopSegmentAsync(
         RenderRequest request,
         string fontFilePath,
-        string titleFilePath,
+        string? titleFilePath,
         string vinylImagePath,
         string backgroundImagePath,
         string loopSegmentPath,

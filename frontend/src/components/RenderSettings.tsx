@@ -51,12 +51,14 @@ export function RenderSettings() {
           htmlFor="title"
           className="block text-sm font-semibold text-white"
         >
-          Track title
+          Track title{' '}
+          <span className="font-normal text-white/50">(optional)</span>
         </label>
         <input
           id="title"
           type="text"
           className={`mt-1 w-full px-3 py-2 text-white outline-none focus:border-accent/60 ${SURFACE_SUNKEN}`}
+          placeholder="Leave blank for no caption"
           {...register('title')}
         />
         {errors.title && (

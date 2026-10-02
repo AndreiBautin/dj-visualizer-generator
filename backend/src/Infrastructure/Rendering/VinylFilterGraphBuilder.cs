@@ -115,12 +115,12 @@ internal static class VinylFilterGraphBuilder
     /// a single-quoted option, ffmpeg does <em>not</em> honour <c>\'</c> as an escaped quote, so
     /// any title containing an apostrophe terminated the option early and injected the remainder
     /// into the graph. Reading the text from a file keeps caller-controlled bytes out of the
-    /// graph string entirely, so there is no escaping rule left to get wrong.</param>
-    public static string BuildRotatingCompositeGraph(VideoPreset preset, string titleFilePath, string fontFilePath, double rotationPeriodSeconds)
+    /// graph string entirely, so there is no escaping rule left to get wrong. Null when the video
+    /// has no title: the frame then passes straight through with no caption drawn.</param>
+    public static string BuildRotatingCompositeGraph(VideoPreset preset, string? titleFilePath, string fontFilePath, double rotationPeriodSeconds)
     {
         var g = ComputeGeometry(preset);
         var angularVelocity = (2 * Math.PI / rotationPeriodSeconds).ToString("G17", CultureInfo.InvariantCulture);
-        var escapedTitleFile = EscapeFilterPath(titleFilePath);
         var escapedFontFile = EscapeFilterPath(fontFilePath);
 
         var stages = new[]
@@ -133,7 +133,9 @@ internal static class VinylFilterGraphBuilder
             "[1:v][vinyl_rotating]overlay=(W-w)/2:(H-h)/2:shortest=1[with_vinyl]",
             // expansion=none disables drawtext's %{...} text-expansion pass, so a title is drawn
             // literally instead of being interpreted (e.g. "%{gmtime}" stays as typed).
-            $"[with_vinyl]drawtext=fontfile='{escapedFontFile}':textfile='{escapedTitleFile}':expansion=none:fontcolor=white:fontsize={g.FontSize}:x=(w-text_w)/2:y=h-{g.BottomMargin}:shadowcolor=black@0.5:shadowx=2:shadowy=2[final]",
+            titleFilePath is null
+                ? "[with_vinyl]null[final]"
+                : $"[with_vinyl]drawtext=fontfile='{escapedFontFile}':textfile='{EscapeFilterPath(titleFilePath)}':expansion=none:fontcolor=white:fontsize={g.FontSize}:x=(w-text_w)/2:y=h-{g.BottomMargin}:shadowcolor=black@0.5:shadowx=2:shadowy=2[final]",
         };
 
         return string.Join(";", stages);

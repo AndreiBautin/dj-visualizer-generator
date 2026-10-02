@@ -18,11 +18,12 @@ public class JobTitleTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
-    public void Create_Rejects_Empty_Or_Whitespace(string? value)
+    public void Create_Reads_Empty_Or_Whitespace_As_No_Title(string? value)
     {
-        var act = () => JobTitle.Create(value!);
+        var title = JobTitle.Create(value);
 
-        act.Should().Throw<InvalidJobTitleException>();
+        title.Should().BeSameAs(JobTitle.None);
+        title.HasText.Should().BeFalse();
     }
 
     [Fact]

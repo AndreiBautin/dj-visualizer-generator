@@ -11,9 +11,19 @@ describe('renderSettingsSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  it('rejects an empty title', () => {
+  it('accepts a blank title as no caption', () => {
     const result = renderSettingsSchema.safeParse({
       title: '   ',
+      preset: '1080p',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.data?.title).toBe('')
+  })
+
+  it('rejects a title over 200 characters', () => {
+    const result = renderSettingsSchema.safeParse({
+      title: 'a'.repeat(201),
       preset: '1080p',
     })
 

@@ -192,6 +192,27 @@ public class FfmpegVideoRendererTests : IDisposable
         File.Exists(outputPath).Should().BeTrue();
     }
 
+    /// <summary>A title is optional: with none, the render draws no caption and still succeeds.</summary>
+    [RequiresFfmpegFact]
+    public async Task RenderAsync_Renders_Without_A_Caption_When_There_Is_No_Title()
+    {
+        var audioPath = Path.Combine(_workDir, "audio.wav");
+        var artworkPath = Path.Combine(_workDir, "artwork.png");
+        var outputPath = Path.Combine(_workDir, $"video-{Guid.NewGuid():N}.mp4");
+        var duration = TimeSpan.FromSeconds(1);
+        File.WriteAllBytes(audioPath, SilentWavBuilder.Build(duration, sampleRate: 8000));
+        await RunFfmpegAsync("-y", "-f", "lavfi", "-i", "color=c=red:s=64x64", "-frames:v", "1", artworkPath);
+
+        var sut = new FfmpegVideoRenderer(FontFilePaths);
+        var request = new RenderRequest(
+            audioPath, artworkPath, outputPath, VideoPreset.Hd720p, string.Empty, duration,
+            RotationPeriodSeconds: 1.0, CaptionFont: CaptionFont.SansBold);
+
+        await sut.RenderAsync(request, (_, _) => Task.CompletedTask, CancellationToken.None);
+
+        File.Exists(outputPath).Should().BeTrue();
+    }
+
     private static async Task RunFfmpegAsync(params string[] arguments)
     {
         var startInfo = new ProcessStartInfo("ffmpeg") { UseShellExecute = false };

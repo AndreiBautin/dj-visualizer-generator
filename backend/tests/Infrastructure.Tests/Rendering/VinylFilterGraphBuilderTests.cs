@@ -134,6 +134,15 @@ public class VinylFilterGraphBuilderTests
     }
 
     [Fact]
+    public void BuildRotatingCompositeGraph_Draws_No_Caption_Without_A_Title()
+    {
+        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.FullHd1080p, titleFilePath: null, FontFilePath, rotationPeriodSeconds: 2.0);
+
+        graph.Should().NotContain("drawtext=");
+        graph.Should().EndWith("[with_vinyl]null[final]");
+    }
+
+    [Fact]
     public void BuildRotatingCompositeGraph_Starts_From_Input_Zero_And_Ends_With_The_Final_Pad()
     {
         var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.FullHd1080p, "Title", FontFilePath, rotationPeriodSeconds: 2.0);

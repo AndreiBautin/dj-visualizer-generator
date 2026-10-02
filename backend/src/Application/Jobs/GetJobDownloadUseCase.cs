@@ -80,7 +80,7 @@ public sealed class GetJobDownloadUseCase(
         }
 
         return Result<JobDownloadResult>.Success(
-            new JobDownloadResult(video.FilePath, SanitizeFileName(job.Title.Value) + ".mp4"));
+            new JobDownloadResult(video.FilePath, (job.Title.HasText ? SanitizeFileName(job.Title.Value) : "dj-visualizer") + ".mp4"));
     }
 
     /// <summary>

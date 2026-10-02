@@ -10,8 +10,9 @@ export const renderSettingsSchema = z.object({
   title: z
     .string()
     .trim()
-    .min(1, 'Title is required.')
-    .max(200, 'Title must be 200 characters or fewer.'),
+    // Optional: a blank title renders the record with no caption under it.
+    .max(200, 'Title must be 200 characters or fewer.')
+    .default(''),
   preset: z.enum(['1080p', '720p'], { message: 'Choose a video preset.' }),
   rotationSpeedSeconds: z
     .number()

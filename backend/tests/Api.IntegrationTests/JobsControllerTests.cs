@@ -133,9 +133,17 @@ public class JobsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Post_Jobs_Rejects_A_Missing_Title_With_A_Problem_Details_Response()
+    public async Task Post_Jobs_Accepts_A_Blank_Title()
     {
         var response = await _client.PostAsync("/jobs", BuildValidForm(title: "   "));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task Post_Jobs_Rejects_An_Overlong_Title_With_A_Problem_Details_Response()
+    {
+        var response = await _client.PostAsync("/jobs", BuildValidForm(title: new string('a', 201)));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problem = await response.Content.ReadFromJsonAsync<JsonElement>();

@@ -113,9 +113,26 @@ public class CreateJobUseCaseTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_Rejects_An_Empty_Title_Without_Touching_Storage_Or_The_Queue()
+    public async Task ExecuteAsync_Accepts_A_Blank_Title_As_A_Video_With_No_Caption()
     {
+        _fileStorage.SaveAudioAsync(Arg.Any<JobId>(), Arg.Any<Stream>(), "mix.mp3", Arg.Any<CancellationToken>())
+            .Returns(Result<SavedFile>.Success(new SavedFile("/data/jobs/x/input/audio.mp3", 500)));
+        _fileStorage.SaveArtworkAsync(Arg.Any<JobId>(), Arg.Any<Stream>(), "cover.jpg", Arg.Any<CancellationToken>())
+            .Returns(Result<SavedFile>.Success(new SavedFile("/data/jobs/x/input/artwork.jpg", 200)));
+        _audioProbe.GetDurationAsync("/data/jobs/x/input/audio.mp3", Arg.Any<CancellationToken>())
+            .Returns(TimeSpan.FromMinutes(30));
         var request = ValidRequest() with { Title = "   " };
+
+        var result = await CreateSut().ExecuteAsync(request, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _jobQueue.Received(1).EnqueueAsync(Arg.Is<Job>(j => !j!.Title.HasText), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Rejects_A_Title_Over_The_Length_Limit_Without_Touching_Storage_Or_The_Queue()
+    {
+        var request = ValidRequest() with { Title = new string('a', 201) };
 
         var result = await CreateSut().ExecuteAsync(request, CancellationToken.None);
 
