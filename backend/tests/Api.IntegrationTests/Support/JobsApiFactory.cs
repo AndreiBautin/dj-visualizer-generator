@@ -59,8 +59,22 @@ public sealed class JobsApiFactory : WebApplicationFactory<Program>
         });
     }
 
+    private bool _disposing;
+
+    /// <summary>
+    /// The base <c>Dispose(true)</c> calls <c>DisposeAsync</c>, which calls back into this method
+    /// <em>before</em> it disposes the host - so the nested call ran while the API still held
+    /// <c>.api.lock</c> open and the delete failed on Windows. Only the outermost call cleans up,
+    /// once the host is gone.
+    /// </summary>
     protected override void Dispose(bool disposing)
     {
+        if (_disposing)
+        {
+            return;
+        }
+
+        _disposing = true;
         base.Dispose(disposing);
         if (Directory.Exists(JobsRootPath))
         {
