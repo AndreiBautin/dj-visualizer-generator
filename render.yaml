@@ -42,8 +42,14 @@ services:
       # creation time rather than failing partway through a mux with no disk left. The real
       # ceiling on this free instance's ephemeral disk is undocumented and unverified against a
       # real 45-minute render - watch the first few live renders at this length.
+      #
+      # The audio cap was 120 MB, sized for a compressed mix - and it rejected a 30-minute mono WAV
+      # (157 MB) that the 45-minute duration limit had promised to accept. WAV is uncompressed:
+      # 45 minutes of 16-bit 44.1 kHz stereo is 476 MB, so 500 MB is what makes the duration limit
+      # true for every format the app takes. The upload streams to disk, not memory, and the
+      # free-disk floor above still refuses a job cleanly if the instance is short of space.
       - key: Jobs__MaxAudioBytes
-        value: "125829120" # 120 MB
+        value: "524288000" # 500 MB
       - key: Jobs__MaxImageBytes
         value: "10485760" # 10 MB
       - key: Jobs__MaxDurationSeconds

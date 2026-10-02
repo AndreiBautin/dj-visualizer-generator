@@ -246,7 +246,7 @@ resolving something that was never tested.
 1. **Anyone can spend the server's CPU.** There is no auth, so the rate limiter and the upload
    limits are the only things standing between the public demo and someone using it as a free
    transcoder. On the free tier the blast radius is one small instance that spins down anyway, and
-   the demo's limits (120 MB, 45 minutes) are set with this in mind. On a self-hosted instance with
+   the demo's limits (500 MB - enough for 45 minutes of uncompressed WAV - and 45 minutes) are set with this in mind. On a self-hosted instance with
    the 2 GB defaults, **do not expose it to the internet without putting auth in front of it.**
 
    Note the distinction this list previously blurred: on the deployed demo, spending CPU cannot
