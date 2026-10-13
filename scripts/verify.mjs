@@ -1,3 +1,4 @@
+import { checkBudget, entryGzipKb } from './bundle-budget.mjs'
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 const run = (command, args, options = {}) => {
@@ -52,6 +53,7 @@ if (
 }
 front(['test'])
 front(['run', 'build'])
+console.log(checkBudget(entryGzipKb('frontend/dist/assets')))
 front(['run', 'build', '--', '--mode', 'standalone'], {
   ...process.env,
   VITE_SAMPLE_ENABLED: 'true',
