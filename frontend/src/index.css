@@ -65,14 +65,28 @@ body {
   font-feature-settings: 'ss01', 'cv11';
 }
 
-/* The same three files the render worker burns captions with (assets/fonts/, copied into
+/* The same three faces the render worker burns captions with (assets/fonts/, copied into
    public/fonts/ - see docs/BACKLOG.md item 3) - so the caption-font choice previews itself in
-   its actual typeface instead of naming itself in the UI's own font. */
+   its actual typeface instead of naming itself in the UI's own font.
+
+   Sans and Mono are declared twice. The Latin subset (WOFF2, ~28 KB for both; regenerate with
+   scripts/subset-caption-fonts.sh) is declared last with a unicode-range, so it wins for Latin
+   text; the full TTF covers anything else and is only fetched if a title needs it. Serif stays
+   the original file: Abril's OFL reserves its name, which a modified subset may not carry. */
 @font-face {
   font-family: 'Caption Sans';
   src: url('/fonts/Poppins-ExtraBold.ttf') format('truetype');
   font-weight: 800;
   font-display: swap;
+}
+@font-face {
+  font-family: 'Caption Sans';
+  src: url('/fonts/Poppins-ExtraBold.latin.woff2') format('woff2');
+  font-weight: 800;
+  font-display: swap;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
   font-family: 'Caption Serif';
@@ -84,6 +98,15 @@ body {
   src: url('/fonts/SpaceMono-Bold.ttf') format('truetype');
   font-weight: 700;
   font-display: swap;
+}
+@font-face {
+  font-family: 'Caption Mono';
+  src: url('/fonts/SpaceMono-Bold.latin.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 /* Sweeps a highlight across the queued progress bar - see motion-safe:animate-[progress-sweep...]

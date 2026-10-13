@@ -40,6 +40,14 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // The shell plus the fonts its first screen draws with, so an installed app opened
+        // offline does not fall back to a system face. Only the Latin subsets: the other Geist
+        // ranges and the full caption TTFs load on demand if a title needs them.
+        globPatterns: [
+          '**/*.{js,css,html}',
+          'assets/geist-latin-wght-*.woff2',
+          'fonts/*.latin.woff2',
+        ],
         // The API responses (job status, downloads) must never be served from cache - only the
         // built SPA shell and its assets are precached.
         navigateFallbackDenylist: [
