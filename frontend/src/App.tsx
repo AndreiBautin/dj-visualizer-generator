@@ -374,30 +374,34 @@ function App() {
               </p>
             )}
 
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className={`relative w-full overflow-hidden ${BUTTON_PRIMARY}`}
-            >
-              {createJobMutation.isPending ? (
-                <>
-                  {/* Fills the button left to right as the file goes up. */}
-                  <span
-                    aria-hidden="true"
-                    className="absolute inset-y-0 left-0 bg-white/20 transition-[width] duration-300"
-                    style={{ width: `${Math.round(uploadFraction * 100)}%` }}
-                  />
-                  <Spinner />
-                  <span className="relative tabular-nums">
-                    Uploading...
-                    {uploadFraction > 0 &&
-                      ` ${Math.round(uploadFraction * 100)}%`}
-                  </span>
-                </>
-              ) : (
-                'Generate Video'
-              )}
-            </button>
+            {/* On phones the form is taller than the screen, so the action rides along at the
+                bottom; from lg up the form fits beside the record and it sits in flow. */}
+            <div className="sticky bottom-3 z-30 -mx-2 rounded-2xl bg-canvas/70 p-2 backdrop-blur-md lg:static lg:mx-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
+              <button
+                type="submit"
+                disabled={!canSubmit}
+                className={`relative w-full overflow-hidden ${BUTTON_PRIMARY}`}
+              >
+                {createJobMutation.isPending ? (
+                  <>
+                    {/* Fills the button left to right as the file goes up. */}
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-y-0 left-0 bg-white/20 transition-[width] duration-300"
+                      style={{ width: `${Math.round(uploadFraction * 100)}%` }}
+                    />
+                    <Spinner />
+                    <span className="relative tabular-nums">
+                      Uploading...
+                      {uploadFraction > 0 &&
+                        ` ${Math.round(uploadFraction * 100)}%`}
+                    </span>
+                  </>
+                ) : (
+                  'Generate Video'
+                )}
+              </button>
+            </div>
 
             <p
               aria-hidden="true"
