@@ -161,9 +161,26 @@ export function ProgressPanel({
 
   if (isPending) {
     return (
-      <p className="text-ink-muted motion-safe:animate-pulse">
-        Checking on your render...
-      </p>
+      // Same shape as the progress view it is about to become, so nothing jumps when the
+      // first status lands - most visible when a shared link or a reload opens this screen.
+      <div className="flex w-full flex-col items-center gap-5 sm:items-start">
+        <p className="sr-only">Checking on your render...</p>
+        <div
+          aria-hidden="true"
+          className="h-4 w-48 rounded-full bg-tint/[0.07] motion-safe:animate-pulse"
+        />
+        <div
+          aria-hidden="true"
+          className="flex w-full items-end justify-between"
+        >
+          <div className="h-4 w-32 rounded-full bg-tint/[0.07] motion-safe:animate-pulse" />
+          <div className="h-9 w-20 rounded-lg bg-tint/[0.07] motion-safe:animate-pulse" />
+        </div>
+        <div
+          aria-hidden="true"
+          className="h-2 w-full rounded-full bg-tint/[0.07] motion-safe:animate-pulse"
+        />
+      </div>
     )
   }
 
