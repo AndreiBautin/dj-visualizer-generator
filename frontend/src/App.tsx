@@ -423,15 +423,34 @@ function App({ now = Date.now }: { now?: () => number } = {}) {
             <RenderSettings />
 
             {(createJobMutation.isError || sampleJobMutation.isError) && (
-              <p role="alert" className="text-sm text-danger">
-                {(() => {
-                  const error =
-                    createJobMutation.error ?? sampleJobMutation.error
-                  return error instanceof ApiError
-                    ? error.message
-                    : 'The upload didn’t go through. Check your connection and try again.'
-                })()}
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger/25 bg-danger/[0.06] px-4 py-3">
+                <p role="alert" className="text-sm text-danger">
+                  {(() => {
+                    const error =
+                      createJobMutation.error ?? sampleJobMutation.error
+                    return error instanceof ApiError
+                      ? error.message
+                      : 'The upload didn’t go through. Check your connection and try again.'
+                  })()}
+                </p>
+                {/* Only where retrying can help - a dropped connection or a server fault. A
+                    rejected file or setting fails the same way twice. The chosen files and
+                    settings are still in the form, so retry resubmits them as they are. */}
+                {createJobMutation.isError &&
+                  !(
+                    createJobMutation.error instanceof ApiError &&
+                    createJobMutation.error.status < 500
+                  ) && (
+                    <button
+                      type="button"
+                      onClick={() => void methods.handleSubmit(onSubmit)()}
+                      disabled={!canSubmit}
+                      className={`px-4 py-2 text-xs ${BUTTON_SECONDARY}`}
+                    >
+                      Try again
+                    </button>
+                  )}
+              </div>
             )}
 
             {/* On phones the form is taller than the screen, so the action rides along at the

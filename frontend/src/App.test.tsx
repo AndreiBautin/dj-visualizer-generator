@@ -161,4 +161,34 @@ describe('App', () => {
       ),
     ).toBeInTheDocument()
   })
+
+  it('retries a failed upload with the same files, but not a rejected one', async () => {
+    const createJob = vi
+      .spyOn(apiClient, 'createJob')
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockRejectedValueOnce(
+        new apiClient.ApiError('Unsupported audio format.', 400),
+      )
+    // The spy is shared with earlier tests in this file; count only this one's calls.
+    createJob.mockClear()
+    const user = userEvent.setup()
+    renderApp()
+    await user.upload(
+      screen.getByLabelText('Audio file', { selector: 'input' }),
+      makeFile('mix.mp3'),
+    )
+    await user.upload(
+      screen.getByLabelText('Artwork', { selector: 'input' }),
+      makeFile('cover.png', 'image/png'),
+    )
+    await user.click(screen.getByRole('button', { name: /generate video/i }))
+
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
+
+    expect(createJob).toHaveBeenCalledTimes(2)
+    expect(createJob.mock.calls[1]![0].audioFile.name).toBe('mix.mp3')
+    // A 400 would fail identically again, so no retry is offered for it.
+    await screen.findByText('Unsupported audio format.')
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+  })
 })
