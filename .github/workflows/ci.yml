@@ -60,6 +60,36 @@ jobs:
             frontend/test-results
           if-no-files-found: ignore
 
+  # Lighthouse on the built frontend. Advisory like the visual job: scores go to the run
+  # summary and the full report is an artifact, but nothing here fails the build - a lab
+  # score on a shared runner is too noisy to gate a deploy on.
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --prefix frontend
+      - name: Build and serve the standalone frontend
+        working-directory: frontend
+        run: |
+          npm run build -- --mode standalone
+          npx vite preview --port 4173 --strictPort &
+          npx --yes wait-on@8.0.3 -t 60000 http://localhost:4173
+      - name: Audit
+        run: |
+          npx --yes lighthouse@12.8.2 http://localhost:4173/ --chrome-flags="--headless=new --no-sandbox"             --only-categories=performance,accessibility,best-practices,seo             --output=json --output=html --output-path=./lighthouse || echo "::warning::Lighthouse did not complete"
+          node -e "const r=require('./lighthouse.report.json');const l=Object.values(r.categories).map(c=>'| '+c.title+' | '+Math.round(c.score*100)+' |');console.log(['| Category | Score |','| --- | --- |',...l].join('\n'))" >> "$GITHUB_STEP_SUMMARY" || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse
+          path: lighthouse.report.*
+          if-no-files-found: ignore
+
   secrets:
     runs-on: ubuntu-latest
     permissions:
