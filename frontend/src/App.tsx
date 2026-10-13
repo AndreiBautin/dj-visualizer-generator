@@ -15,6 +15,7 @@ import { CopyJobLink } from './components/CopyJobLink'
 import { BrandMark } from './components/BrandMark'
 import { BuildFooter } from './components/BuildFooter'
 import { ExampleStrip } from './components/ExampleStrip'
+import { InstallButton } from './components/InstallButton'
 import { HowItWorks } from './components/HowItWorks'
 import { ProgressPanel } from './components/ProgressPanel'
 import { Spinner } from './components/Spinner'
@@ -489,6 +490,7 @@ function App() {
           </form>
         </div>
 
+        <InstallButton />
         <ExampleStrip />
         <HowItWorks />
 
