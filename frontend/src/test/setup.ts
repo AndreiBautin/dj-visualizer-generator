@@ -7,4 +7,5 @@ window.scrollTo = () => {}
 // App writes the job id into the address; without this one test's job leaks into the next.
 afterEach(() => {
   window.history.replaceState(null, '', '/')
+  window.localStorage.clear()
 })

@@ -27,6 +27,13 @@ import { useJobStatus } from './hooks/useJobStatus'
 import { usePageFileDrop } from './hooks/usePageFileDrop'
 import { DEFAULT_LABEL_CROP, type LabelCrop } from './lib/labelCrop'
 import { LabelCropEditor } from './components/LabelCropEditor'
+import { RecentRenders } from './components/RecentRenders'
+import {
+  addRecentJob,
+  loadRecentJobs,
+  saveRecentJobs,
+  type RecentJob,
+} from './lib/recentJobs'
 import { jobIdFromSearch, withJobId } from './lib/jobUrl'
 import { useArtworkColor } from './hooks/useArtworkColor'
 import { useUploadLimits } from './hooks/useUploadLimits'
@@ -139,13 +146,20 @@ function JobVinylRecord({
   )
 }
 
-function App() {
+/** `now` is the clock, injectable so recent-render times are testable. */
+function App({ now = Date.now }: { now?: () => number } = {}) {
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [artworkFile, setArtworkFile] = useState<File | null>(null)
   const [audioError, setAudioError] = useState<string | null>(null)
   const [artworkError, setArtworkError] = useState<string | null>(null)
   // The job lives in the address too, so a reload returns to the render and the link can be
   // shared. Possession of that link is the only access control - see AGENTS.md.
+  const [recentJobs, setRecentJobs] = useState<RecentJob[]>(loadRecentJobs)
+  function rememberJob(jobId: string, title: string) {
+    const next = addRecentJob(recentJobs, { jobId, title, createdAt: now() })
+    setRecentJobs(next)
+    saveRecentJobs(next)
+  }
   // Reset with the artwork: a crop chosen for one image means nothing for the next.
   const [labelCrop, setLabelCrop] = useState<LabelCrop>(DEFAULT_LABEL_CROP)
   const [jobId, setJobIdState] = useState<string | null>(() =>
@@ -249,6 +263,7 @@ function App() {
         rotationSpeedSeconds: values.rotationSpeedSeconds,
         captionFont: values.captionFont,
       })
+      rememberJob(result.jobId, values.title?.trim() || 'Sample mix')
       setJobId(result.jobId)
     } catch {
       // Swallowed deliberately: this is a bare click handler, not a form submit, so an
@@ -273,6 +288,7 @@ function App() {
         artworkFile,
         labelCrop,
       })
+      rememberJob(result.jobId, values.title.trim())
       setJobId(result.jobId)
     } catch {
       // Swallowed deliberately, same reasoning as handleTrySample below: the mutation already
@@ -487,6 +503,8 @@ function App() {
                 </p>
               </div>
             )}
+
+            <RecentRenders jobs={recentJobs} now={now()} onOpen={setJobId} />
           </form>
         </div>
 
