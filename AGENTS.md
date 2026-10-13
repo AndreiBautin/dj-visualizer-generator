@@ -12,4 +12,5 @@ Keep the existing .NET/React product scope. AI critique is a separate, unverifie
 - The app has no user ownership: possession of a random job URL grants access until expiry. Do not describe this as authenticated privacy.
 - Build both default and standalone frontend modes. The latter uses an empty API prefix; an unset value means /api and is different.
 - Render must use After CI Checks Pass. Live verification requires an expected commit and decodes a real rendered MP4. Never call a deployment verified from health alone.
+- UI uses the tokens in `index.css`, `lib/surfaces.ts` and `lib/buttons.ts` (see docs/ARCHITECTURE.md, "The frontend's visual system"); no raw `white/NN` text colours or one-off button styles. Keep animation `motion-safe:`, and give decorative layers `overflow-hidden` so they cannot widen `main`'s scroll area.
 - Preserve uncommitted work. Describe actual test/deployment evidence, with remaining unchecked areas explicit.

@@ -167,3 +167,25 @@ rejects.
 `JobDownloadGate` serializes download admission through persistence; transfer occurs after releasing it. Writes use unique temp files. Readers permit atomic rename on Windows. `/jobs/{id}/preview` supports ranges without incrementing saves; `/download` serves an attachment and increments saves. Both reserve a whole file per request against process-local egress, conservatively overcounting range responses and aborted transfers.
 
 `scripts/architecture.mjs` enforces dependency direction in `npm run verify`. One worker owns processing updates. Cleanup can race with expiring file transfers; ephemeral storage loss on host restart remains a demo limitation.
+
+## The frontend's visual system
+
+Every screen draws from three small vocabularies, so a new screen ranks and layers its
+content the same way the existing ones do:
+
+- **Tokens** (`frontend/src/index.css`, `@theme`): `accent`/`accent-glow` for the one thing
+  happening now, `ink`/`ink-muted`/`ink-faint` for three text levels, `line`/`line-strong` for
+  borders, `danger`, and `canvas` for the page. Components use these, not raw `white/NN`.
+  `canvas`'s hex value is repeated in `index.html`, `vite.config.ts` and `public/favicon.svg`,
+  because a manifest and a meta tag cannot read CSS variables.
+- **Surfaces** (`lib/surfaces.ts`): base, raised and sunken - a card on the page, a card on a
+  card, and a well that holds a control.
+- **Button weights** (`lib/buttons.ts`): primary for the screen's purpose, secondary for a
+  real alternative, ghost for an escape hatch.
+
+The record preview (`VinylRecord.tsx`) shares its geometry with `VinylFilterGraphBuilder`, and
+the caption under it mirrors the render's `drawtext` stage. Its sheen and halo are page-only
+lighting outside the spinning layer, not part of what the worker draws. All animation is
+`motion-safe:`. The three PWA icons in `public/icons/` are
+`public/favicon.svg` screenshotted in headless Chromium at 192 and 512 px (the maskable one at
+72% on a `canvas` fill, inside the safe zone); regenerate all three when the SVG changes.
