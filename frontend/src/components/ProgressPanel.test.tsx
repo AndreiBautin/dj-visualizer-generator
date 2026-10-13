@@ -53,6 +53,9 @@ describe('ProgressPanel', () => {
       preset: '1080p',
       captionFont: 'sans-bold',
       rotationSpeedSeconds: 18,
+      labelFocusX: 0.5,
+      labelFocusY: 0.5,
+      labelZoom: 1,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -70,6 +73,9 @@ describe('ProgressPanel', () => {
       preset: '1080p',
       captionFont: 'sans-bold',
       rotationSpeedSeconds: 18,
+      labelFocusX: 0.5,
+      labelFocusY: 0.5,
+      labelZoom: 1,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -88,6 +94,9 @@ describe('ProgressPanel', () => {
       preset: '1080p',
       captionFont: 'sans-bold',
       rotationSpeedSeconds: 18,
+      labelFocusX: 0.5,
+      labelFocusY: 0.5,
+      labelZoom: 1,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -109,6 +118,9 @@ describe('ProgressPanel', () => {
       preset: '1080p',
       captionFont: 'sans-bold',
       rotationSpeedSeconds: 18,
+      labelFocusX: 0.5,
+      labelFocusY: 0.5,
+      labelZoom: 1,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -130,6 +142,9 @@ describe('ProgressPanel', () => {
       preset: '1080p',
       captionFont: 'sans-bold',
       rotationSpeedSeconds: 18,
+      labelFocusX: 0.5,
+      labelFocusY: 0.5,
+      labelZoom: 1,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -148,6 +163,9 @@ describe('ProgressPanel', () => {
       preset: '1080p',
       captionFont: 'sans-bold',
       rotationSpeedSeconds: 18,
+      labelFocusX: 0.5,
+      labelFocusY: 0.5,
+      labelZoom: 1,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -171,6 +189,9 @@ describe('ProgressPanel', () => {
       preset: '1080p',
       captionFont: 'sans-bold',
       rotationSpeedSeconds: 18,
+      labelFocusX: 0.5,
+      labelFocusY: 0.5,
+      labelZoom: 1,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -189,6 +210,9 @@ describe('ProgressPanel', () => {
       preset: '1080p',
       captionFont: 'sans-bold',
       rotationSpeedSeconds: 18,
+      labelFocusX: 0.5,
+      labelFocusY: 0.5,
+      labelZoom: 1,
     })
 
     const { unmount } = renderWithClient(
@@ -210,6 +234,9 @@ describe('ProgressPanel', () => {
       preset: '1080p',
       captionFont: 'sans-bold',
       rotationSpeedSeconds: 18,
+      labelFocusX: 0.5,
+      labelFocusY: 0.5,
+      labelZoom: 1,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -229,6 +256,9 @@ describe('ProgressPanel', () => {
       preset: '1080p',
       captionFont: 'sans-bold',
       rotationSpeedSeconds: 18,
+      labelFocusX: 0.5,
+      labelFocusY: 0.5,
+      labelZoom: 1,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)

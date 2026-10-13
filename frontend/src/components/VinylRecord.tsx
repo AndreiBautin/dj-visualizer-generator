@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useObjectUrl } from '../hooks/useObjectUrl'
+import { DEFAULT_LABEL_CROP, type LabelCrop } from '../lib/labelCrop'
+import { CroppedLabelImage } from './CroppedLabelImage'
 
 const SPIN_DOWN_MS = 1400
 
@@ -15,6 +17,8 @@ interface VinylRecordProps {
   motion?: 'idle' | 'rendering' | 'stopped'
   /** Plays a single ring burst behind the record - the video is ready. */
   celebrate?: boolean
+  /** Which part of the artwork the label shows - the same crop the render applies. */
+  labelCrop?: LabelCrop
 }
 
 /**
@@ -28,6 +32,7 @@ export function VinylRecord({
   rotationSpeedSeconds,
   motion = 'idle',
   celebrate = false,
+  labelCrop = DEFAULT_LABEL_CROP,
 }: VinylRecordProps) {
   const labelUrl = useObjectUrl(artworkFile)
   const discRef = useRef<HTMLDivElement>(null)
@@ -91,7 +96,7 @@ export function VinylRecord({
         <div className="absolute inset-[6%] rounded-full bg-[radial-gradient(circle_at_35%_30%,rgba(255,255,255,0.06),transparent_60%)]" />
         <div className="absolute inset-[30%] flex items-center justify-center overflow-hidden rounded-full bg-accent shadow-[inset_0_0_0_1px_rgba(0,0,0,0.3)]">
           {labelUrl ? (
-            <img src={labelUrl} alt="" className="h-full w-full object-cover" />
+            <CroppedLabelImage src={labelUrl} crop={labelCrop} />
           ) : (
             <span className="text-xs font-semibold uppercase tracking-widest text-accent-content/70">
               Your art here

@@ -24,6 +24,8 @@ import { UploadCard } from './components/UploadCard'
 import { VinylRecord } from './components/VinylRecord'
 import { useJobStatus } from './hooks/useJobStatus'
 import { usePageFileDrop } from './hooks/usePageFileDrop'
+import { DEFAULT_LABEL_CROP, type LabelCrop } from './lib/labelCrop'
+import { LabelCropEditor } from './components/LabelCropEditor'
 import { jobIdFromSearch, withJobId } from './lib/jobUrl'
 import { useArtworkColor } from './hooks/useArtworkColor'
 import { useUploadLimits } from './hooks/useUploadLimits'
@@ -48,12 +50,14 @@ function LiveVinylRecord({
   motion,
   celebrate,
   jobSettings,
+  labelCrop,
 }: {
   artworkFile: File | null
   motion?: 'idle' | 'rendering' | 'stopped'
   celebrate?: boolean
   /** A job's own settings win over the form's - after a reload the form holds defaults. */
   jobSettings?: { rotationSpeedSeconds: number; captionFont: string }
+  labelCrop?: LabelCrop
 }) {
   const formSpeed = useWatch<RenderSettingsInput>({
     name: 'rotationSpeedSeconds',
@@ -77,6 +81,7 @@ function LiveVinylRecord({
         }
         motion={motion}
         celebrate={celebrate}
+        labelCrop={labelCrop}
       />
       {/* Where and how the render's drawtext stage burns the title: centred under the
           record, white with a soft shadow, in the chosen caption face. */}
@@ -120,6 +125,15 @@ function JobVinylRecord({
       motion={motion}
       celebrate={sawInProgress && data?.status === 'Completed'}
       jobSettings={data}
+      labelCrop={
+        data
+          ? {
+              focusX: data.labelFocusX,
+              focusY: data.labelFocusY,
+              zoom: data.labelZoom,
+            }
+          : undefined
+      }
     />
   )
 }
@@ -131,6 +145,8 @@ function App() {
   const [artworkError, setArtworkError] = useState<string | null>(null)
   // The job lives in the address too, so a reload returns to the render and the link can be
   // shared. Possession of that link is the only access control - see AGENTS.md.
+  // Reset with the artwork: a crop chosen for one image means nothing for the next.
+  const [labelCrop, setLabelCrop] = useState<LabelCrop>(DEFAULT_LABEL_CROP)
   const [jobId, setJobIdState] = useState<string | null>(() =>
     jobIdFromSearch(window.location.search),
   )
@@ -188,6 +204,7 @@ function App() {
   }
 
   function handleArtworkSelected(file: File) {
+    setLabelCrop(DEFAULT_LABEL_CROP)
     setArtworkFile(file)
     setArtworkError(validateArtworkFile(file, limits.maxImageBytes))
   }
@@ -212,6 +229,7 @@ function App() {
     setAudioError(null)
     setArtworkError(null)
     methods.reset()
+    setLabelCrop(DEFAULT_LABEL_CROP)
     createJobMutation.reset()
     sampleJobMutation.reset()
   }
@@ -252,6 +270,7 @@ function App() {
         captionFont: values.captionFont,
         audioFile,
         artworkFile,
+        labelCrop,
       })
       setJobId(result.jobId)
     } catch {
@@ -317,7 +336,10 @@ function App() {
         <div className="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-10 p-6 sm:p-10 lg:flex-row lg:items-center lg:gap-16">
           <div className="flex flex-col items-center gap-6 text-center motion-safe:animate-[rise-in_600ms_cubic-bezier(.2,.8,.2,1)_both] lg:sticky lg:top-10 lg:w-2/5 lg:items-start lg:text-left">
             <div className="w-full max-w-[20rem] [view-transition-name:vinyl]">
-              <LiveVinylRecord artworkFile={artworkFile} />
+              <LiveVinylRecord
+                artworkFile={artworkFile}
+                labelCrop={labelCrop}
+              />
             </div>
             <div>
               <p className="inline-flex items-center gap-2 text-xs font-medium tracking-[0.2em] text-accent-glow uppercase">
@@ -373,6 +395,13 @@ function App() {
                 setArtworkError(null)
               }}
             />
+            {artworkFile && !artworkError && (
+              <LabelCropEditor
+                file={artworkFile}
+                crop={labelCrop}
+                onChange={setLabelCrop}
+              />
+            )}
 
             <RenderSettings />
 

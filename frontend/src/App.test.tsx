@@ -69,6 +69,9 @@ describe('App', () => {
       preset: '1080p',
       captionFont: 'sans-bold',
       rotationSpeedSeconds: 18,
+      labelFocusX: 0.5,
+      labelFocusY: 0.5,
+      labelZoom: 1,
     })
     const user = userEvent.setup()
     renderApp()
@@ -81,7 +84,7 @@ describe('App', () => {
       makeFile('cover.png', 'image/png'),
     )
 
-    screen.getByRole('slider').focus()
+    screen.getByRole('slider', { name: /rotation speed/i }).focus()
     await user.keyboard('{Control>}{Enter}{/Control}')
 
     expect(apiClient.createJob).toHaveBeenCalledOnce()
@@ -98,6 +101,9 @@ describe('App', () => {
       preset: '1080p',
       captionFont: 'sans-bold',
       rotationSpeedSeconds: 18,
+      labelFocusX: 0.5,
+      labelFocusY: 0.5,
+      labelZoom: 1,
     })
     const user = userEvent.setup()
     renderApp()
@@ -122,6 +128,7 @@ describe('App', () => {
         captionFont: 'sans-bold',
         audioFile: expect.any(File),
         artworkFile: expect.any(File),
+        labelCrop: { focusX: 0.5, focusY: 0.5, zoom: 1 },
       },
       expect.anything(),
     )

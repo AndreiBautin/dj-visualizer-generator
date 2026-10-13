@@ -20,6 +20,8 @@ export interface CreateJobRequest {
   captionFont: CaptionFont
   audioFile: File
   artworkFile: File
+  /** Omitted = the server's centre crop. */
+  labelCrop?: { focusX: number; focusY: number; zoom: number }
 }
 
 export interface CreateJobResponse {
@@ -38,6 +40,9 @@ export interface JobStatusResponse {
   preset: VideoPreset
   captionFont: CaptionFont
   rotationSpeedSeconds: number
+  labelFocusX: number
+  labelFocusY: number
+  labelZoom: number
 }
 
 async function parseErrorDetail(response: Response): Promise<string> {
@@ -63,6 +68,11 @@ export async function createJob(
   formData.set('CaptionFont', request.captionFont)
   formData.set('Audio', request.audioFile)
   formData.set('Artwork', request.artworkFile)
+  if (request.labelCrop) {
+    formData.set('LabelFocusX', String(request.labelCrop.focusX))
+    formData.set('LabelFocusY', String(request.labelCrop.focusY))
+    formData.set('LabelZoom', String(request.labelCrop.zoom))
+  }
 
   // fetch cannot report upload progress, and a hosted WAV can be hundreds of megabytes - so a
   // caller that wants a progress bar gets an XHR, wrapped back into a fetch Response so the
