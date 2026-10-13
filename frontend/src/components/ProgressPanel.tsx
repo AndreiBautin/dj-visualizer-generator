@@ -41,7 +41,7 @@ export function ProgressPanel({ jobId, onReset }: ProgressPanelProps) {
 
   if (isPending) {
     return (
-      <p className="text-center text-white/60">Checking on your render...</p>
+      <p className="text-center text-ink-muted">Checking on your render...</p>
     )
   }
 
@@ -65,7 +65,7 @@ export function ProgressPanel({ jobId, onReset }: ProgressPanelProps) {
 
   if (isError || !data) {
     return (
-      <p className="text-center text-red-400">
+      <p className="text-center text-danger">
         Lost the connection for a moment - retrying...
       </p>
     )
@@ -78,12 +78,12 @@ export function ProgressPanel({ jobId, onReset }: ProgressPanelProps) {
   if (data.status === 'Failed') {
     return (
       <div className="flex flex-col items-center gap-4 text-center">
-        <p className="text-lg font-semibold text-red-400">Rendering failed</p>
-        <p className="text-sm text-white/70">{data.errorMessage}</p>
+        <p className="text-lg font-semibold text-danger">Rendering failed</p>
+        <p className="text-sm text-ink-muted">{data.errorMessage}</p>
         <button
           type="button"
           onClick={onReset}
-          className="text-sm text-white/60 hover:text-white"
+          className="text-sm text-ink-muted hover:text-ink"
         >
           Try again
         </button>
@@ -95,7 +95,7 @@ export function ProgressPanel({ jobId, onReset }: ProgressPanelProps) {
 
   return (
     <div className="flex flex-col items-center gap-3 text-center">
-      <p className="text-white/80">
+      <p className="text-ink-muted">
         {STATUS_LABEL[data.status] ?? data.status}
       </p>
       <div
@@ -114,7 +114,7 @@ export function ProgressPanel({ jobId, onReset }: ProgressPanelProps) {
           />
         )}
       </div>
-      <p className="text-sm text-white/60">
+      <p className="text-sm text-ink-muted">
         {isIndeterminate
           ? 'Waiting for a worker to pick this up...'
           : `${data.progress}%`}

@@ -8,7 +8,7 @@ interface DownloadPanelProps {
 export function DownloadPanel({ jobId, onReset }: DownloadPanelProps) {
   return (
     <div className="flex flex-col items-center gap-4 text-center motion-safe:animate-[panel-in_220ms_ease-out]">
-      <p className="text-lg font-semibold text-white">Your video is ready.</p>
+      <p className="text-lg font-semibold text-ink">Your video is ready.</p>
       <video
         controls
         preload="none"
@@ -28,14 +28,14 @@ export function DownloadPanel({ jobId, onReset }: DownloadPanelProps) {
         stays a plain anchor deliberately - fetching the video into a blob to catch that response
         would pull a multi-hundred-megabyte file through memory to improve an error message.
       */}
-      <p className="text-xs text-white/50">
+      <p className="text-xs text-ink-faint">
         You can save this file five times. Previewing does not use those saves.
         Files expire automatically.
       </p>
       <button
         type="button"
         onClick={onReset}
-        className="text-sm text-white/60 hover:text-white"
+        className="text-sm text-ink-muted hover:text-ink"
       >
         Create another video
       </button>

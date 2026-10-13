@@ -16,7 +16,7 @@ export function UpdatePrompt() {
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center p-4">
-      <div className="flex items-center gap-3 rounded-lg border border-white/15 bg-neutral-900 px-4 py-3 text-sm text-white shadow-lg">
+      <div className="flex items-center gap-3 rounded-lg border border-white/15 bg-neutral-900 px-4 py-3 text-sm text-ink shadow-lg">
         <span>An update is ready.</span>
         <button
           type="button"
@@ -28,7 +28,7 @@ export function UpdatePrompt() {
         <button
           type="button"
           onClick={() => setNeedRefresh(false)}
-          className="text-white/50 hover:text-white/80"
+          className="text-ink-faint hover:text-ink-muted"
         >
           Later
         </button>

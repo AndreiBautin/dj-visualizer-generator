@@ -11,8 +11,8 @@
  *   segmented control's track.
  */
 export const SURFACE_BASE =
-  'rounded-xl border border-white/10 bg-white/[0.04] shadow-sm shadow-black/20'
+  'rounded-2xl border border-line bg-white/[0.035] shadow-[inset_0_1px_0_0_rgb(255_255_255/0.06),0_8px_24px_-12px_rgb(0_0_0/0.6)] backdrop-blur-md'
 export const SURFACE_RAISED =
-  'rounded-lg border border-white/15 bg-white/[0.07] shadow-md shadow-black/30'
+  'rounded-xl border border-line-strong bg-white/[0.06] shadow-[inset_0_1px_0_0_rgb(255_255_255/0.08),0_10px_30px_-12px_rgb(0_0_0/0.7)]'
 export const SURFACE_SUNKEN =
-  'rounded-lg border border-white/10 bg-white/[0.03]'
+  'rounded-xl border border-line bg-black/25 shadow-[inset_0_1px_2px_0_rgb(0_0_0/0.4)]'

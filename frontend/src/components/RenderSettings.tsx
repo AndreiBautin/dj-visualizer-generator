@@ -31,7 +31,7 @@ const PRESET_OPTIONS = [
 ] as const
 
 const SEGMENT_LABEL_CLASS =
-  'block cursor-pointer rounded-md px-3 py-2 text-center text-sm text-white/70 transition-colors peer-checked:bg-accent peer-checked:font-semibold peer-checked:text-accent-content hover:text-white'
+  'block cursor-pointer rounded-md px-3 py-2 text-center text-sm text-ink-muted transition-colors peer-checked:bg-accent peer-checked:font-semibold peer-checked:text-accent-content hover:text-ink'
 
 export function RenderSettings() {
   const {
@@ -47,29 +47,26 @@ export function RenderSettings() {
   return (
     <fieldset className="space-y-4">
       <div>
-        <label
-          htmlFor="title"
-          className="block text-sm font-semibold text-white"
-        >
+        <label htmlFor="title" className="block text-sm font-semibold text-ink">
           Track title{' '}
-          <span className="font-normal text-white/50">(optional)</span>
+          <span className="font-normal text-ink-faint">(optional)</span>
         </label>
         <input
           id="title"
           type="text"
-          className={`mt-1 w-full px-3 py-2 text-white outline-none focus:border-accent/60 ${SURFACE_SUNKEN}`}
+          className={`mt-1 w-full px-3 py-2 text-ink outline-none focus:border-accent/60 ${SURFACE_SUNKEN}`}
           placeholder="Leave blank for no caption"
           {...register('title')}
         />
         {errors.title && (
-          <p role="alert" className="mt-1 text-xs text-red-400">
+          <p role="alert" className="mt-1 text-xs text-danger">
             {errors.title.message}
           </p>
         )}
       </div>
 
       <div>
-        <span className="block text-sm font-semibold text-white">
+        <span className="block text-sm font-semibold text-ink">
           Video preset
         </span>
         <div
@@ -89,7 +86,7 @@ export function RenderSettings() {
           ))}
         </div>
         {errors.preset && (
-          <p role="alert" className="mt-1 text-xs text-red-400">
+          <p role="alert" className="mt-1 text-xs text-danger">
             {errors.preset.message}
           </p>
         )}
@@ -98,12 +95,12 @@ export function RenderSettings() {
       <div>
         <label
           htmlFor="rotationSpeedSeconds"
-          className="block text-sm font-semibold text-white"
+          className="block text-sm font-semibold text-ink"
         >
           Rotation speed
         </label>
         <div className="mt-1 flex items-center gap-2">
-          <span className="text-xs text-white/50">Fast</span>
+          <span className="text-xs text-ink-faint">Fast</span>
           <input
             id="rotationSpeedSeconds"
             type="range"
@@ -113,21 +110,21 @@ export function RenderSettings() {
             className="w-full accent-accent"
             {...register('rotationSpeedSeconds', { valueAsNumber: true })}
           />
-          <span className="text-xs text-white/50">Slow</span>
+          <span className="text-xs text-ink-faint">Slow</span>
         </div>
-        <p className="mt-1 text-xs text-white/60">
+        <p className="mt-1 text-xs text-ink-muted">
           {(rotationSpeedSeconds ?? DEFAULT_ROTATION_SPEED_SECONDS).toFixed(0)}s
           per spin
         </p>
         {errors.rotationSpeedSeconds && (
-          <p role="alert" className="mt-1 text-xs text-red-400">
+          <p role="alert" className="mt-1 text-xs text-danger">
             {errors.rotationSpeedSeconds.message}
           </p>
         )}
       </div>
 
       <div>
-        <span className="block text-sm font-semibold text-white">
+        <span className="block text-sm font-semibold text-ink">
           Caption font
         </span>
         <div
@@ -152,7 +149,7 @@ export function RenderSettings() {
           ))}
         </div>
         {errors.captionFont && (
-          <p role="alert" className="mt-1 text-xs text-red-400">
+          <p role="alert" className="mt-1 text-xs text-danger">
             {errors.captionFont.message}
           </p>
         )}

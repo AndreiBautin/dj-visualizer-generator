@@ -134,7 +134,7 @@ function App() {
   if (jobId) {
     return (
       <FormProvider {...methods}>
-        <main className="relative min-h-screen overflow-hidden bg-black text-white">
+        <main className="relative min-h-screen overflow-hidden bg-black text-ink">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,color-mix(in_oklch,var(--color-accent)_14%,transparent),transparent_55%)]" />
           <div className="relative mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center gap-8 p-8 sm:flex-row sm:gap-12">
             <div className="w-full max-w-[16rem] shrink-0 sm:max-w-[18rem]">
@@ -161,7 +161,7 @@ function App() {
 
   return (
     <FormProvider {...methods}>
-      <main className="relative min-h-screen overflow-hidden bg-black text-white">
+      <main className="relative min-h-screen overflow-hidden bg-black text-ink">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,color-mix(in_oklch,var(--color-accent)_14%,transparent),transparent_55%)]" />
         <div className="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-10 p-6 sm:p-10 lg:flex-row lg:items-center lg:gap-16">
           <div className="flex flex-col items-center gap-6 text-center lg:sticky lg:top-10 lg:w-2/5 lg:items-start lg:text-left">
@@ -172,7 +172,7 @@ function App() {
               <h1 className="text-4xl font-semibold tracking-tight text-balance">
                 DJ Visualizer Generator
               </h1>
-              <p className="mt-2 text-white/60">
+              <p className="mt-2 text-ink-muted">
                 Upload a mix, get a spinning-record video.
               </p>
             </div>
@@ -210,7 +210,7 @@ function App() {
             <RenderSettings />
 
             {(createJobMutation.isError || sampleJobMutation.isError) && (
-              <p role="alert" className="text-sm text-red-400">
+              <p role="alert" className="text-sm text-danger">
                 {(() => {
                   const error =
                     createJobMutation.error ?? sampleJobMutation.error
@@ -230,21 +230,21 @@ function App() {
             </button>
 
             {isSampleMixEnabled() && (
-              <div className="space-y-2 border-t border-white/10 pt-4 text-center">
-                <p className="text-xs text-white/50">No mix to hand?</p>
+              <div className="space-y-2 border-t border-line pt-4 text-center">
+                <p className="text-xs text-ink-faint">No mix to hand?</p>
                 <button
                   type="button"
                   onClick={handleTrySample}
                   disabled={
                     sampleJobMutation.isPending || createJobMutation.isPending
                   }
-                  className="w-full rounded-lg border border-white/25 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="w-full rounded-lg border border-white/25 px-6 py-3 text-sm font-semibold text-ink hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {sampleJobMutation.isPending
                     ? 'Starting...'
                     : 'Render a sample mix'}
                 </button>
-                <p className="text-xs text-white/40">
+                <p className="text-xs text-ink-faint">
                   Renders a short synthesized track bundled with the app -
                   nothing to upload.
                 </p>

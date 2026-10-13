@@ -23,7 +23,7 @@ export function BuildFooter() {
   }
 
   return (
-    <footer className="text-xs text-white/30">
+    <footer className="text-xs text-ink/30">
       build <code>{commit}</code>
     </footer>
   )

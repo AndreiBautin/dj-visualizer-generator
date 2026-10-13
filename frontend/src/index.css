@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/geist';
 
 /* One accent, used everywhere something is the primary action or the thing currently happening
    (the CTA, the progress fill, a selected segmented option, the drag-active dropzone state) - so
@@ -7,6 +8,27 @@
 @theme {
   --color-accent: oklch(62% 0.19 235);
   --color-accent-content: oklch(98% 0.01 235);
+  --color-accent-glow: oklch(72% 0.17 220);
+
+  /* Bundled (font-src 'self'), so the CSP needs no third-party font host. */
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+
+  /* Text levels - components reach for these instead of ad-hoc white/NN opacities, so
+     hierarchy is three named steps rather than whichever number was typed that day. */
+  --color-ink: oklch(98% 0 0);
+  --color-ink-muted: oklch(98% 0 0 / 0.68);
+  --color-ink-faint: oklch(98% 0 0 / 0.5);
+  --color-line: oklch(100% 0 0 / 0.09);
+  --color-line-strong: oklch(100% 0 0 / 0.16);
+  --color-danger: oklch(72% 0.17 22);
+  --color-canvas: oklch(13% 0.01 250);
+}
+
+body {
+  background: var(--color-canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'ss01', 'cv11';
 }
 
 /* The same three files the render worker burns captions with (assets/fonts/, copied into

@@ -30,19 +30,19 @@ export function FilePreview({ file, onRemove }: FilePreviewProps) {
           className="h-12 w-12 rounded object-cover"
         />
       ) : (
-        <div className="flex h-12 w-12 items-center justify-center rounded bg-white/10 text-xs text-white/60">
+        <div className="flex h-12 w-12 items-center justify-center rounded bg-white/10 text-xs text-ink-muted">
           FILE
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-white">{file.name}</p>
-        <p className="text-xs text-white/60">{formatBytes(file.size)}</p>
+        <p className="truncate text-sm font-medium text-ink">{file.name}</p>
+        <p className="text-xs text-ink-muted">{formatBytes(file.size)}</p>
         {file.type.startsWith('audio/') && <WaveformPreview file={file} />}
       </div>
       <button
         type="button"
         onClick={onRemove}
-        className="rounded px-2 py-1 text-xs text-white/60 hover:bg-white/10 hover:text-white"
+        className="rounded px-2 py-1 text-xs text-ink-muted hover:bg-white/10 hover:text-ink"
       >
         Remove
       </button>
