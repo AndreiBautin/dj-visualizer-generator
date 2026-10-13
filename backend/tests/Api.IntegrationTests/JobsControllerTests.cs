@@ -174,6 +174,8 @@ public class JobsControllerTests : IDisposable
         status.GetProperty("status").GetString().Should().Be("Queued");
         status.GetProperty("progress").GetInt32().Should().Be(0);
         status.GetProperty("downloadsRemaining").GetInt32().Should().Be(5);
+        // So a page opened from a shared link can name the render.
+        status.GetProperty("title").GetString().Should().Be("Friday Night Set");
         // The job's own settings, so a page reopened from a link can describe what is rendering.
         status.GetProperty("preset").GetString().Should().NotBeNullOrEmpty();
         status.GetProperty("captionFont").GetString().Should().NotBeNullOrEmpty();

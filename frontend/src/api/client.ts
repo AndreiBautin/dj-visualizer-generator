@@ -43,6 +43,8 @@ export interface JobStatusResponse {
   labelFocusX: number
   labelFocusY: number
   labelZoom: number
+  /** Empty when the job has no caption. */
+  title: string
 }
 
 async function parseErrorDetail(response: Response): Promise<string> {

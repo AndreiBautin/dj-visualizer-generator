@@ -71,6 +71,7 @@ describe('ProgressPanel', () => {
       labelFocusX: 0.5,
       labelFocusY: 0.5,
       labelZoom: 1,
+      title: '',
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -91,6 +92,7 @@ describe('ProgressPanel', () => {
       labelFocusX: 0.5,
       labelFocusY: 0.5,
       labelZoom: 1,
+      title: '',
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -112,6 +114,7 @@ describe('ProgressPanel', () => {
       labelFocusX: 0.5,
       labelFocusY: 0.5,
       labelZoom: 1,
+      title: '',
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -136,6 +139,7 @@ describe('ProgressPanel', () => {
       labelFocusX: 0.5,
       labelFocusY: 0.5,
       labelZoom: 1,
+      title: '',
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -160,12 +164,37 @@ describe('ProgressPanel', () => {
       labelFocusX: 0.5,
       labelFocusY: 0.5,
       labelZoom: 1,
+      title: '',
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
 
     await screen.findByText('42%')
     expect(document.title).toBe('42% · DJ Visualizer Generator')
+  })
+
+  it('names a titled job in the tab, so several renders can be told apart', async () => {
+    vi.spyOn(apiClient, 'getJobStatus').mockResolvedValue({
+      jobId: 'abc',
+      status: 'Processing',
+      progress: 42,
+      errorMessage: null,
+      downloadsRemaining: 5,
+      preset: '1080p',
+      captionFont: 'sans-bold',
+      rotationSpeedSeconds: 18,
+      labelFocusX: 0.5,
+      labelFocusY: 0.5,
+      labelZoom: 1,
+      title: 'Friday Night Set',
+    })
+
+    renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
+
+    await screen.findByText('42%')
+    expect(document.title).toBe(
+      '42% · Friday Night Set · DJ Visualizer Generator',
+    )
   })
 
   it('sets a queued document title while waiting for a worker', async () => {
@@ -181,6 +210,7 @@ describe('ProgressPanel', () => {
       labelFocusX: 0.5,
       labelFocusY: 0.5,
       labelZoom: 1,
+      title: '',
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -207,6 +237,7 @@ describe('ProgressPanel', () => {
       labelFocusX: 0.5,
       labelFocusY: 0.5,
       labelZoom: 1,
+      title: '',
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -228,6 +259,7 @@ describe('ProgressPanel', () => {
       labelFocusX: 0.5,
       labelFocusY: 0.5,
       labelZoom: 1,
+      title: '',
     })
 
     const { unmount } = renderWithClient(
@@ -252,6 +284,7 @@ describe('ProgressPanel', () => {
       labelFocusX: 0.5,
       labelFocusY: 0.5,
       labelZoom: 1,
+      title: '',
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -274,6 +307,7 @@ describe('ProgressPanel', () => {
       labelFocusX: 0.5,
       labelFocusY: 0.5,
       labelZoom: 1,
+      title: '',
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)

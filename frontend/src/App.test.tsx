@@ -72,6 +72,7 @@ describe('App', () => {
       labelFocusX: 0.5,
       labelFocusY: 0.5,
       labelZoom: 1,
+      title: '',
     })
     const user = userEvent.setup()
     renderApp()
@@ -104,6 +105,7 @@ describe('App', () => {
       labelFocusX: 0.5,
       labelFocusY: 0.5,
       labelZoom: 1,
+      title: '',
     })
     const user = userEvent.setup()
     renderApp()

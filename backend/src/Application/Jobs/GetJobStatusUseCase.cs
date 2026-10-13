@@ -36,6 +36,7 @@ public sealed class GetJobStatusUseCase(IJobRepository jobRepository) : IGetJobS
             job.RotationSpeed.SecondsPerRotation,
             job.LabelCrop.FocusX,
             job.LabelCrop.FocusY,
-            job.LabelCrop.Zoom));
+            job.LabelCrop.Zoom,
+            job.Title.Value));
     }
 }

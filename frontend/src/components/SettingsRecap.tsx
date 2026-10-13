@@ -10,22 +10,29 @@ export function SettingsRecap({ jobId }: { jobId: string }) {
     CAPTION_FONT_OPTIONS.find((option) => option.value === data.captionFont)
       ?.label ?? data.captionFont
   return (
-    <ul
-      aria-label="Render settings"
-      className="flex flex-wrap justify-center gap-1.5 text-[11px] text-ink-muted sm:justify-start"
-    >
-      {[
-        data.preset,
-        `${font} caption`,
-        `${Math.round(data.rotationSpeedSeconds)}s per spin`,
-      ].map((item) => (
-        <li
-          key={item}
-          className="rounded-full bg-tint/[0.05] px-2.5 py-1 ring-1 ring-line"
-        >
-          {item}
-        </li>
-      ))}
-    </ul>
+    <>
+      {data.title && (
+        <p className="-mt-3 max-w-full truncate text-lg font-medium text-ink-muted">
+          {data.title}
+        </p>
+      )}
+      <ul
+        aria-label="Render settings"
+        className="flex flex-wrap justify-center gap-1.5 text-[11px] text-ink-muted sm:justify-start"
+      >
+        {[
+          data.preset,
+          `${font} caption`,
+          `${Math.round(data.rotationSpeedSeconds)}s per spin`,
+        ].map((item) => (
+          <li
+            key={item}
+            className="rounded-full bg-tint/[0.05] px-2.5 py-1 ring-1 ring-line"
+          >
+            {item}
+          </li>
+        ))}
+      </ul>
+    </>
   )
 }
