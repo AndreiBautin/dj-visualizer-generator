@@ -10,6 +10,7 @@ import {
 } from './api/client'
 import { Backdrop } from './components/Backdrop'
 import { BuildFooter } from './components/BuildFooter'
+import { HowItWorks } from './components/HowItWorks'
 import { ProgressPanel } from './components/ProgressPanel'
 import { Spinner } from './components/Spinner'
 import {
@@ -348,6 +349,8 @@ function App() {
             )}
           </form>
         </div>
+
+        <HowItWorks />
 
         <div className="relative flex justify-center pb-6 lg:pb-8">
           <BuildFooter />

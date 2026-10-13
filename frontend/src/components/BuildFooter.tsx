@@ -23,7 +23,7 @@ export function BuildFooter() {
   }
 
   return (
-    <footer className="text-xs text-ink/30">
+    <footer className="rounded-full px-3 py-1 font-mono text-[11px] text-ink/35 ring-1 ring-line">
       build <code>{commit}</code>
     </footer>
   )
