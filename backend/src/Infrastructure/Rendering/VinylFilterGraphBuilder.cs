@@ -59,7 +59,7 @@ internal static class VinylFilterGraphBuilder
         return $"color=c=black:s={w}x{h},format=rgb24,geq=r='0':g='{GlowGreen}*{falloff}':b='{GlowBlue}*{falloff}'[background]";
     }
 
-    public static string BuildStaticVinylGraph(VideoPreset preset)
+    public static string BuildStaticVinylGraph(VideoPreset preset, LabelCrop labelCrop)
     {
         var d = ComputeGeometry(preset).Diameter;
         var px = d / PreviewDiameterPx;
@@ -85,6 +85,13 @@ internal static class VinylFilterGraphBuilder
         var label = (int)Math.Round(d * LabelRatio);
         var labelRadius = Format(label / 2.0);
 
+        // Scale so the shorter side covers the label times the zoom, then slide a label-sized
+        // window across the slack. With LabelCrop.Default this is the old centre crop exactly:
+        // crop's own default x/y is (iw-ow)/2, (ih-oh)/2, truncated the same way.
+        var scaled = (int)Math.Round(label * labelCrop.Zoom);
+        var cropX = $"(iw-{label})*{Format(labelCrop.FocusX)}";
+        var cropY = $"(ih-{label})*{Format(labelCrop.FocusY)}";
+
         var hole = (int)Math.Round(d * HoleRatio);
         var ring = Math.Max(1, (int)Math.Round(2 * px));
         var holeCanvas = hole + (2 * ring);
@@ -95,7 +102,7 @@ internal static class VinylFilterGraphBuilder
         var stages = new[]
         {
             $"color=c=black:s={d}x{d},format=rgba,geq=r='{shade}':g='{shade}':b='{shade}':a='{discAlpha}'[disc]",
-            $"[0:v]scale={label}:{label}:force_original_aspect_ratio=increase,crop={label}:{label},format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='clip(255*({labelRadius}-hypot(X-{labelRadius},Y-{labelRadius})+0.5),0,255)'[label]",
+            $"[0:v]scale={scaled}:{scaled}:force_original_aspect_ratio=increase,crop={label}:{label}:x='{cropX}':y='{cropY}',format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='clip(255*({labelRadius}-hypot(X-{labelRadius},Y-{labelRadius})+0.5),0,255)'[label]",
             // The spindle hole, ringed in white at 15% as the homepage's box-shadow draws it.
             $"color=c=black:s={holeCanvas}x{holeCanvas},format=rgba,geq=r='if({inHole},0,255)':g='if({inHole},0,255)':b='if({inHole},0,255)':a='if({inHole},255,if(lte({hr},{holeCentre}),38,0))'[hole]",
             "[disc][label]overlay=(W-w)/2:(H-h)/2:format=auto[with_label]",

@@ -43,7 +43,10 @@ public sealed class JobsController(
                 artworkStream,
                 request.Artwork.FileName,
                 request.RotationSpeedSeconds,
-                request.CaptionFont),
+                request.CaptionFont,
+                request.LabelFocusX,
+                request.LabelFocusY,
+                request.LabelZoom),
             cancellationToken);
 
         if (!result.IsSuccess)

@@ -15,7 +15,7 @@ public class VinylFilterGraphBuilderTests
     [Fact]
     public void BuildStaticVinylGraph_Draws_The_Homepage_Record_At_1080p()
     {
-        var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.FullHd1080p);
+        var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.FullHd1080p, LabelCrop.Default);
 
         graph.Should().Contain("color=c=black:s=799x799");
         graph.Should().Contain("[0:v]scale=320:320:force_original_aspect_ratio=increase,crop=320:320");
@@ -24,9 +24,44 @@ public class VinylFilterGraphBuilderTests
     }
 
     [Fact]
+    public void BuildStaticVinylGraph_Default_LabelCrop_Is_A_Centre_Crop_Of_The_Largest_Square()
+    {
+        var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.FullHd1080p, LabelCrop.Default);
+
+        // Same scale as the old centre crop, and x/y equal to crop's own (iw-ow)/2, (ih-oh)/2 default.
+        graph.Should().Contain("[0:v]scale=320:320:force_original_aspect_ratio=increase,crop=320:320:x='(iw-320)*0.5':y='(ih-320)*0.5',");
+    }
+
+    [Fact]
+    public void BuildStaticVinylGraph_Applies_A_Custom_LabelCrop()
+    {
+        var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.FullHd1080p, LabelCrop.Create(0.0, 0.75, 2.5));
+
+        // Zoom scales the cover to 2.5x the label before the label-sized window is cut from it.
+        graph.Should().Contain("[0:v]scale=800:800:force_original_aspect_ratio=increase,crop=320:320:x='(iw-320)*0':y='(ih-320)*0.75',");
+    }
+
+    [Fact]
+    public void BuildStaticVinylGraph_Formats_The_Crop_With_The_Invariant_Culture()
+    {
+        var previous = System.Globalization.CultureInfo.CurrentCulture;
+        System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("de-DE");
+        try
+        {
+            var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.FullHd1080p, LabelCrop.Create(0.25, 0.5, 1.0));
+
+            graph.Should().Contain("x='(iw-320)*0.25'");
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = previous;
+        }
+    }
+
+    [Fact]
     public void BuildStaticVinylGraph_Draws_The_Homepage_Record_At_720p()
     {
-        var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.Hd720p);
+        var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.Hd720p, LabelCrop.Default);
 
         graph.Should().Contain("color=c=black:s=533x533");
         graph.Should().Contain("[0:v]scale=213:213:force_original_aspect_ratio=increase,crop=213:213");
@@ -36,7 +71,7 @@ public class VinylFilterGraphBuilderTests
     [Fact]
     public void BuildStaticVinylGraph_Cuts_Grooves_Into_The_Disc_And_Labels_It_With_The_Artwork()
     {
-        var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.FullHd1080p);
+        var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.FullHd1080p, LabelCrop.Default);
 
         // The grooves repeat on a radius period; the label goes over the disc, the hole over both.
         graph.Should().Contain("mod(hypot(");
@@ -46,7 +81,7 @@ public class VinylFilterGraphBuilderTests
     [Fact]
     public void BuildStaticVinylGraph_Contains_No_Per_Frame_Filters()
     {
-        var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.FullHd1080p);
+        var graph = VinylFilterGraphBuilder.BuildStaticVinylGraph(VideoPreset.FullHd1080p, LabelCrop.Default);
 
         // The whole point of the pass split: geq work happens once here, not per output frame.
         graph.Should().NotContain("rotate=");

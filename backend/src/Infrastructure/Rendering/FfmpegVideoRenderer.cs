@@ -99,7 +99,7 @@ public sealed class FfmpegVideoRenderer(
 
     private async Task RenderStaticVinylAsync(RenderRequest request, string vinylImagePath, CancellationToken cancellationToken)
     {
-        var filterGraph = VinylFilterGraphBuilder.BuildStaticVinylGraph(request.Preset);
+        var filterGraph = VinylFilterGraphBuilder.BuildStaticVinylGraph(request.Preset, request.LabelCrop);
         var arguments = FfmpegArgumentsBuilder.BuildStaticVinylArguments(request, filterGraph, vinylImagePath);
         await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: false), cancellationToken, onOutputLine: null);
     }

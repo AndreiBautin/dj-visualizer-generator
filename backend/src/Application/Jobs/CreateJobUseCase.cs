@@ -76,7 +76,24 @@ public sealed class CreateJobUseCase(
             return Result<CreateJobResult>.Failure(Error.Validation(ex.Message));
         }
 
-        var job = Job.Create(title, preset, rotationSpeed, captionFont, clock.UtcNow);
+        LabelCrop labelCrop;
+        try
+        {
+            // Each field is optional on its own: an omitted one keeps its default, so a caller can
+            // send only a zoom, or only a horizontal focus.
+            labelCrop = request.LabelFocusX is null && request.LabelFocusY is null && request.LabelZoom is null
+                ? LabelCrop.Default
+                : LabelCrop.Create(
+                    request.LabelFocusX ?? LabelCrop.Default.FocusX,
+                    request.LabelFocusY ?? LabelCrop.Default.FocusY,
+                    request.LabelZoom ?? LabelCrop.Default.Zoom);
+        }
+        catch (InvalidLabelCropException ex)
+        {
+            return Result<CreateJobResult>.Failure(Error.Validation(ex.Message));
+        }
+
+        var job = Job.Create(title, preset, rotationSpeed, captionFont, clock.UtcNow, labelCrop);
 
         var audioResult = await fileStorage.SaveAudioAsync(job.Id, request.AudioStream, request.AudioFileName, cancellationToken);
         if (!audioResult.IsSuccess)

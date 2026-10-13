@@ -15,7 +15,7 @@ public class FfmpegArgumentsBuilderTests
         Title: "Test Mix",
         Duration: TimeSpan.FromMinutes(45),
         RotationPeriodSeconds: 3.0,
-        CaptionFont: CaptionFont.SansBold);
+        CaptionFont: CaptionFont.SansBold, LabelCrop: LabelCrop.Default);
 
     [Fact]
     public void BuildStaticVinylArguments_Outputs_A_Single_Frame_To_The_Vinyl_Image_Path()

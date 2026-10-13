@@ -55,7 +55,7 @@ public class FfmpegVideoRendererTests : IDisposable
         var progressReports = new List<int>();
         var request = new RenderRequest(
             audioPath, artworkPath, outputPath, VideoPreset.Hd720p, "Test Mix: 100%", duration,
-            RotationPeriodSeconds: 2.0, CaptionFont: CaptionFont.SansBold);
+            RotationPeriodSeconds: 2.0, CaptionFont: CaptionFont.SansBold, LabelCrop: LabelCrop.Default);
 
         await sut.RenderAsync(request, (percent, _) =>
         {
@@ -78,6 +78,28 @@ public class FfmpegVideoRendererTests : IDisposable
     }
 
     [RequiresFfmpegFact]
+    public async Task RenderAsync_Renders_With_A_Non_Default_LabelCrop_On_Non_Square_Artwork()
+    {
+        var audioPath = Path.Combine(_workDir, "audio.wav");
+        var artworkPath = Path.Combine(_workDir, "artwork.png");
+        var outputPath = Path.Combine(_workDir, "video.mp4");
+        var duration = TimeSpan.FromSeconds(1);
+        File.WriteAllBytes(audioPath, SilentWavBuilder.Build(duration, sampleRate: 8000));
+        await RunFfmpegAsync("-y", "-f", "lavfi", "-i", "color=c=blue:s=160x64", "-frames:v", "1", artworkPath);
+
+        var sut = new FfmpegVideoRenderer(FontFilePaths);
+        var request = new RenderRequest(
+            audioPath, artworkPath, outputPath, VideoPreset.Hd720p, "Crop", duration,
+            RotationPeriodSeconds: 1.0, CaptionFont: CaptionFont.SansBold, LabelCrop: LabelCrop.Create(0.0, 1.0, 4.0));
+
+        await sut.RenderAsync(request, (_, _) => Task.CompletedTask, CancellationToken.None);
+
+        var probe = await ProbeVideoAsync(outputPath);
+        probe.Width.Should().Be(1280);
+        probe.Height.Should().Be(720);
+    }
+
+    [RequiresFfmpegFact]
     public async Task RenderAsync_Throws_A_RenderException_When_Ffmpeg_Fails()
     {
         var sut = new FfmpegVideoRenderer(FontFilePaths);
@@ -89,7 +111,7 @@ public class FfmpegVideoRendererTests : IDisposable
             "Test",
             TimeSpan.FromSeconds(2),
             RotationPeriodSeconds: 2.0,
-            CaptionFont: CaptionFont.SansBold);
+            CaptionFont: CaptionFont.SansBold, LabelCrop: LabelCrop.Default);
 
         var act = () => sut.RenderAsync(request, (_, _) => Task.CompletedTask, CancellationToken.None);
 
@@ -110,7 +132,7 @@ public class FfmpegVideoRendererTests : IDisposable
             "Test",
             TimeSpan.FromSeconds(2),
             RotationPeriodSeconds: 2.0,
-            CaptionFont: CaptionFont.MonoBold);
+            CaptionFont: CaptionFont.MonoBold, LabelCrop: LabelCrop.Default);
 
         var act = () => sut.RenderAsync(request, (_, _) => Task.CompletedTask, CancellationToken.None);
 
@@ -137,7 +159,7 @@ public class FfmpegVideoRendererTests : IDisposable
         var reported = new List<int>();
         var request = new RenderRequest(
             audioPath, artworkPath, outputPath, VideoPreset.Hd720p, "Progress", duration,
-            RotationPeriodSeconds: 2.0, CaptionFont: CaptionFont.SansBold);
+            RotationPeriodSeconds: 2.0, CaptionFont: CaptionFont.SansBold, LabelCrop: LabelCrop.Default);
 
         await new FfmpegVideoRenderer(FontFilePaths).RenderAsync(request, (percent, _) =>
         {
@@ -184,7 +206,7 @@ public class FfmpegVideoRendererTests : IDisposable
         var sut = new FfmpegVideoRenderer(FontFilePaths);
         var request = new RenderRequest(
             audioPath, artworkPath, outputPath, VideoPreset.Hd720p, hostileTitle, duration,
-            RotationPeriodSeconds: 1.0, CaptionFont: CaptionFont.SansBold);
+            RotationPeriodSeconds: 1.0, CaptionFont: CaptionFont.SansBold, LabelCrop: LabelCrop.Default);
 
         var render = async () => await sut.RenderAsync(request, (_, _) => Task.CompletedTask, CancellationToken.None);
 
@@ -206,7 +228,7 @@ public class FfmpegVideoRendererTests : IDisposable
         var sut = new FfmpegVideoRenderer(FontFilePaths);
         var request = new RenderRequest(
             audioPath, artworkPath, outputPath, VideoPreset.Hd720p, string.Empty, duration,
-            RotationPeriodSeconds: 1.0, CaptionFont: CaptionFont.SansBold);
+            RotationPeriodSeconds: 1.0, CaptionFont: CaptionFont.SansBold, LabelCrop: LabelCrop.Default);
 
         await sut.RenderAsync(request, (_, _) => Task.CompletedTask, CancellationToken.None);
 

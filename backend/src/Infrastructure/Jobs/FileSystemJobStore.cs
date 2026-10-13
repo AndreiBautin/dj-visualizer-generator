@@ -159,7 +159,10 @@ public sealed class FileSystemJobStore : IJobRepository, IJobQueue
         job.ErrorMessage,
         job.CreatedAt,
         job.UpdatedAt,
-        job.DownloadCount);
+        job.DownloadCount,
+        job.LabelCrop.FocusX,
+        job.LabelCrop.FocusY,
+        job.LabelCrop.Zoom);
 
     private static Job ToDomain(JobDto dto) => Job.Rehydrate(
         JobId.Parse(dto.Id),
@@ -177,5 +180,8 @@ public sealed class FileSystemJobStore : IJobRepository, IJobQueue
         dto.ErrorMessage,
         dto.CreatedAt,
         dto.UpdatedAt,
-        dto.DownloadCount);
+        dto.DownloadCount,
+        dto is { LabelFocusX: { } fx, LabelFocusY: { } fy, LabelZoom: { } zoom }
+            ? LabelCrop.Create(fx, fy, zoom)
+            : LabelCrop.Default);
 }

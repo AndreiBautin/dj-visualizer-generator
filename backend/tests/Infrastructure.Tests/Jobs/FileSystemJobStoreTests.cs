@@ -120,6 +120,53 @@ public class FileSystemJobStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task FindAsync_Falls_Back_To_The_Default_LabelCrop_For_A_Job_File_Without_Crop_Fields()
+    {
+        var sut = CreateSut();
+        var id = JobId.New();
+        var jobDirectory = Path.Combine(_rootPath, id.ToString());
+        Directory.CreateDirectory(jobDirectory);
+        // The exact shape status.json had before label cropping existed.
+        await File.WriteAllTextAsync(Path.Combine(jobDirectory, "status.json"), $$"""
+            {
+              "Id": "{{id}}",
+              "Title": "Pre-crop Set",
+              "Preset": "1080p",
+              "RotationSpeedSecondsPerRotation": 20,
+              "CaptionFont": "sans-bold",
+              "Status": "Queued",
+              "Progress": 0,
+              "ErrorMessage": null,
+              "CreatedAt": "2026-07-31T12:00:00+00:00",
+              "UpdatedAt": "2026-07-31T12:00:00+00:00",
+              "DownloadCount": 0
+            }
+            """);
+
+        var found = await sut.FindAsync(id, CancellationToken.None);
+
+        found!.LabelCrop.Should().Be(LabelCrop.Default);
+    }
+
+    [Fact]
+    public async Task EnqueueAsync_Then_FindAsync_Roundtrips_A_NonDefault_LabelCrop()
+    {
+        var sut = CreateSut();
+        var job = Job.Create(
+            JobTitle.Create("Friday Night Set"),
+            VideoPreset.FullHd1080p,
+            RotationSpeed.Default,
+            CaptionFont.Default,
+            Now,
+            LabelCrop.Create(0.1, 0.9, 3.0));
+
+        await sut.EnqueueAsync(job, CancellationToken.None);
+        var found = await sut.FindAsync(job.Id, CancellationToken.None);
+
+        found!.LabelCrop.Should().Be(LabelCrop.Create(0.1, 0.9, 3.0));
+    }
+
+    [Fact]
     public async Task SaveAsync_Overwrites_The_Previously_Persisted_State()
     {
         var sut = CreateSut();

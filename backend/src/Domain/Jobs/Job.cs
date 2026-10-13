@@ -9,6 +9,7 @@ public sealed class Job
     public VideoPreset Preset { get; }
     public RotationSpeed RotationSpeed { get; }
     public CaptionFont CaptionFont { get; }
+    public LabelCrop LabelCrop { get; }
     public JobStatus Status { get; private set; }
     public int Progress { get; private set; }
     public string? ErrorMessage { get; private set; }
@@ -43,7 +44,8 @@ public sealed class Job
         string? errorMessage,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
-        int downloadCount)
+        int downloadCount,
+        LabelCrop labelCrop)
     {
         Id = id;
         Title = title;
@@ -56,6 +58,7 @@ public sealed class Job
         CreatedAt = createdAt;
         UpdatedAt = updatedAt;
         DownloadCount = downloadCount;
+        LabelCrop = labelCrop;
     }
 
     public static Job Create(
@@ -63,8 +66,9 @@ public sealed class Job
         VideoPreset preset,
         RotationSpeed rotationSpeed,
         CaptionFont captionFont,
-        DateTimeOffset now) =>
-        new(JobId.New(), title, preset, rotationSpeed, captionFont, JobStatus.Queued, progress: 0, errorMessage: null, createdAt: now, updatedAt: now, downloadCount: 0);
+        DateTimeOffset now,
+        LabelCrop? labelCrop = null) =>
+        new(JobId.New(), title, preset, rotationSpeed, captionFont, JobStatus.Queued, progress: 0, errorMessage: null, createdAt: now, updatedAt: now, downloadCount: 0, labelCrop ?? LabelCrop.Default);
 
     public static Job Rehydrate(
         JobId id,
@@ -77,8 +81,9 @@ public sealed class Job
         string? errorMessage,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
-        int downloadCount = 0) =>
-        new(id, title, preset, rotationSpeed, captionFont, status, progress, errorMessage, createdAt, updatedAt, downloadCount);
+        int downloadCount = 0,
+        LabelCrop? labelCrop = null) =>
+        new(id, title, preset, rotationSpeed, captionFont, status, progress, errorMessage, createdAt, updatedAt, downloadCount, labelCrop ?? LabelCrop.Default);
 
     public void Start(DateTimeOffset now)
     {

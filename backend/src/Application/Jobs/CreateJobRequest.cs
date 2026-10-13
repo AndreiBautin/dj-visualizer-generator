@@ -8,4 +8,7 @@ public sealed record CreateJobRequest(
     Stream ArtworkStream,
     string ArtworkFileName,
     double? RotationSpeedSeconds = null,
-    string? CaptionFontName = null);
+    string? CaptionFontName = null,
+    double? LabelFocusX = null,
+    double? LabelFocusY = null,
+    double? LabelZoom = null);

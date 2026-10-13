@@ -10,4 +10,5 @@ public sealed record RenderRequest(
     string Title,
     TimeSpan Duration,
     double RotationPeriodSeconds,
-    CaptionFont CaptionFont);
+    CaptionFont CaptionFont,
+    LabelCrop LabelCrop);

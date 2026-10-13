@@ -53,7 +53,8 @@ public sealed class ProcessRenderJobUseCase(
             job.Title.Value,
             duration,
             job.RotationSpeed.SecondsPerRotation,
-            job.CaptionFont);
+            job.CaptionFont,
+            job.LabelCrop);
 
         try
         {

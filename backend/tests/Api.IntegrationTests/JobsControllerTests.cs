@@ -37,7 +37,10 @@ public class JobsControllerTests : IDisposable
         byte[]? audioBytes = null,
         string artworkFileName = "cover.png",
         double? rotationSpeedSeconds = null,
-        string? captionFont = null)
+        string? captionFont = null,
+        string? labelFocusX = null,
+        string? labelFocusY = null,
+        string? labelZoom = null)
     {
         var content = new MultipartFormDataContent
         {
@@ -53,6 +56,21 @@ public class JobsControllerTests : IDisposable
         if (captionFont is not null)
         {
             content.Add(new StringContent(captionFont), "CaptionFont");
+        }
+
+        if (labelFocusX is not null)
+        {
+            content.Add(new StringContent(labelFocusX), "LabelFocusX");
+        }
+
+        if (labelFocusY is not null)
+        {
+            content.Add(new StringContent(labelFocusY), "LabelFocusY");
+        }
+
+        if (labelZoom is not null)
+        {
+            content.Add(new StringContent(labelZoom), "LabelZoom");
         }
 
         var audioContent = new ByteArrayContent(audioBytes ?? ValidMp3Bytes);
@@ -90,6 +108,40 @@ public class JobsControllerTests : IDisposable
         var status = await _client.GetFromJsonAsync<JsonElement>($"/jobs/{created.GetProperty("jobId").GetString()}");
         status.GetProperty("captionFont").GetString().Should().Be("mono-bold");
         status.GetProperty("rotationSpeedSeconds").GetDouble().Should().Be(30.0);
+    }
+
+    [Fact]
+    public async Task Post_Jobs_Accepts_A_Custom_LabelCrop_And_Reports_It_In_The_Status()
+    {
+        var response = await _client.PostAsync("/jobs", BuildValidForm(labelFocusX: "0.2", labelFocusY: "0.9", labelZoom: "2.5"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var created = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var status = await _client.GetFromJsonAsync<JsonElement>($"/jobs/{created.GetProperty("jobId").GetString()}");
+        status.GetProperty("labelFocusX").GetDouble().Should().Be(0.2);
+        status.GetProperty("labelFocusY").GetDouble().Should().Be(0.9);
+        status.GetProperty("labelZoom").GetDouble().Should().Be(2.5);
+    }
+
+    [Fact]
+    public async Task Post_Jobs_Without_A_LabelCrop_Reports_The_Centred_Default()
+    {
+        var response = await _client.PostAsync("/jobs", BuildValidForm());
+
+        var created = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var status = await _client.GetFromJsonAsync<JsonElement>($"/jobs/{created.GetProperty("jobId").GetString()}");
+        status.GetProperty("labelFocusX").GetDouble().Should().Be(0.5);
+        status.GetProperty("labelFocusY").GetDouble().Should().Be(0.5);
+        status.GetProperty("labelZoom").GetDouble().Should().Be(1.0);
+    }
+
+    [Fact]
+    public async Task Post_Jobs_Rejects_A_LabelZoom_Outside_The_Allowed_Range()
+    {
+        var response = await _client.PostAsync("/jobs", BuildValidForm(labelZoom: "10"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
