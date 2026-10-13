@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useObjectUrl } from '../hooks/useObjectUrl'
 
 // Best-effort preview of the file prefix, not the whole mix. This limits encoded input;
 // decoded PCM can be larger. Some containers cannot decode a partial file.
@@ -11,10 +12,19 @@ interface WaveformPreviewProps {
 
 export function WaveformPreview({ file }: WaveformPreviewProps) {
   const [peaks, setPeaks] = useState<number[] | null>(null)
+  // The waveform covers only the decoded prefix, so the playhead is drawn against that
+  // span and playback stops at its end rather than running past what the bars show.
+  const [prefixSeconds, setPrefixSeconds] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const [position, setPosition] = useState(0)
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const audioUrl = useObjectUrl(file)
 
   useEffect(() => {
     let cancelled = false
     setPeaks(null)
+    setPlaying(false)
+    setPosition(0)
 
     async function decode() {
       const AudioContextCtor = window.AudioContext
@@ -28,6 +38,7 @@ export function WaveformPreview({ file }: WaveformPreviewProps) {
         const audioBuffer = await context.decodeAudioData(buffer)
         if (!cancelled) {
           setPeaks(extractPeaks(audioBuffer, BAR_COUNT))
+          setPrefixSeconds(audioBuffer.duration)
         }
       } catch {
         // Best-effort preview only - FilePreview already shows the filename and size regardless
@@ -50,28 +61,77 @@ export function WaveformPreview({ file }: WaveformPreviewProps) {
 
   const max = Math.max(...peaks, 0.01)
   const barWidth = 100 / peaks.length
+  const playedFraction =
+    prefixSeconds > 0 ? Math.min(1, position / prefixSeconds) : 0
+
+  function toggle() {
+    const audio = audioRef.current
+    if (!audio) return
+    if (playing) {
+      audio.pause()
+    } else {
+      if (audio.currentTime >= prefixSeconds) audio.currentTime = 0
+      void audio.play().catch(() => setPlaying(false))
+    }
+  }
 
   return (
-    <svg
-      viewBox="0 0 100 24"
-      preserveAspectRatio="none"
-      className="h-6 w-full"
-      aria-hidden="true"
-    >
-      {peaks.map((peak, index) => {
-        const height = Math.max(1, (peak / max) * 24)
-        return (
-          <rect
-            key={index}
-            x={index * barWidth}
-            y={(24 - height) / 2}
-            width={barWidth * 0.7}
-            height={height}
-            className="fill-white/50"
-          />
-        )
-      })}
-    </svg>
+    <div className="mt-1 flex items-center gap-2">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={playing ? 'Pause preview' : 'Play preview'}
+        className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-tint/[0.08] text-ink transition-colors hover:bg-tint/[0.14] focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
+      >
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 16 16"
+          className="h-3 w-3"
+          fill="currentColor"
+        >
+          {playing ? (
+            <path d="M4 3h3v10H4zM9 3h3v10H9z" />
+          ) : (
+            <path d="M5 3l8 5-8 5z" />
+          )}
+        </svg>
+      </button>
+      <svg
+        viewBox="0 0 100 24"
+        preserveAspectRatio="none"
+        className="h-6 w-full"
+        aria-hidden="true"
+      >
+        {peaks.map((peak, index) => {
+          const height = Math.max(1, (peak / max) * 24)
+          const played = (index + 0.5) / peaks.length <= playedFraction
+          return (
+            <rect
+              key={index}
+              x={index * barWidth}
+              y={(24 - height) / 2}
+              width={barWidth * 0.7}
+              height={height}
+              className={played ? 'fill-accent-glow' : 'fill-tint/40'}
+            />
+          )
+        })}
+      </svg>
+      {audioUrl && (
+        <audio
+          ref={audioRef}
+          src={audioUrl}
+          preload="none"
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          onTimeUpdate={(event) => {
+            const time = event.currentTarget.currentTime
+            setPosition(time)
+            if (time >= prefixSeconds) event.currentTarget.pause()
+          }}
+        />
+      )}
+    </div>
   )
 }
 

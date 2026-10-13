@@ -21,16 +21,19 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
     /// <summary>
     /// Policy for the SPA document and its assets. Everything is same-origin: the bundle, the
     /// styles and the API it calls are all served by this process, so no host allowlist is
-    /// needed. Two relaxations are load-bearing rather than habitual:
+    /// needed. Three relaxations are load-bearing rather than habitual:
     /// <c>'unsafe-inline'</c> for styles, because the progress bar sets its width with a React
     /// inline style attribute; and <c>blob:</c> for images, because artwork is previewed before
-    /// upload via <c>URL.createObjectURL</c>. Scripts get no such relaxation.
+    /// upload via <c>URL.createObjectURL</c>; and <c>blob:</c> for media, so the selected mix can be
+    /// auditioned the same way. Both blob relaxations reach only files the visitor chose on their
+    /// own machine. Scripts get no such relaxation.
     /// </summary>
     internal const string AppContentSecurityPolicy =
         "default-src 'self'; " +
         "script-src 'self'; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data: blob:; " +
+        "media-src 'self' blob:; " +
         "font-src 'self'; " +
         "connect-src 'self'; " +
         "object-src 'none'; " +

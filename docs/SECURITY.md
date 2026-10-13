@@ -96,7 +96,9 @@ The middleware now negotiates on content type: `text/html` gets a real SPA polic
 keeps `default-src 'none'`. Two relaxations in the SPA policy are load-bearing rather than
 habitual, and are commented as such: `style-src 'unsafe-inline'` because the progress bar sets its
 width via a React inline style, and `img-src blob:` because artwork is previewed before upload via
-`URL.createObjectURL`. Scripts get no relaxation.
+`URL.createObjectURL`. `media-src blob:` was added later so the selected mix can be auditioned
+before upload; like the image case it only reaches files the visitor picked locally. Scripts get
+no relaxation.
 
 ### F-4 — job data written into the source tree (Low) — **fixed**
 
