@@ -1,4 +1,4 @@
-import { useRef, type PointerEvent } from 'react'
+import { useRef, type KeyboardEvent, type PointerEvent } from 'react'
 import { useObjectUrl } from '../hooks/useObjectUrl'
 import {
   DEFAULT_LABEL_CROP,
@@ -52,19 +52,40 @@ export function LabelCropEditor({
     )
   }
 
+  // Arrow keys move the window like dragging does (the image moves with the arrow), +/- zoom.
+  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const step = event.shiftKey ? 0.2 : 0.05
+    const moves: Record<string, Partial<LabelCrop>> = {
+      ArrowLeft: { focusX: crop.focusX + step },
+      ArrowRight: { focusX: crop.focusX - step },
+      ArrowUp: { focusY: crop.focusY + step },
+      ArrowDown: { focusY: crop.focusY - step },
+      '+': { zoom: crop.zoom + 0.25 },
+      '=': { zoom: crop.zoom + 0.25 },
+      '-': { zoom: crop.zoom - 0.25 },
+    }
+    const move = moves[event.key]
+    if (!move) return
+    event.preventDefault()
+    onChange(clampCrop({ ...crop, ...move }))
+  }
+
   if (!url) return null
 
   return (
     <div className="mt-3 flex items-center gap-4">
       <div
         ref={frame}
-        role="img"
-        aria-label="Record label crop - drag to reposition"
+        role="group"
+        tabIndex={0}
+        aria-label="Record label crop"
+        aria-describedby="label-crop-help"
+        onKeyDown={onKeyDown}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={() => (drag.current = null)}
         onPointerCancel={() => (drag.current = null)}
-        className="relative z-10 h-24 w-24 shrink-0 cursor-grab touch-none overflow-hidden rounded-full ring-2 ring-accent/50 active:cursor-grabbing"
+        className="relative z-10 h-24 w-24 shrink-0 cursor-grab focus-visible:ring-4 focus-visible:ring-accent-glow focus-visible:outline-none touch-none overflow-hidden rounded-full ring-2 ring-accent/50 active:cursor-grabbing"
       >
         <CroppedLabelImage src={url} crop={crop} />
       </div>
@@ -75,8 +96,8 @@ export function LabelCropEditor({
         >
           Label crop
         </label>
-        <p className="text-[11px] text-ink-faint">
-          Drag the circle to reposition.
+        <p id="label-crop-help" className="text-[11px] text-ink-faint">
+          Drag the circle, or focus it and use the arrow keys (+ and − to zoom).
         </p>
         <input
           id="label-zoom"
