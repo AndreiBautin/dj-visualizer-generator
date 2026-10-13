@@ -15,6 +15,8 @@ import { CopyJobLink } from './components/CopyJobLink'
 import { BrandMark } from './components/BrandMark'
 import { BuildFooter } from './components/BuildFooter'
 import { ExampleStrip } from './components/ExampleStrip'
+import { OfflineBanner } from './components/OfflineBanner'
+import { useOnline } from './hooks/useOnline'
 import { InstallButton } from './components/InstallButton'
 import { HowItWorks } from './components/HowItWorks'
 import { ProgressPanel } from './components/ProgressPanel'
@@ -193,6 +195,7 @@ function App({ now = Date.now }: { now?: () => number } = {}) {
     }
   }
   const limits = useUploadLimits()
+  const online = useOnline()
   const artworkColor = useArtworkColor(artworkError ? null : artworkFile)
   const moodStyle = artworkColor
     ? ({ '--mood': artworkColor } as React.CSSProperties)
@@ -313,6 +316,7 @@ function App({ now = Date.now }: { now?: () => number } = {}) {
           style={moodStyle}
         >
           <Backdrop />
+          <OfflineBanner />
           <div className="relative mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center gap-8 p-8 sm:flex-row sm:gap-12">
             <div className="w-full max-w-[16rem] shrink-0 [view-transition-name:vinyl] sm:max-w-[18rem]">
               <JobVinylRecord jobId={jobId} artworkFile={artworkFile} />
@@ -342,7 +346,8 @@ function App({ now = Date.now }: { now?: () => number } = {}) {
 
   const canSubmit =
     Boolean(audioFile && artworkFile && !audioError && !artworkError) &&
-    !createJobMutation.isPending
+    !createJobMutation.isPending &&
+    online
 
   return (
     <FormProvider {...methods}>
@@ -351,6 +356,7 @@ function App({ now = Date.now }: { now?: () => number } = {}) {
         style={moodStyle}
       >
         <Backdrop />
+        <OfflineBanner />
         <div
           aria-hidden="true"
           className={`pointer-events-none fixed inset-3 z-20 flex items-end justify-center rounded-3xl border-2 border-dashed border-accent/60 bg-accent/[0.06] pb-10 transition-opacity duration-200 ${isPageDragging ? 'opacity-100' : 'opacity-0'}`}
