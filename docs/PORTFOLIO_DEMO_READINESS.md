@@ -1,6 +1,18 @@
 # Spinner: senior developer portfolio demo readiness
 
-## Current result — 2026-10-13 (second pass)
+## Current result — 2026-10-14
+
+Verified application revision: `61293e8`.
+
+- Root `npm run verify` passed (format check now also covers the gate scripts and visual specs). CI succeeded with browser tests in Chromium, Firefox and WebKit - including Copy link's clipboard write and a real download spending one save (5 → 4) - plus the advisory visual and Lighthouse jobs.
+- [Expected-revision deployment verification](https://github.com/AndreiBautin/dj-visualizer-generator/actions/runs/38478423109) succeeded: sample rendered in 145 s, downloaded and decoded (4,653,434 bytes).
+- Lighthouse against the live site (mobile, lab): Performance 87, Accessibility 100, Best Practices 96, SEO 100. Fingerprinted assets are served immutable for a year; the document and service worker revalidate.
+- On the live site, a 600 MB file was refused before upload, and a 202 MB WAV uploaded with a steadily climbing percentage (about 2.5 minutes). That upload exposed a bug - the screen did not switch to the job when the window was not producing frames - fixed and confirmed in the same conditions.
+- Main-thread profiling at 4x CPU: steady-state style recalculation is zero (the record spin is compositor-only); the remaining blocking time is the first React render of the form.
+
+Not verified: real Safari (see the manual checklist in TESTING.md), and a 40-minute render to completion on the hosted instance - the one attempted was lost to a redeploy (see DEPLOYMENT.md).
+
+## Earlier result — 2026-10-13 (second pass)
 
 Verified application revision: `2dcb15f`.
 
