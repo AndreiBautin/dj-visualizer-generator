@@ -42,6 +42,9 @@ for (const colorScheme of ['dark', 'light'] as const) {
       await expect(
         page.getByRole('button', { name: 'Generate Video' }),
       ).toBeVisible()
+      // The hints start from built-in defaults and switch to the server's limits when they
+      // arrive; wait for the mocked ones or the screenshot races the request.
+      await expect(page.getByText(/up to 1\.9 GB/)).toBeVisible()
       await expect(page).toHaveScreenshot(`form-${colorScheme}.png`, {
         fullPage: true,
       })
