@@ -130,7 +130,11 @@ function App() {
     },
   })
 
-  const createJobMutation = useMutation({ mutationFn: createJob })
+  const [uploadFraction, setUploadFraction] = useState(0)
+  const createJobMutation = useMutation({
+    mutationFn: (request: Parameters<typeof createJob>[0]) =>
+      createJob(request, setUploadFraction),
+  })
   const sampleJobMutation = useMutation({ mutationFn: createSampleJob })
 
   function handleAudioSelected(file: File) {
@@ -194,6 +198,7 @@ function App() {
       return
     }
 
+    setUploadFraction(0)
     try {
       const result = await createJobMutation.mutateAsync({
         title: values.title,
@@ -320,12 +325,22 @@ function App() {
             <button
               type="submit"
               disabled={!canSubmit}
-              className={`w-full ${BUTTON_PRIMARY}`}
+              className={`relative w-full overflow-hidden ${BUTTON_PRIMARY}`}
             >
               {createJobMutation.isPending ? (
                 <>
+                  {/* Fills the button left to right as the file goes up. */}
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-y-0 left-0 bg-white/20 transition-[width] duration-300"
+                    style={{ width: `${Math.round(uploadFraction * 100)}%` }}
+                  />
                   <Spinner />
-                  Uploading...
+                  <span className="relative tabular-nums">
+                    Uploading...
+                    {uploadFraction > 0 &&
+                      ` ${Math.round(uploadFraction * 100)}%`}
+                  </span>
                 </>
               ) : (
                 'Generate Video'

@@ -51,6 +51,7 @@ async function parseErrorDetail(response: Response): Promise<string> {
 
 export async function createJob(
   request: CreateJobRequest,
+  onUploadProgress?: (fraction: number) => void,
 ): Promise<CreateJobResponse> {
   const formData = new FormData()
   formData.set('Title', request.title)
@@ -60,15 +61,49 @@ export async function createJob(
   formData.set('Audio', request.audioFile)
   formData.set('Artwork', request.artworkFile)
 
-  const response = await fetch(`${BASE_URL}/jobs`, {
-    method: 'POST',
-    body: formData,
-  })
+  // fetch cannot report upload progress, and a hosted WAV can be hundreds of megabytes - so a
+  // caller that wants a progress bar gets an XHR, wrapped back into a fetch Response so the
+  // error handling below stays one path.
+  const response = onUploadProgress
+    ? await postWithUploadProgress(
+        `${BASE_URL}/jobs`,
+        formData,
+        onUploadProgress,
+      )
+    : await fetch(`${BASE_URL}/jobs`, { method: 'POST', body: formData })
   if (!response.ok) {
     throw new ApiError(await parseErrorDetail(response), response.status)
   }
 
   return (await response.json()) as CreateJobResponse
+}
+
+function postWithUploadProgress(
+  url: string,
+  body: FormData,
+  onUploadProgress: (fraction: number) => void,
+): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', url)
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && event.total > 0) {
+        onUploadProgress(event.loaded / event.total)
+      }
+    }
+    xhr.onload = () =>
+      resolve(
+        new Response(xhr.status === 204 ? null : xhr.responseText, {
+          status: xhr.status,
+          headers: {
+            'Content-Type': xhr.getResponseHeader('Content-Type') ?? '',
+          },
+        }),
+      )
+    xhr.onerror = () => reject(new TypeError('Network request failed'))
+    xhr.onabort = () => reject(new TypeError('Network request aborted'))
+    xhr.send(body)
+  })
 }
 
 export async function getJobStatus(jobId: string): Promise<JobStatusResponse> {
