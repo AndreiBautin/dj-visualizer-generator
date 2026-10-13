@@ -9,6 +9,7 @@ import {
   isSampleMixEnabled,
 } from './api/client'
 import { Backdrop } from './components/Backdrop'
+import { CopyJobLink } from './components/CopyJobLink'
 import { BuildFooter } from './components/BuildFooter'
 import { HowItWorks } from './components/HowItWorks'
 import { ProgressPanel } from './components/ProgressPanel'
@@ -21,6 +22,7 @@ import { UploadCard } from './components/UploadCard'
 import { VinylRecord } from './components/VinylRecord'
 import { useJobStatus } from './hooks/useJobStatus'
 import { usePageFileDrop } from './hooks/usePageFileDrop'
+import { jobIdFromSearch, withJobId } from './lib/jobUrl'
 import { useUploadLimits } from './hooks/useUploadLimits'
 import {
   formatBytes,
@@ -101,7 +103,15 @@ function App() {
   const [artworkFile, setArtworkFile] = useState<File | null>(null)
   const [audioError, setAudioError] = useState<string | null>(null)
   const [artworkError, setArtworkError] = useState<string | null>(null)
-  const [jobId, setJobId] = useState<string | null>(null)
+  // The job lives in the address too, so a reload returns to the render and the link can be
+  // shared. Possession of that link is the only access control - see AGENTS.md.
+  const [jobId, setJobIdState] = useState<string | null>(() =>
+    jobIdFromSearch(window.location.search),
+  )
+  function setJobId(next: string | null) {
+    setJobIdState(next)
+    window.history.replaceState(null, '', withJobId(window.location.href, next))
+  }
   const limits = useUploadLimits()
 
   // Form and progress are two different screens sharing one URL, so the browser keeps the
@@ -219,6 +229,7 @@ function App() {
                 onReset={handleReset}
                 posterFile={artworkFile}
               />
+              <CopyJobLink />
             </div>
           </div>
           <div className="relative flex justify-center pb-6">
