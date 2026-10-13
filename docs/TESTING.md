@@ -22,7 +22,7 @@ Current totals and actual run results are recorded in PORTFOLIO_DEMO_READINESS.m
 
 ## Deliberately not tested
 
-Pixel-perfect FFmpeg snapshots are brittle across encoder/platform builds; inspect a real output visually. Timing is recorded as a measurement, not a pass/fail assertion on shared hardware. Multiple workers are unsupported and rejected by a lease; a distributed queue is outside this product. Hosted load/cost limits need separate measurements on actual hardware. We test our integration with FFmpeg and ASP.NET, not their internal implementations. The visual suite is not in `verify` or CI: font rasterisation differs between Windows and CI's Linux runner, so one set of baselines cannot pass both, and a gate that fails on antialiasing gets ignored. It is a local review tool, run before shipping a UI change.
+Pixel-perfect FFmpeg snapshots are brittle across encoder/platform builds; inspect a real output visually. Timing is recorded as a measurement, not a pass/fail assertion on shared hardware. Multiple workers are unsupported and rejected by a lease; a distributed queue is outside this product. Hosted load/cost limits need separate measurements on actual hardware. We test our integration with FFmpeg and ASP.NET, not their internal implementations. The visual suite is not a gate. Font rasterisation differs between Windows and Linux, so baselines are kept per platform; CI's `visual` job compares against the Linux set and reports differences as a warning with the screenshots attached, never a failed check, because Render deploys only after checks pass and antialiasing must not block a release.
 
 ## Helpers
 
