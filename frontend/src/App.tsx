@@ -12,7 +12,10 @@ import { Backdrop } from './components/Backdrop'
 import { BuildFooter } from './components/BuildFooter'
 import { ProgressPanel } from './components/ProgressPanel'
 import { Spinner } from './components/Spinner'
-import { RenderSettings } from './components/RenderSettings'
+import {
+  CAPTION_FONT_OPTIONS,
+  RenderSettings,
+} from './components/RenderSettings'
 import { UploadCard } from './components/UploadCard'
 import { VinylRecord } from './components/VinylRecord'
 import { useJobStatus } from './hooks/useJobStatus'
@@ -43,16 +46,33 @@ function LiveVinylRecord({
   const rotationSpeedSeconds = useWatch<RenderSettingsInput>({
     name: 'rotationSpeedSeconds',
   })
+  const title = useWatch<RenderSettingsInput>({ name: 'title' })
+  const captionFont = useWatch<RenderSettingsInput>({ name: 'captionFont' })
+  const caption = typeof title === 'string' ? title.trim() : ''
+  const fontFamily = CAPTION_FONT_OPTIONS.find(
+    (option) => option.value === captionFont,
+  )?.previewFontFamily
   return (
-    <VinylRecord
-      artworkFile={artworkFile}
-      rotationSpeedSeconds={
-        typeof rotationSpeedSeconds === 'number'
-          ? rotationSpeedSeconds
-          : DEFAULT_ROTATION_SPEED_SECONDS
-      }
-      motion={motion}
-    />
+    <div className="flex flex-col items-center gap-4">
+      <VinylRecord
+        artworkFile={artworkFile}
+        rotationSpeedSeconds={
+          typeof rotationSpeedSeconds === 'number'
+            ? rotationSpeedSeconds
+            : DEFAULT_ROTATION_SPEED_SECONDS
+        }
+        motion={motion}
+      />
+      {/* Where and how the render's drawtext stage burns the title: centred under the
+          record, white with a soft shadow, in the chosen caption face. */}
+      <p
+        aria-hidden="true"
+        className={`max-w-full truncate text-center text-xl text-white transition-opacity duration-300 [text-shadow:2px_2px_0_rgb(0_0_0/0.5)] ${caption ? 'opacity-100' : 'opacity-0'}`}
+        style={{ fontFamily }}
+      >
+        {caption || ' '}
+      </p>
+    </div>
   )
 }
 

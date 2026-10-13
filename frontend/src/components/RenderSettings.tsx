@@ -7,7 +7,7 @@ import {
   type RenderSettingsInput,
 } from '../schemas/renderSettingsSchema'
 
-const CAPTION_FONT_OPTIONS = [
+export const CAPTION_FONT_OPTIONS = [
   {
     value: 'sans-bold',
     label: 'Sans',
