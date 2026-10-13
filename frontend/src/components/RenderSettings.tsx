@@ -1,5 +1,11 @@
 import { useFormContext, useWatch } from 'react-hook-form'
 import { CAPTION_FONT_OPTIONS } from '../lib/captionFonts'
+import {
+  canvasMeasurer,
+  captionFits,
+  captionWidthShare,
+} from '../lib/captionFit'
+import { useMemo } from 'react'
 import { SURFACE_SUNKEN } from '../lib/surfaces'
 import {
   DEFAULT_ROTATION_SPEED_SECONDS,
@@ -32,6 +38,35 @@ function SegmentPill({ index, count }: { index: number; count: number }) {
   )
 }
 
+/** Warns, without blocking, when the title would crowd or run off the rendered frame. */
+function CaptionFitWarning({
+  title,
+  captionFont,
+}: {
+  title: string
+  captionFont: string | undefined
+}) {
+  const option = CAPTION_FONT_OPTIONS.find((o) => o.value === captionFont)
+  const measure = useMemo(
+    () =>
+      option
+        ? canvasMeasurer(option.previewFontFamily, option.previewFontWeight)
+        : null,
+    [option],
+  )
+  const text = title.trim()
+  if (!text || !measure) return null
+  const share = captionWidthShare(text, measure)
+  if (captionFits(share)) return null
+  return (
+    <p className="mt-1.5 text-xs text-ink-muted">
+      <span className="font-medium text-danger">Long for one line.</span> This
+      title runs {share > 1 ? 'off' : 'to'} the edge of the video in the{' '}
+      {option?.label} face — shorten it or try a narrower font.
+    </p>
+  )
+}
+
 export function RenderSettings() {
   const {
     register,
@@ -43,6 +78,7 @@ export function RenderSettings() {
     name: 'rotationSpeedSeconds',
   })
   const preset = useWatch({ control, name: 'preset' })
+  const title = useWatch({ control, name: 'title' })
   const captionFont = useWatch({ control, name: 'captionFont' })
   const speed = rotationSpeedSeconds ?? DEFAULT_ROTATION_SPEED_SECONDS
   const speedFraction =
@@ -63,6 +99,7 @@ export function RenderSettings() {
           placeholder="Leave blank for no caption"
           {...register('title')}
         />
+        <CaptionFitWarning title={title ?? ''} captionFont={captionFont} />
         {errors.title && (
           <p role="alert" className="mt-1 text-xs text-danger">
             {errors.title.message}
