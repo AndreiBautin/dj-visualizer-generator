@@ -11,6 +11,6 @@ const BUTTON_BASE =
 
 export const BUTTON_PRIMARY = `${BUTTON_BASE} bg-gradient-to-b from-accent-glow to-accent text-accent-content shadow-[0_10px_30px_-10px_var(--color-accent),inset_0_1px_0_rgb(255_255_255/0.3)] hover:-translate-y-px hover:brightness-110 disabled:hover:translate-y-0 disabled:hover:brightness-100`
 
-export const BUTTON_SECONDARY = `${BUTTON_BASE} border border-line-strong bg-white/[0.04] text-ink hover:bg-white/[0.08]`
+export const BUTTON_SECONDARY = `${BUTTON_BASE} border border-line-strong bg-tint/[0.04] text-ink hover:bg-tint/[0.08]`
 
-export const BUTTON_GHOST = `${BUTTON_BASE} px-3 py-2 font-medium text-ink-muted hover:bg-white/[0.06] hover:text-ink`
+export const BUTTON_GHOST = `${BUTTON_BASE} px-3 py-2 font-medium text-ink-muted hover:bg-tint/[0.06] hover:text-ink`

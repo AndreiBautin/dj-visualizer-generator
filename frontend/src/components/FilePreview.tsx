@@ -42,7 +42,7 @@ export function FilePreview({ file, onRemove }: FilePreviewProps) {
       <button
         type="button"
         onClick={onRemove}
-        className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink-muted transition-colors hover:bg-white/10 hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
+        className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink-muted transition-colors hover:bg-tint/10 hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
       >
         Remove
       </button>

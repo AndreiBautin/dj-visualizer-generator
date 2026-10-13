@@ -103,7 +103,7 @@ export function DownloadPanel({
           className={`rounded-full px-2.5 py-1 font-medium tabular-nums ring-1 ${
             exhausted
               ? 'bg-danger/10 text-danger ring-danger/30'
-              : 'bg-white/[0.05] text-ink-muted ring-line-strong'
+              : 'bg-tint/[0.05] text-ink-muted ring-line-strong'
           }`}
         >
           {exhausted

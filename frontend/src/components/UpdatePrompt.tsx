@@ -16,12 +16,12 @@ export function UpdatePrompt() {
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center p-4">
-      <div className="flex items-center gap-3 rounded-lg border border-white/15 bg-neutral-900 px-4 py-3 text-sm text-ink shadow-lg">
+      <div className="flex items-center gap-3 rounded-lg border border-line-strong bg-canvas px-4 py-3 text-sm text-ink shadow-lg">
         <span>An update is ready.</span>
         <button
           type="button"
           onClick={() => updateServiceWorker(true)}
-          className="rounded bg-white px-3 py-1 font-semibold text-black hover:bg-white/90"
+          className="rounded bg-ink px-3 py-1 font-semibold text-canvas hover:bg-ink/90"
         >
           Reload
         </button>

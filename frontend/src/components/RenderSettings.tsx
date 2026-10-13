@@ -31,7 +31,7 @@ const PRESET_OPTIONS = [
 ] as const
 
 const SEGMENT_LABEL_CLASS =
-  'relative z-10 block cursor-pointer rounded-lg px-3 py-2 text-center text-sm text-ink-muted transition-colors duration-200 peer-checked:font-semibold peer-checked:text-accent-content peer-focus-visible:ring-2 peer-focus-visible:ring-white/60 hover:text-ink'
+  'relative z-10 block cursor-pointer rounded-lg px-3 py-2 text-center text-sm text-ink-muted transition-colors duration-200 peer-checked:font-semibold peer-checked:text-accent-content peer-focus-visible:ring-2 peer-focus-visible:ring-tint/60 hover:text-ink'
 
 /** The selected-option pill, drawn once per control and slid to the chosen column - so a
  * selection change moves rather than blinks. */
@@ -141,7 +141,7 @@ export function RenderSettings() {
           />
           <span className="text-xs text-ink-faint">Slow</span>
         </div>
-        <p className="mt-1.5 inline-block rounded-md bg-white/[0.06] px-2 py-0.5 text-xs font-medium text-ink-muted tabular-nums">
+        <p className="mt-1.5 inline-block rounded-md bg-tint/[0.06] px-2 py-0.5 text-xs font-medium text-ink-muted tabular-nums">
           {(rotationSpeedSeconds ?? DEFAULT_ROTATION_SPEED_SECONDS).toFixed(0)}s
           per spin
         </p>

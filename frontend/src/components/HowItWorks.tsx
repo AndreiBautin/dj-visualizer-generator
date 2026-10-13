@@ -17,7 +17,7 @@ export function HowItWorks() {
       {STEPS.map((step, index) => (
         <li
           key={step.title}
-          className="flex gap-3 rounded-2xl border border-line bg-white/[0.02] p-4"
+          className="flex gap-3 rounded-2xl border border-line bg-tint/[0.02] p-4"
         >
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xs font-semibold text-accent-glow tabular-nums ring-1 ring-accent/30">
             {index + 1}

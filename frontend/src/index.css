@@ -22,6 +22,37 @@
   --color-line-strong: oklch(100% 0 0 / 0.16);
   --color-danger: oklch(72% 0.17 22);
   --color-canvas: oklch(13% 0.01 250);
+  /* What translucent fills are mixed from: white on the dark canvas, black on the light one. */
+  --color-tint: oklch(100% 0 0);
+  --color-sunken: oklch(0% 0 0 / 0.25);
+}
+
+:root {
+  --vignette: rgb(0 0 0 / 0.55);
+  --shadow: rgb(0 0 0 / 0.65);
+  --shadow-inset: rgb(0 0 0 / 0.4);
+  color-scheme: dark;
+}
+
+/* Light theme: the same tokens, flipped, following the system setting. The record, the video
+   frame and the caption stay as they are - those are previews of a dark video, not chrome. */
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-canvas: oklch(97.5% 0.005 250);
+    --color-ink: oklch(20% 0.02 255);
+    --color-ink-muted: oklch(20% 0.02 255 / 0.7);
+    --color-ink-faint: oklch(20% 0.02 255 / 0.55);
+    --color-line: oklch(20% 0.02 255 / 0.1);
+    --color-line-strong: oklch(20% 0.02 255 / 0.18);
+    --color-tint: oklch(20% 0.02 255);
+    --color-sunken: oklch(100% 0 0 / 0.7);
+    --color-danger: oklch(55% 0.2 25);
+    --color-accent-glow: oklch(58% 0.18 235);
+    --vignette: transparent;
+    --shadow: rgb(15 23 42 / 0.14);
+    --shadow-inset: rgb(15 23 42 / 0.06);
+    color-scheme: light;
+  }
 }
 
 body {
@@ -111,13 +142,13 @@ body {
   background: linear-gradient(
     to right,
     var(--color-accent) var(--fill, 50%),
-    rgb(255 255 255 / 0.1) var(--fill, 50%)
+    color-mix(in oklch, var(--color-tint) 10%, transparent) var(--fill, 50%)
   );
 }
 .range-accent::-moz-range-track {
   height: 6px;
   border-radius: 999px;
-  background: rgb(255 255 255 / 0.1);
+  background: color-mix(in oklch, var(--color-tint) 10%, transparent);
 }
 .range-accent::-moz-range-progress {
   height: 6px;

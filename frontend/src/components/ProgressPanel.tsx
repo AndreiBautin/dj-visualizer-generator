@@ -230,7 +230,7 @@ export function ProgressPanel({
         aria-valuenow={isIndeterminate ? undefined : data.progress}
         aria-valuemin={0}
         aria-valuemax={100}
-        className="relative h-2 w-full overflow-hidden rounded-full bg-white/[0.08] shadow-[inset_0_1px_2px_rgb(0_0_0/0.5)]"
+        className="relative h-2 w-full overflow-hidden rounded-full bg-tint/[0.08] shadow-[inset_0_1px_2px_rgb(0_0_0/0.5)]"
       >
         {isIndeterminate ? (
           <div className="h-full w-1/3 rounded-full bg-accent/70 motion-safe:animate-[progress-sweep_1.4s_ease-in-out_infinite]" />

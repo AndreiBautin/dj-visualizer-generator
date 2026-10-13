@@ -70,7 +70,7 @@ export function UploadCard({
           ? 'border-danger/60! bg-danger/[0.06]! motion-safe:animate-[shake_380ms_ease-in-out]'
           : isDragActive
             ? 'border-accent/70! bg-accent/10! shadow-[0_0_0_4px_color-mix(in_oklch,var(--color-accent)_15%,transparent)]!'
-            : 'hover:border-line-strong hover:bg-white/[0.05]'
+            : 'hover:border-line-strong hover:bg-tint/[0.05]'
       }`}
     >
       <div className="flex items-center gap-4">
@@ -81,7 +81,7 @@ export function UploadCard({
               ? 'border-danger/40 bg-danger/15 text-danger'
               : file
                 ? 'border-accent/40 bg-accent/15 text-accent-glow'
-                : 'border-line-strong bg-white/[0.04] text-ink-muted'
+                : 'border-line-strong bg-tint/[0.04] text-ink-muted'
           }`}
         >
           {file && !error ? (

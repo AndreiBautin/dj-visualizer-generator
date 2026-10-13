@@ -226,7 +226,7 @@ function App() {
               <JobVinylRecord jobId={jobId} artworkFile={artworkFile} />
             </div>
             <div className="flex w-full max-w-sm flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-              <h1 className="bg-gradient-to-b from-white to-white/60 bg-clip-text text-3xl font-semibold tracking-[-0.03em] text-transparent">
+              <h1 className="bg-gradient-to-b from-ink to-ink/60 bg-clip-text text-3xl font-semibold tracking-[-0.03em] text-transparent">
                 DJ Visualizer Generator
               </h1>
               <ProgressPanel
@@ -270,7 +270,7 @@ function App() {
               <p className="text-xs font-medium tracking-[0.2em] text-accent-glow uppercase">
                 Mix to video
               </p>
-              <h1 className="mt-3 bg-gradient-to-b from-white to-white/60 bg-clip-text text-5xl font-semibold tracking-[-0.035em] text-balance text-transparent">
+              <h1 className="mt-3 bg-gradient-to-b from-ink to-ink/60 bg-clip-text text-5xl font-semibold tracking-[-0.035em] text-balance text-transparent">
                 DJ Visualizer Generator
               </h1>
               <p className="mt-3 text-lg text-ink-muted">
