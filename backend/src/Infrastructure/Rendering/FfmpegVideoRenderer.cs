@@ -126,16 +126,17 @@ public sealed class FfmpegVideoRenderer(
         var arguments = FfmpegArgumentsBuilder.BuildLoopSegmentArguments(
             vinylImagePath, backgroundImagePath, filterGraph, videoCodec, x264Preset, loopDurationSeconds, loopSegmentPath);
         var loopDuration = TimeSpan.FromSeconds(loopDurationSeconds);
+        var loopSegmentEnd = RenderProgressScale.LoopSegmentEndFor(request.Duration);
 
         await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: true), cancellationToken, onOutputLine: async (line, ct) =>
         {
             if (FfmpegProgressParser.TryParseElapsed(line, out var elapsed))
             {
-                await onProgress(RenderProgressScale.ForLoopSegment(FfmpegProgressParser.CalculatePercent(elapsed, loopDuration)), ct);
+                await onProgress(RenderProgressScale.ForLoopSegment(FfmpegProgressParser.CalculatePercent(elapsed, loopDuration), loopSegmentEnd), ct);
             }
         });
 
-        await onProgress(RenderProgressScale.LoopSegmentEnd, cancellationToken);
+        await onProgress(loopSegmentEnd, cancellationToken);
     }
 
     private async Task MuxFinalVideoAsync(
@@ -152,7 +153,7 @@ public sealed class FfmpegVideoRenderer(
         {
             if (FfmpegProgressParser.TryParseElapsed(line, out var elapsed))
             {
-                await onProgress(RenderProgressScale.ForMux(FfmpegProgressParser.CalculatePercent(elapsed, request.Duration)), ct);
+                await onProgress(RenderProgressScale.ForMux(FfmpegProgressParser.CalculatePercent(elapsed, request.Duration), RenderProgressScale.LoopSegmentEndFor(request.Duration)), ct);
             }
         });
     }

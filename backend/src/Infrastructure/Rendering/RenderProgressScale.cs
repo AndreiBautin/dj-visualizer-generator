@@ -11,13 +11,11 @@ namespace DjVisualizer.Infrastructure.Rendering;
 /// elapsed with no visible movement and the page read as hung.
 /// </para>
 /// <para>
-/// The weights are a deliberate compromise and cannot be right for every input, because the
-/// passes scale with different things: passes 1-3 scale with output resolution and are
-/// independent of the mix's length, while the mux is a stream copy whose cost tracks the audio
-/// duration. A twenty-second sample is dominated by the static passes; a six-hour set is
-/// dominated by the mux. Splitting the difference keeps the bar moving in both cases, which is
-/// the point - a progress bar's job is to show that work is happening, not to predict when it
-/// will stop.
+/// The passes scale with different things: passes 1-3 with output resolution, independent of
+/// the length of the mix, while the cost of the mux tracks the audio duration. A short sample is
+/// dominated by the static passes and a long set by the mux, so the hand-over point between the
+/// rotation pass and the mux moves with the duration (<see cref="LoopSegmentEndFor"/>), keeping
+/// the speed of the bar roughly even instead of fast-then-crawling.
 /// </para>
 /// </remarks>
 internal static class RenderProgressScale
@@ -30,15 +28,27 @@ internal static class RenderProgressScale
 
     public const int LoopSegmentStart = BackgroundComplete;
 
-    /// <summary>The rotation pass encodes a known duration, so it reports real progress across
-    /// this span rather than only marking its completion.</summary>
-    public const int LoopSegmentEnd = 45;
+    /// <summary>Seconds of audio whose mux costs about as much as the rotation pass. Measured on
+    /// the free host (2026-10-14): a 40-minute mix spent about 250 s in the rotation pass and
+    /// about 1,050 s muxing - the mux ran at about 0.44 s per audio second against a roughly
+    /// fixed rotation pass. With the old fixed 45/55 split that render crawled at 1% per 20 s
+    /// from halfway and read as stalled.</summary>
+    private const double MuxBalanceSeconds = 480;
 
-    public const int MuxStart = LoopSegmentEnd;
+    /// <summary>Where the rotation pass hands over to the mux: late for a short sample (the mux is
+    /// trivial), early for a long set (the mux is most of the work). Clamped so each pass always
+    /// keeps a visible slice of the bar.</summary>
+    public static int LoopSegmentEndFor(TimeSpan audioDuration)
+    {
+        var seconds = Math.Max(0, audioDuration.TotalSeconds);
+        var muxShare = seconds / (seconds + MuxBalanceSeconds);
+        var end = 100 - (int)Math.Round(muxShare * (100 - LoopSegmentStart));
+        return Math.Clamp(end, LoopSegmentStart + 10, 90);
+    }
 
-    public static int ForLoopSegment(int passPercent) => Scale(passPercent, LoopSegmentStart, LoopSegmentEnd);
+    public static int ForLoopSegment(int passPercent, int loopSegmentEnd) => Scale(passPercent, LoopSegmentStart, loopSegmentEnd);
 
-    public static int ForMux(int passPercent) => Scale(passPercent, MuxStart, 100);
+    public static int ForMux(int passPercent, int loopSegmentEnd) => Scale(passPercent, loopSegmentEnd, 100);
 
     /// <summary>Clamps before scaling: a pass reporting something nonsensical must not push the
     /// overall value outside 0-100, which <c>Job.UpdateProgress</c> rejects outright and would

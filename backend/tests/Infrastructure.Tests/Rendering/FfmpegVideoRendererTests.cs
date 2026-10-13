@@ -174,9 +174,10 @@ public class FfmpegVideoRendererTests : IDisposable
 
         // The substance of the fix: something is reported while the static and rotation passes
         // run, not only once the mux begins.
-        reported.Should().Contain(percent => percent > 0 && percent < RenderProgressScale.MuxStart,
+        var loopSegmentEnd = RenderProgressScale.LoopSegmentEndFor(request.Duration);
+        reported.Should().Contain(percent => percent > 0 && percent < loopSegmentEnd,
             "the passes before the mux should move the bar");
-        reported.Should().Contain(RenderProgressScale.LoopSegmentEnd);
+        reported.Should().Contain(loopSegmentEnd);
         reported.Last().Should().Be(100, "the bar must finish even if ffmpeg undershoots the duration");
     }
 
