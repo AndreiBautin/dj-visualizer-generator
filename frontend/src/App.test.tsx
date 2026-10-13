@@ -58,6 +58,32 @@ describe('App', () => {
     ).toBeEnabled()
   })
 
+  it('submits with Ctrl+Enter from a control where a bare Enter would not', async () => {
+    vi.spyOn(apiClient, 'createJob').mockResolvedValue({ jobId: 'abc-123' })
+    vi.spyOn(apiClient, 'getJobStatus').mockResolvedValue({
+      jobId: 'abc-123',
+      status: 'Queued',
+      progress: 0,
+      errorMessage: null,
+      downloadsRemaining: 5,
+    })
+    const user = userEvent.setup()
+    renderApp()
+    await user.upload(
+      screen.getByLabelText('Audio file', { selector: 'input' }),
+      makeFile('mix.mp3'),
+    )
+    await user.upload(
+      screen.getByLabelText('Artwork', { selector: 'input' }),
+      makeFile('cover.png', 'image/png'),
+    )
+
+    screen.getByRole('slider').focus()
+    await user.keyboard('{Control>}{Enter}{/Control}')
+
+    expect(apiClient.createJob).toHaveBeenCalledOnce()
+  })
+
   it('creates a job and shows the progress panel on submit', async () => {
     vi.spyOn(apiClient, 'createJob').mockResolvedValue({ jobId: 'abc-123' })
     vi.spyOn(apiClient, 'getJobStatus').mockResolvedValue({

@@ -281,6 +281,18 @@ function App() {
 
           <form
             onSubmit={methods.handleSubmit(onSubmit)}
+            // Ctrl/Cmd+Enter from anywhere in the form - including the title field, where a
+            // bare Enter already submits, and the radios and slider, where it does not.
+            onKeyDown={(event) => {
+              if (
+                event.key === 'Enter' &&
+                (event.ctrlKey || event.metaKey) &&
+                canSubmit
+              ) {
+                event.preventDefault()
+                event.currentTarget.requestSubmit()
+              }
+            }}
             className="w-full space-y-4 motion-safe:animate-[rise-in_600ms_cubic-bezier(.2,.8,.2,1)_120ms_both] lg:w-3/5"
           >
             <UploadCard
@@ -346,6 +358,20 @@ function App() {
                 'Generate Video'
               )}
             </button>
+
+            <p
+              aria-hidden="true"
+              className="-mt-2 hidden text-center text-[11px] text-ink-faint sm:block"
+            >
+              <kbd className="rounded border border-line-strong px-1 font-sans">
+                {/Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘' : 'Ctrl'}
+              </kbd>{' '}
+              +{' '}
+              <kbd className="rounded border border-line-strong px-1 font-sans">
+                Enter
+              </kbd>{' '}
+              to generate
+            </p>
 
             {isSampleMixEnabled() && (
               <div className="mt-2 space-y-2 border-t border-line pt-5 text-center">

@@ -130,6 +130,12 @@ export function UploadCard({
         type="file"
         accept={accept}
         className="peer sr-only"
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' && file) {
+            event.preventDefault()
+            onClear()
+          }
+        }}
         onChange={(event) => {
           const selected = event.target.files?.[0]
           if (selected) {
