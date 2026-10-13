@@ -98,11 +98,11 @@ test('upload a short mix, watch it render, and download the mp4', async ({
   await page.goto('/')
 
   await page.getByLabel('Track title').fill('E2E Happy Path Mix')
-  // force: true - the radio is `peer sr-only` (RenderSettings.tsx), so its own visible sibling
-  // <span> sits on top of it and intercepts the pointer event a plain .check() sends. A real user
-  // clicks that span and the browser's native wrapping-label association checks the input; force
-  // skips Playwright's actionability check on the (correctly) invisible input and does the same.
-  await page.getByLabel('720p').check({ force: true })
+  // Click the visible option, as a user does; the wrapping label checks the sr-only radio.
+  // Force-checking the invisible input itself works in Chromium but not WebKit, where the
+  // click lands on the 1px input's position under the segment pill instead.
+  await page.getByText('720p', { exact: true }).click()
+  await expect(page.getByLabel('720p')).toBeChecked()
   await page.getByLabel('Audio file').setInputFiles(audioPath)
   await page.getByLabel('Artwork').setInputFiles(artworkPath)
 
@@ -121,8 +121,8 @@ test('upload a short mix, watch it render, and download the mp4', async ({
   await page.keyboard.press('ArrowRight')
   // step is 1, so two presses from the 18s default lands on 20s.
   await expect(page.getByText(/^20s per spin/i)).toBeVisible()
-  // force: true - same sr-only-radio-under-a-visible-span shape as the preset picker above.
-  await page.getByLabel('Mono').check({ force: true })
+  // The visible option, as with the preset picker above.
+  await page.getByText('Mono', { exact: true }).click()
 
   await page.getByRole('button', { name: 'Generate Video' }).click()
 
