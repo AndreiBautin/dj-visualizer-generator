@@ -1,5 +1,6 @@
 import { ApiError } from '../api/client'
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { estimateRemainingMs, formatClock } from '../lib/renderTiming'
 import { useJobStatus } from '../hooks/useJobStatus'
 import { BUTTON_SECONDARY } from '../lib/buttons'
 import { DownloadPanel } from './DownloadPanel'
@@ -40,6 +41,22 @@ function StageTrack({ current }: { current: number }) {
         </li>
       ))}
     </ol>
+  )
+}
+
+function TimingLine({
+  elapsedMs,
+  progress,
+}: {
+  elapsedMs: number
+  progress: number
+}) {
+  const remaining = estimateRemainingMs(elapsedMs, progress)
+  return (
+    <p className="text-xs text-ink-faint tabular-nums">
+      {formatClock(elapsedMs)} elapsed
+      {remaining !== null && ` · about ${formatClock(remaining)} left`}
+    </p>
   )
 }
 
@@ -88,6 +105,8 @@ interface ProgressPanelProps {
   jobId: string
   onReset: () => void
   posterFile?: File | null
+  /** The clock, injectable so elapsed time is testable. */
+  now?: () => number
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -101,8 +120,23 @@ export function ProgressPanel({
   jobId,
   onReset,
   posterFile,
+  now = Date.now,
 }: ProgressPanelProps) {
   const { data, isPending, isError, error, refetch } = useJobStatus(jobId)
+
+  // Measured from when this page first saw the job rendering - the server sends no start
+  // time, and a page reopened mid-render honestly does not know more than that.
+  const renderStartedAt = useRef<number | null>(null)
+  const [clock, setClock] = useState(() => now())
+  const isRendering = data?.status === 'Processing'
+  if (isRendering && renderStartedAt.current === null) {
+    renderStartedAt.current = now()
+  }
+  useEffect(() => {
+    if (!isRendering) return
+    const timer = setInterval(() => setClock(now()), 1000)
+    return () => clearInterval(timer)
+  }, [isRendering, now])
 
   // Lets a backgrounded tab communicate status without being watched - the alternative is a
   // visitor tabbing away during a multi-minute render and having no way to tell it apart from a
@@ -207,10 +241,17 @@ export function ProgressPanel({
           />
         )}
       </div>
-      {isIndeterminate && (
+      {isIndeterminate ? (
         <p className="text-sm text-ink-faint">
           Waiting for a worker to pick this up...
         </p>
+      ) : (
+        renderStartedAt.current !== null && (
+          <TimingLine
+            elapsedMs={Math.max(0, clock - renderStartedAt.current)}
+            progress={data.progress}
+          />
+        )
       )}
     </div>
   )
