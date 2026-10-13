@@ -19,6 +19,7 @@ import {
 import { UploadCard } from './components/UploadCard'
 import { VinylRecord } from './components/VinylRecord'
 import { useJobStatus } from './hooks/useJobStatus'
+import { usePageFileDrop } from './hooks/usePageFileDrop'
 import { useUploadLimits } from './hooks/useUploadLimits'
 import {
   formatBytes,
@@ -131,6 +132,19 @@ function App() {
     setArtworkError(validateArtworkFile(file, limits.maxImageBytes))
   }
 
+  // Sorted by what the file is, not where it landed: a mix goes to audio, anything else to
+  // artwork, where the usual validation explains a wrong type.
+  const isPageDragging = usePageFileDrop((file) => {
+    if (
+      file.type.startsWith('audio/') ||
+      /\.(mp3|wav|flac|m4a)$/i.test(file.name)
+    ) {
+      handleAudioSelected(file)
+    } else {
+      handleArtworkSelected(file)
+    }
+  }, jobId === null)
+
   function handleReset() {
     setJobId(null)
     setAudioFile(null)
@@ -222,6 +236,14 @@ function App() {
     <FormProvider {...methods}>
       <main className="relative min-h-screen overflow-clip bg-canvas text-ink">
         <Backdrop />
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none fixed inset-3 z-20 flex items-end justify-center rounded-3xl border-2 border-dashed border-accent/60 bg-accent/[0.06] pb-10 transition-opacity duration-200 ${isPageDragging ? 'opacity-100' : 'opacity-0'}`}
+        >
+          <span className="rounded-full bg-canvas/80 px-4 py-2 text-sm font-medium text-ink ring-1 ring-accent/40 backdrop-blur">
+            Drop a mix or artwork anywhere
+          </span>
+        </div>
         <div className="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-10 p-6 sm:p-10 lg:flex-row lg:items-center lg:gap-16">
           <div className="flex flex-col items-center gap-6 text-center motion-safe:animate-[rise-in_600ms_cubic-bezier(.2,.8,.2,1)_both] lg:sticky lg:top-10 lg:w-2/5 lg:items-start lg:text-left">
             <div className="w-full max-w-[20rem]">
