@@ -213,11 +213,13 @@ body {
   outline: none;
 }
 
-/* First-paint entrance for the hero and form, staggered so the page assembles rather than pops. */
+/* First-paint entrance for the hero and form, staggered so the page assembles rather than pops.
+   It starts partly visible: from opacity 0 the first screen read as blank for most of a second
+   on a throttled phone, which is what Lighthouse's Speed Index (6.8s) was measuring. */
 @keyframes rise-in {
   from {
-    opacity: 0;
-    transform: translateY(12px);
+    opacity: 0.4;
+    transform: translateY(8px);
   }
   to {
     opacity: 1;

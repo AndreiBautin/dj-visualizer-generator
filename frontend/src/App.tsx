@@ -366,7 +366,7 @@ function App({ now = Date.now }: { now?: () => number } = {}) {
           </span>
         </div>
         <div className="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-10 p-6 sm:p-10 lg:flex-row lg:items-center lg:gap-16">
-          <div className="flex flex-col items-center gap-6 text-center motion-safe:animate-[rise-in_600ms_cubic-bezier(.2,.8,.2,1)_both] lg:sticky lg:top-10 lg:w-2/5 lg:items-start lg:text-left">
+          <div className="flex flex-col items-center gap-6 text-center motion-safe:animate-[rise-in_400ms_cubic-bezier(.2,.8,.2,1)_both] lg:sticky lg:top-10 lg:w-2/5 lg:items-start lg:text-left">
             <div className="w-full max-w-[20rem] [view-transition-name:vinyl]">
               <LiveVinylRecord
                 artworkFile={artworkFile}
@@ -401,7 +401,7 @@ function App({ now = Date.now }: { now?: () => number } = {}) {
                 event.currentTarget.requestSubmit()
               }
             }}
-            className="w-full space-y-4 motion-safe:animate-[rise-in_600ms_cubic-bezier(.2,.8,.2,1)_120ms_both] lg:w-3/5"
+            className="w-full space-y-4 motion-safe:animate-[rise-in_400ms_cubic-bezier(.2,.8,.2,1)_60ms_both] lg:w-3/5"
           >
             <UploadCard
               label="Audio file"
