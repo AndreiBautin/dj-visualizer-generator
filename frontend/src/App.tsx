@@ -12,6 +12,7 @@ import { Backdrop } from './components/Backdrop'
 import { CopyJobLink } from './components/CopyJobLink'
 import { BrandMark } from './components/BrandMark'
 import { BuildFooter } from './components/BuildFooter'
+import { ExampleStrip } from './components/ExampleStrip'
 import { HowItWorks } from './components/HowItWorks'
 import { ProgressPanel } from './components/ProgressPanel'
 import { Spinner } from './components/Spinner'
@@ -416,6 +417,7 @@ function App() {
           </form>
         </div>
 
+        <ExampleStrip />
         <HowItWorks />
 
         <div className="relative flex justify-center pb-6 lg:pb-8">
