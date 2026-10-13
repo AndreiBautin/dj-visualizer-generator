@@ -179,7 +179,11 @@ function App() {
               <h1 className="bg-gradient-to-b from-white to-white/60 bg-clip-text text-3xl font-semibold tracking-[-0.03em] text-transparent">
                 DJ Visualizer Generator
               </h1>
-              <ProgressPanel jobId={jobId} onReset={handleReset} />
+              <ProgressPanel
+                jobId={jobId}
+                onReset={handleReset}
+                posterFile={artworkFile}
+              />
             </div>
           </div>
           <div className="relative flex justify-center pb-6">

@@ -87,6 +87,7 @@ function ErrorState({
 interface ProgressPanelProps {
   jobId: string
   onReset: () => void
+  posterFile?: File | null
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -96,7 +97,11 @@ const STATUS_LABEL: Record<string, string> = {
 
 const DEFAULT_TITLE = 'DJ Visualizer Generator'
 
-export function ProgressPanel({ jobId, onReset }: ProgressPanelProps) {
+export function ProgressPanel({
+  jobId,
+  onReset,
+  posterFile,
+}: ProgressPanelProps) {
   const { data, isPending, isError, error, refetch } = useJobStatus(jobId)
 
   // Lets a backgrounded tab communicate status without being watched - the alternative is a
@@ -155,6 +160,7 @@ export function ProgressPanel({ jobId, onReset }: ProgressPanelProps) {
         // the save when the transfer begins, a moment after the click.
         onDownloadStarted={() => setTimeout(() => void refetch(), 1500)}
         onReset={onReset}
+        posterFile={posterFile}
       />
     )
   }

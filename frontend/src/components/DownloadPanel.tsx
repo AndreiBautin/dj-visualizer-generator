@@ -1,9 +1,12 @@
 import { downloadUrl, previewUrl } from '../api/client'
+import { useObjectUrl } from '../hooks/useObjectUrl'
 import { BUTTON_GHOST, BUTTON_PRIMARY } from '../lib/buttons'
 
 interface DownloadPanelProps {
   jobId: string
   downloadsRemaining: number
+  /** The visitor's own artwork, shown before playback; absent for the bundled sample. */
+  posterFile?: File | null
   onDownloadStarted: () => void
   onReset: () => void
 }
@@ -13,7 +16,9 @@ export function DownloadPanel({
   downloadsRemaining,
   onDownloadStarted,
   onReset,
+  posterFile,
 }: DownloadPanelProps) {
+  const posterUrl = useObjectUrl(posterFile)
   const exhausted = downloadsRemaining <= 0
   return (
     <div className="flex w-full flex-col items-center gap-5 text-center sm:items-start sm:text-left motion-safe:animate-[panel-in_220ms_ease-out]">
@@ -40,6 +45,7 @@ export function DownloadPanel({
         controls
         preload="none"
         src={previewUrl(jobId)}
+        poster={posterUrl ?? undefined}
         className="aspect-video w-full rounded-2xl bg-black shadow-[0_30px_60px_-20px_rgb(0_0_0/0.8)] ring-1 ring-line-strong"
       />
       <a

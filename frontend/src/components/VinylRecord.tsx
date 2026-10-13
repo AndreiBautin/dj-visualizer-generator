@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useObjectUrl } from '../hooks/useObjectUrl'
 
 interface VinylRecordProps {
   /** The artwork the visitor has selected, if any - shown as the record's center label. */
@@ -23,17 +23,7 @@ export function VinylRecord({
   rotationSpeedSeconds,
   motion = 'idle',
 }: VinylRecordProps) {
-  const [labelUrl, setLabelUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!artworkFile) {
-      setLabelUrl(null)
-      return
-    }
-    const url = URL.createObjectURL(artworkFile)
-    setLabelUrl(url)
-    return () => URL.revokeObjectURL(url)
-  }, [artworkFile])
+  const labelUrl = useObjectUrl(artworkFile)
 
   return (
     <div
