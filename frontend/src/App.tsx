@@ -11,6 +11,7 @@ import {
 import { Backdrop } from './components/Backdrop'
 import { BuildFooter } from './components/BuildFooter'
 import { ProgressPanel } from './components/ProgressPanel'
+import { Spinner } from './components/Spinner'
 import { RenderSettings } from './components/RenderSettings'
 import { UploadCard } from './components/UploadCard'
 import { VinylRecord } from './components/VinylRecord'
@@ -21,6 +22,7 @@ import {
   validateArtworkFile,
   validateAudioFile,
 } from './lib/fileValidation'
+import { BUTTON_PRIMARY, BUTTON_SECONDARY } from './lib/buttons'
 import {
   DEFAULT_ROTATION_SPEED_SECONDS,
   renderSettingsSchema,
@@ -228,13 +230,20 @@ function App() {
             <button
               type="submit"
               disabled={!canSubmit}
-              className="w-full rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-accent-content shadow-md shadow-black/30 transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100"
+              className={`w-full ${BUTTON_PRIMARY}`}
             >
-              {createJobMutation.isPending ? 'Uploading...' : 'Generate Video'}
+              {createJobMutation.isPending ? (
+                <>
+                  <Spinner />
+                  Uploading...
+                </>
+              ) : (
+                'Generate Video'
+              )}
             </button>
 
             {isSampleMixEnabled() && (
-              <div className="space-y-2 border-t border-line pt-4 text-center">
+              <div className="mt-2 space-y-2 border-t border-line pt-5 text-center">
                 <p className="text-xs text-ink-faint">No mix to hand?</p>
                 <button
                   type="button"
@@ -242,11 +251,16 @@ function App() {
                   disabled={
                     sampleJobMutation.isPending || createJobMutation.isPending
                   }
-                  className="w-full rounded-lg border border-white/25 px-6 py-3 text-sm font-semibold text-ink hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  className={`w-full ${BUTTON_SECONDARY}`}
                 >
-                  {sampleJobMutation.isPending
-                    ? 'Starting...'
-                    : 'Render a sample mix'}
+                  {sampleJobMutation.isPending ? (
+                    <>
+                      <Spinner />
+                      Starting...
+                    </>
+                  ) : (
+                    'Render a sample mix'
+                  )}
                 </button>
                 <p className="text-xs text-ink-faint">
                   Renders a short synthesized track bundled with the app -
