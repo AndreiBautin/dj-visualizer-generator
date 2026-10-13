@@ -38,10 +38,11 @@ internal static class VinylFilterGraphBuilder
     private const double HoleRatio = 0.06; // inset 47%
     private const double HighlightInsetRatio = 0.88; // inset 6%
 
-    // The page's accent, oklch(62% 0.19 235), is sRGB (0, 147, 230); its glow is 14% of that at
-    // 20%/20%, fading out at 55% of the distance to the far corner.
-    private const int GlowGreen = 21;
-    private const int GlowBlue = 32;
+    // The page's accent, oklch(52% 0.18 245), is sRGB (0, 108, 200); its glow is 14% of that at
+    // 20%/20%, fading out at 55% of the distance to the far corner. scripts/gates.test.mjs fails
+    // if these drift from --color-accent in frontend/src/index.css.
+    private const int GlowGreen = 15;
+    private const int GlowBlue = 28;
 
     private readonly record struct Geometry(int Diameter, int FontSize, int BottomMargin);
 
