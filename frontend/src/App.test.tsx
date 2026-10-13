@@ -65,6 +65,7 @@ describe('App', () => {
       status: 'Queued',
       progress: 0,
       errorMessage: null,
+      downloadsRemaining: 5,
     })
     const user = userEvent.setup()
     renderApp()

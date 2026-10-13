@@ -30,6 +30,8 @@ public sealed class Job
 
     public bool DownloadLimitReached => DownloadCount >= MaxDownloads;
 
+    public int DownloadsRemaining => Math.Max(0, MaxDownloads - DownloadCount);
+
     private Job(
         JobId id,
         JobTitle title,

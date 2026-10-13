@@ -153,11 +153,13 @@ public class JobTests
         for (var i = 0; i < Job.MaxDownloads; i++)
         {
             job.DownloadLimitReached.Should().BeFalse($"only {i} of {Job.MaxDownloads} downloads have been recorded");
+            job.DownloadsRemaining.Should().Be(Job.MaxDownloads - i);
             job.RecordDownload();
         }
 
         job.DownloadCount.Should().Be(Job.MaxDownloads);
         job.DownloadLimitReached.Should().BeTrue();
+        job.DownloadsRemaining.Should().Be(0);
 
         var act = job.RecordDownload;
 

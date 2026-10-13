@@ -33,6 +33,8 @@ export interface JobStatusResponse {
   status: JobStatusValue
   progress: number
   errorMessage: string | null
+  /** Saves left of the job's five; previewing does not spend them. */
+  downloadsRemaining: number
 }
 
 async function parseErrorDetail(response: Response): Promise<string> {

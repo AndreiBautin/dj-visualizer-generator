@@ -114,6 +114,7 @@ public class JobsControllerTests : IDisposable
         var status = await statusResponse.Content.ReadFromJsonAsync<JsonElement>();
         status.GetProperty("status").GetString().Should().Be("Queued");
         status.GetProperty("progress").GetInt32().Should().Be(0);
+        status.GetProperty("downloadsRemaining").GetInt32().Should().Be(5);
     }
 
     [Fact]

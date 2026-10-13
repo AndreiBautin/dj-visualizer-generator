@@ -97,7 +97,7 @@ const STATUS_LABEL: Record<string, string> = {
 const DEFAULT_TITLE = 'DJ Visualizer Generator'
 
 export function ProgressPanel({ jobId, onReset }: ProgressPanelProps) {
-  const { data, isPending, isError, error } = useJobStatus(jobId)
+  const { data, isPending, isError, error, refetch } = useJobStatus(jobId)
 
   // Lets a backgrounded tab communicate status without being watched - the alternative is a
   // visitor tabbing away during a multi-minute render and having no way to tell it apart from a
@@ -147,7 +147,16 @@ export function ProgressPanel({ jobId, onReset }: ProgressPanelProps) {
   }
 
   if (data.status === 'Completed') {
-    return <DownloadPanel jobId={jobId} onReset={onReset} />
+    return (
+      <DownloadPanel
+        jobId={jobId}
+        downloadsRemaining={data.downloadsRemaining}
+        // Polling stops at Completed, so re-read once after a save starts - the server counts
+        // the save when the transfer begins, a moment after the click.
+        onDownloadStarted={() => setTimeout(() => void refetch(), 1500)}
+        onReset={onReset}
+      />
+    )
   }
 
   if (data.status === 'Failed') {

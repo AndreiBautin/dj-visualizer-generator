@@ -49,6 +49,7 @@ describe('ProgressPanel', () => {
       status: 'Queued',
       progress: 0,
       errorMessage: null,
+      downloadsRemaining: 5,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -62,6 +63,7 @@ describe('ProgressPanel', () => {
       status: 'Queued',
       progress: 0,
       errorMessage: null,
+      downloadsRemaining: 5,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -78,6 +80,7 @@ describe('ProgressPanel', () => {
       status: 'Processing',
       progress: 42,
       errorMessage: null,
+      downloadsRemaining: 5,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -95,6 +98,7 @@ describe('ProgressPanel', () => {
       status: 'Queued',
       progress: 0,
       errorMessage: null,
+      downloadsRemaining: 5,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -112,6 +116,7 @@ describe('ProgressPanel', () => {
       status: 'Processing',
       progress: 42,
       errorMessage: null,
+      downloadsRemaining: 5,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -126,6 +131,7 @@ describe('ProgressPanel', () => {
       status: 'Queued',
       progress: 0,
       errorMessage: null,
+      downloadsRemaining: 5,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -145,6 +151,7 @@ describe('ProgressPanel', () => {
       status: 'Completed',
       progress: 100,
       errorMessage: null,
+      downloadsRemaining: 5,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -159,6 +166,7 @@ describe('ProgressPanel', () => {
       status: 'Processing',
       progress: 42,
       errorMessage: null,
+      downloadsRemaining: 5,
     })
 
     const { unmount } = renderWithClient(
@@ -176,6 +184,7 @@ describe('ProgressPanel', () => {
       status: 'Completed',
       progress: 100,
       errorMessage: null,
+      downloadsRemaining: 5,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
@@ -191,6 +200,7 @@ describe('ProgressPanel', () => {
       status: 'Failed',
       progress: 0,
       errorMessage: 'ffmpeg exited with code 1',
+      downloadsRemaining: 5,
     })
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)

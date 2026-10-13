@@ -29,6 +29,7 @@ public sealed class GetJobStatusUseCase(IJobRepository jobRepository) : IGetJobS
             job.Id.ToString(),
             job.Status.ToString(),
             job.Progress,
-            job.ErrorMessage));
+            job.ErrorMessage,
+            job.DownloadsRemaining));
     }
 }

@@ -3,10 +3,18 @@ import { BUTTON_GHOST, BUTTON_PRIMARY } from '../lib/buttons'
 
 interface DownloadPanelProps {
   jobId: string
+  downloadsRemaining: number
+  onDownloadStarted: () => void
   onReset: () => void
 }
 
-export function DownloadPanel({ jobId, onReset }: DownloadPanelProps) {
+export function DownloadPanel({
+  jobId,
+  downloadsRemaining,
+  onDownloadStarted,
+  onReset,
+}: DownloadPanelProps) {
+  const exhausted = downloadsRemaining <= 0
   return (
     <div className="flex w-full flex-col items-center gap-5 text-center sm:items-start sm:text-left motion-safe:animate-[panel-in_220ms_ease-out]">
       <div className="flex items-center gap-3">
@@ -35,9 +43,11 @@ export function DownloadPanel({ jobId, onReset }: DownloadPanelProps) {
         className="aspect-video w-full rounded-2xl bg-black shadow-[0_30px_60px_-20px_rgb(0_0_0/0.8)] ring-1 ring-line-strong"
       />
       <a
-        href={downloadUrl(jobId)}
+        href={exhausted ? undefined : downloadUrl(jobId)}
         download
-        className={`w-full sm:w-auto ${BUTTON_PRIMARY}`}
+        aria-disabled={exhausted}
+        onClick={exhausted ? undefined : onDownloadStarted}
+        className={`w-full sm:w-auto ${BUTTON_PRIMARY} ${exhausted ? 'pointer-events-none opacity-40' : ''}`}
       >
         <svg
           aria-hidden="true"
@@ -59,10 +69,20 @@ export function DownloadPanel({ jobId, onReset }: DownloadPanelProps) {
         stays a plain anchor deliberately - fetching the video into a blob to catch that response
         would pull a multi-hundred-megabyte file through memory to improve an error message.
       */}
-      <p className="max-w-sm text-xs leading-relaxed text-ink-faint">
-        You can save this file five times. Previewing does not use those saves.
-        Files expire automatically.
-      </p>
+      <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-ink-faint sm:justify-start">
+        <span
+          className={`rounded-full px-2.5 py-1 font-medium tabular-nums ring-1 ${
+            exhausted
+              ? 'bg-danger/10 text-danger ring-danger/30'
+              : 'bg-white/[0.05] text-ink-muted ring-line-strong'
+          }`}
+        >
+          {exhausted
+            ? 'No saves left'
+            : `${downloadsRemaining} ${downloadsRemaining === 1 ? 'save' : 'saves'} left`}
+        </span>
+        <span>Previewing is free. Files expire automatically.</span>
+      </div>
       <button
         type="button"
         onClick={onReset}
