@@ -10,6 +10,7 @@ import {
 } from './api/client'
 import { Backdrop } from './components/Backdrop'
 import { CopyJobLink } from './components/CopyJobLink'
+import { BrandMark } from './components/BrandMark'
 import { BuildFooter } from './components/BuildFooter'
 import { HowItWorks } from './components/HowItWorks'
 import { ProgressPanel } from './components/ProgressPanel'
@@ -226,7 +227,8 @@ function App() {
               <JobVinylRecord jobId={jobId} artworkFile={artworkFile} />
             </div>
             <div className="flex w-full max-w-sm flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-              <h1 className="bg-gradient-to-b from-ink to-ink/60 bg-clip-text text-3xl font-semibold tracking-[-0.03em] text-transparent">
+              <BrandMark className="h-8 w-8" />
+              <h1 className="-mt-3 bg-gradient-to-b from-ink to-ink/60 bg-clip-text text-3xl font-semibold tracking-[-0.03em] text-transparent">
                 DJ Visualizer Generator
               </h1>
               <ProgressPanel
@@ -267,7 +269,8 @@ function App() {
               <LiveVinylRecord artworkFile={artworkFile} />
             </div>
             <div>
-              <p className="text-xs font-medium tracking-[0.2em] text-accent-glow uppercase">
+              <p className="inline-flex items-center gap-2 text-xs font-medium tracking-[0.2em] text-accent-glow uppercase">
+                <BrandMark className="h-5 w-5" />
                 Mix to video
               </p>
               <h1 className="mt-3 bg-gradient-to-b from-ink to-ink/60 bg-clip-text text-5xl font-semibold tracking-[-0.035em] text-balance text-transparent">
