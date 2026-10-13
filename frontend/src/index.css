@@ -84,3 +84,15 @@ body {
     transform: translate3d(8%, 6%, 0) scale(1.1);
   }
 }
+
+/* The file-accepted check in UploadCard - a small overshoot so it lands rather than appears. */
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

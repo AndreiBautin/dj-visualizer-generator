@@ -27,10 +27,10 @@ export function FilePreview({ file, onRemove }: FilePreviewProps) {
         <img
           src={imageUrl}
           alt={file.name}
-          className="h-12 w-12 rounded object-cover"
+          className="h-12 w-12 rounded-lg object-cover ring-1 ring-line-strong"
         />
       ) : (
-        <div className="flex h-12 w-12 items-center justify-center rounded bg-white/10 text-xs text-ink-muted">
+        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/15 text-[10px] font-semibold tracking-wider text-accent-glow">
           FILE
         </div>
       )}
@@ -42,7 +42,7 @@ export function FilePreview({ file, onRemove }: FilePreviewProps) {
       <button
         type="button"
         onClick={onRemove}
-        className="rounded px-2 py-1 text-xs text-ink-muted hover:bg-white/10 hover:text-ink"
+        className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink-muted transition-colors hover:bg-white/10 hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
       >
         Remove
       </button>

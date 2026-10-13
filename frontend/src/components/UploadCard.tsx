@@ -61,27 +61,71 @@ export function UploadCard({
       onDragOver={(event) => event.preventDefault()}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
-      className={`border-dashed p-4 transition-colors ${SURFACE_BASE} ${
+      className={`relative p-4 transition-[border-color,background-color,box-shadow] duration-200 has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-accent/60 ${SURFACE_BASE} ${file ? '' : 'border-dashed'} ${
         // SURFACE_BASE already sets a border color and background; the ! suffix (Tailwind v4's
         // important modifier) deterministically overrides those two specific utilities for the
         // active-drag state instead of leaving two same-property classes to fight over cascade
         // order.
         isDragActive
-          ? 'border-accent/70! bg-accent/10!'
-          : 'hover:border-white/25'
+          ? 'border-accent/70! bg-accent/10! shadow-[0_0_0_4px_color-mix(in_oklch,var(--color-accent)_15%,transparent)]!'
+          : 'hover:border-line-strong hover:bg-white/[0.05]'
       }`}
     >
-      <label
-        htmlFor={inputId}
-        className="cursor-pointer text-sm font-semibold text-ink"
-      >
-        {label}
-      </label>
+      <div className="flex items-center gap-4">
+        <div
+          aria-hidden="true"
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors ${
+            file
+              ? 'border-accent/40 bg-accent/15 text-accent-glow'
+              : 'border-line-strong bg-white/[0.04] text-ink-muted'
+          }`}
+        >
+          {file ? (
+            <svg
+              viewBox="0 0 20 20"
+              className="h-5 w-5 motion-safe:animate-[pop-in_260ms_cubic-bezier(.2,1.4,.4,1)]"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M5 10.5l3.2 3L15 7" />
+            </svg>
+          ) : (
+            <svg
+              viewBox="0 0 20 20"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M10 13V4M6.5 7.5L10 4l3.5 3.5M4 13.5V15a1.5 1.5 0 001.5 1.5h9A1.5 1.5 0 0016 15v-1.5" />
+            </svg>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <label
+            htmlFor={inputId}
+            className="cursor-pointer text-sm font-semibold text-ink after:absolute after:inset-0 after:content-['']"
+          >
+            {label}
+          </label>
+          {!file && (
+            <p className="mt-0.5 text-xs text-ink-faint">
+              <span className="text-ink-muted">Drop a file or browse</span> ·{' '}
+              <span>{hint}</span>
+            </p>
+          )}
+        </div>
+      </div>
       <input
         id={inputId}
         type="file"
         accept={accept}
-        className="sr-only"
+        className="peer sr-only"
         onChange={(event) => {
           const selected = event.target.files?.[0]
           if (selected) {
@@ -91,12 +135,10 @@ export function UploadCard({
         }}
       />
 
-      {file ? (
-        <div className="mt-2">
+      {file && (
+        <div className="relative z-10 mt-3">
           <FilePreview file={file} onRemove={onClear} />
         </div>
-      ) : (
-        <p className="mt-1 text-xs text-ink-faint">{hint}</p>
       )}
 
       {error && (
