@@ -23,6 +23,21 @@ describe('ProgressPanel', () => {
     expect(screen.getByRole('button', { name: /another/i })).toBeVisible()
   })
 
+  it('tells the app once when a job has expired, and shows what it did about it', async () => {
+    vi.spyOn(apiClient, 'getJobStatus').mockRejectedValue(
+      new apiClient.ApiError('Gone', 404),
+    )
+    const onExpired = vi.fn(() => 'Removed it from your recent renders.')
+    renderWithClient(
+      <ProgressPanel jobId="expired" onReset={vi.fn()} onExpired={onExpired} />,
+    )
+
+    expect(
+      await screen.findByText('Removed it from your recent renders.'),
+    ).toBeInTheDocument()
+    expect(onExpired).toHaveBeenCalledOnce()
+  })
+
   it('shows a checking-in message before the first status arrives', () => {
     vi.spyOn(apiClient, 'getJobStatus').mockReturnValue(new Promise(() => {}))
 

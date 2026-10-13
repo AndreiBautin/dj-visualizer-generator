@@ -160,6 +160,14 @@ function App({ now = Date.now }: { now?: () => number } = {}) {
     setRecentJobs(next)
     saveRecentJobs(next)
   }
+  /** Drops a job the server no longer has, so the list does not keep offering dead links. */
+  function forgetJob(jobId: string): string | null {
+    if (!recentJobs.some((job) => job.jobId === jobId)) return null
+    const next = recentJobs.filter((job) => job.jobId !== jobId)
+    setRecentJobs(next)
+    saveRecentJobs(next)
+    return 'Removed it from your recent renders.'
+  }
   // Reset with the artwork: a crop chosen for one image means nothing for the next.
   const [labelCrop, setLabelCrop] = useState<LabelCrop>(DEFAULT_LABEL_CROP)
   const [jobId, setJobIdState] = useState<string | null>(() =>
@@ -319,6 +327,7 @@ function App({ now = Date.now }: { now?: () => number } = {}) {
                 jobId={jobId}
                 onReset={handleReset}
                 posterFile={artworkFile}
+                onExpired={() => forgetJob(jobId)}
               />
               <CopyJobLink jobId={jobId} />
             </div>

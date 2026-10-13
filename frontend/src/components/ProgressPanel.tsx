@@ -106,6 +106,8 @@ interface ProgressPanelProps {
   jobId: string
   onReset: () => void
   posterFile?: File | null
+  /** Called once when the server says the job no longer exists. Returns a note to show. */
+  onExpired?: () => string | null
   /** The clock, injectable so elapsed time is testable. */
   now?: () => number
 }
@@ -121,6 +123,7 @@ export function ProgressPanel({
   jobId,
   onReset,
   posterFile,
+  onExpired,
   now = Date.now,
 }: ProgressPanelProps) {
   const { data, isPending, isError, error, refetch } = useJobStatus(jobId)
@@ -129,6 +132,12 @@ export function ProgressPanel({
   // time, and a page reopened mid-render honestly does not know more than that.
   const renderStartedAt = useRef<number | null>(null)
   const [clock, setClock] = useState(() => now())
+  const isExpired = error instanceof ApiError && error.status === 404
+  const [expiredNote, setExpiredNote] = useState<string | null>(null)
+  useEffect(() => {
+    if (isExpired && onExpired) setExpiredNote(onExpired())
+    // Once per expiry, not on every render of the expired state.
+  }, [isExpired])
   const isRendering = data?.status === 'Processing'
   if (isRendering && renderStartedAt.current === null) {
     renderStartedAt.current = now()
@@ -187,10 +196,11 @@ export function ProgressPanel({
     )
   }
 
-  if (error instanceof ApiError && error.status === 404) {
+  if (isExpired) {
     return (
       <ErrorState
         title="This render is no longer available — it expired, or the server restarted."
+        detail={expiredNote}
         action="Create another video"
         onAction={onReset}
       />
