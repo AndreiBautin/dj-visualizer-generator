@@ -13,4 +13,9 @@ Keep the existing .NET/React product scope. AI critique is a separate, unverifie
 - Build both default and standalone frontend modes. The latter uses an empty API prefix; an unset value means /api and is different.
 - Render must use After CI Checks Pass. Live verification requires an expected commit and decodes a real rendered MP4. Never call a deployment verified from health alone.
 - UI uses the tokens in `index.css`, `lib/surfaces.ts` and `lib/buttons.ts` (see docs/ARCHITECTURE.md, "The frontend's visual system"); no raw `white/NN` text colours or one-off button styles. Keep animation `motion-safe:`, and give decorative layers `overflow-hidden` so they cannot widen `main`'s scroll area.
+- The video copies the page: `VinylFilterGraphBuilder` takes its proportions from `VinylRecord.tsx`, `lib/captionFit.ts` and `ExampleStrip.tsx` take theirs from it, and its glow constants are 14% of `--color-accent` (a gate test fails if they drift). Change one side, change the other.
+- Visual baselines are per platform (`frontend/visual/__screenshots__/<platform>/`). Record Windows locally with `npm --prefix frontend run test:visual -- --update-snapshots`; Linux ones come from CI's `visual` artifact, not Docker. The job only warns, so review its artifact after UI changes.
+- Browser tests: `E2E_BROWSERS=all` adds Firefox and WebKit (CI runs all three). Click visible options, never force-check the sr-only radios.
+- The service worker's `navigateFallbackDenylist` must cover every API path under both prefixes (`/api/...` and bare `/jobs/...`); a missing one turns downloads into `index.html`.
+- Caption fonts: Poppins and Space Mono ship Latin WOFF2 subsets from `scripts/subset-caption-fonts.sh`. Never subset Abril Fatface - its OFL reserves the name.
 - Preserve uncommitted work. Describe actual test/deployment evidence, with remaining unchecked areas explicit.
