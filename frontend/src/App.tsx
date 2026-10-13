@@ -137,7 +137,7 @@ function App() {
   if (jobId) {
     return (
       <FormProvider {...methods}>
-        <main className="relative min-h-screen overflow-hidden bg-canvas text-ink">
+        <main className="relative min-h-screen overflow-clip bg-canvas text-ink">
           <Backdrop />
           <div className="relative mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center gap-8 p-8 sm:flex-row sm:gap-12">
             <div className="w-full max-w-[16rem] shrink-0 sm:max-w-[18rem]">
@@ -164,7 +164,7 @@ function App() {
 
   return (
     <FormProvider {...methods}>
-      <main className="relative min-h-screen overflow-hidden bg-canvas text-ink">
+      <main className="relative min-h-screen overflow-clip bg-canvas text-ink">
         <Backdrop />
         <div className="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-10 p-6 sm:p-10 lg:flex-row lg:items-center lg:gap-16">
           <div className="flex flex-col items-center gap-6 text-center lg:sticky lg:top-10 lg:w-2/5 lg:items-start lg:text-left">
