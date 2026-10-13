@@ -4,11 +4,17 @@ Turn audio and cover art into a spinning-record MP4. Built with .NET 9, React, T
 
 Live: [dj-visualizer.onrender.com](https://dj-visualizer.onrender.com). Free instance — the first request after 15 minutes idle can take up to a minute to wake it.
 
+| Upload | Rendering | Finished (light theme) |
+| --- | --- | --- |
+| ![Upload form with the spinning record preview](docs/images/form.png) | ![Progress view with stage track and live percentage](docs/images/rendering.png) | ![Finished video with download and saves left](docs/images/finished-light.png) |
+
+The record on the page is the record in the video: the preview shares the render's geometry, caption placement and label crop, so what you set up is what you get.
+
 ## Run
 
 Install [Node.js 24](https://nodejs.org), [.NET 9 SDK](https://dotnet.microsoft.com/download), and [FFmpeg/ffprobe](https://ffmpeg.org/download.html), available on PATH. On Windows, double-click **start-app.bat**. It installs locked dependencies, builds both parts, checks port 5080, starts the server, waits for health, and opens http://localhost:5080. It prints the server PID and log path for stopping/troubleshooting.
 
-Choose **Render a sample mix** to exercise the real pipeline using bundled synthesized audio and generated artwork. Alternatively upload MP3/WAV/FLAC/M4A and PNG/JPG; select 720p/1080p, rotation speed and caption font. Limits come from the server. Public-host settings differ from local defaults.
+Choose **Render a sample mix** to exercise the real pipeline using bundled synthesized audio and generated artwork. Alternatively upload MP3/WAV/FLAC/M4A and PNG/JPG; select 720p/1080p, rotation speed and caption font, and drag/zoom the artwork to choose the record label. Limits come from the server. Public-host settings differ from local defaults.
 
 For Linux/container startup, use `docker compose up --build` (UI 5173, API 5080). See [deployment](docs/DEPLOYMENT.md).
 
