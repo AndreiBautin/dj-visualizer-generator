@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FormProvider, useForm, useWatch } from 'react-hook-form'
 import {
   ApiError,
@@ -55,6 +55,12 @@ function App() {
   const [artworkError, setArtworkError] = useState<string | null>(null)
   const [jobId, setJobId] = useState<string | null>(null)
   const limits = useUploadLimits()
+
+  // Form and progress are two different screens sharing one URL, so the browser keeps the
+  // old scroll offset across the swap - on a phone that opened the next screen part-way down.
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [jobId])
 
   const methods = useForm<RenderSettingsInput, unknown, RenderSettingsValues>({
     resolver: zodResolver(renderSettingsSchema),
@@ -167,7 +173,7 @@ function App() {
       <main className="relative min-h-screen overflow-clip bg-canvas text-ink">
         <Backdrop />
         <div className="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-10 p-6 sm:p-10 lg:flex-row lg:items-center lg:gap-16">
-          <div className="flex flex-col items-center gap-6 text-center lg:sticky lg:top-10 lg:w-2/5 lg:items-start lg:text-left">
+          <div className="flex flex-col items-center gap-6 text-center motion-safe:animate-[rise-in_600ms_cubic-bezier(.2,.8,.2,1)_both] lg:sticky lg:top-10 lg:w-2/5 lg:items-start lg:text-left">
             <div className="w-full max-w-[20rem]">
               <LiveVinylRecord artworkFile={artworkFile} />
             </div>
@@ -186,7 +192,7 @@ function App() {
 
           <form
             onSubmit={methods.handleSubmit(onSubmit)}
-            className="w-full space-y-4 lg:w-3/5"
+            className="w-full space-y-4 motion-safe:animate-[rise-in_600ms_cubic-bezier(.2,.8,.2,1)_120ms_both] lg:w-3/5"
           >
             <UploadCard
               label="Audio file"
