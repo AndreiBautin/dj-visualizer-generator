@@ -201,12 +201,19 @@ if (singleContainer)
 {
     // Serves the built SPA from wwwroot. In docker-compose this is nginx's job instead, so the
     // static-file middleware is not even registered - the API stays a pure JSON API there.
+    var spaFiles = new StaticFileOptions
+    {
+        OnPrepareResponse = context =>
+            context.Context.Response.Headers.CacheControl =
+                StaticAssetCaching.CacheControlFor(context.Context.Request.Path.Value ?? "/"),
+    };
     app.UseDefaultFiles();
-    app.UseStaticFiles();
+    app.UseStaticFiles(spaFiles);
 
     // Client-side routes (and a refresh on one) must return the SPA document rather than a 404.
-    // Registered after MapControllers so it can never shadow a real API route.
-    app.MapFallbackToFile("index.html");
+    // Registered after MapControllers so it can never shadow a real API route. The document
+    // must revalidate, so it gets the same options (a deep link path is not under /assets/).
+    app.MapFallbackToFile("index.html", spaFiles);
 }
 
 app.Run();
