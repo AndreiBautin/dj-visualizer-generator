@@ -125,8 +125,9 @@ test('upload a short mix, watch it render, and download the mp4', async ({
 
   await page.getByRole('button', { name: 'Generate Video' }).click()
 
-  // Queued or already Processing - either is a valid immediate next state.
-  await expect(page.getByText(/queued|rendering/i)).toBeVisible()
+  // Queued or already Processing - either shows the progress bar. Matched by role, not text:
+  // the stage track names both states, so a text match is ambiguous.
+  await expect(page.getByRole('progressbar')).toBeVisible()
 
   const downloadLink = page.getByRole('link', { name: /download mp4/i })
   await expect(downloadLink).toBeVisible({ timeout: 120_000 })
