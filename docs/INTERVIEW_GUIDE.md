@@ -17,6 +17,13 @@ Start the bundled sample, explain settings and progress, play and seek the resul
 - **What proves it?** One verification command, real media tests, API range/concurrency tests, browser tests, and an expected-commit live check that downloads and decodes output. Cite the latest recorded run, not a memorized test count.
 - **How does privacy work?** No accounts. A random job URL is a bearer capability, not ownership authorization. Files expire; public fixtures are generated content.
 
+## UI decisions to explain
+
+- **Why does the preview equal the render?** The record, caption and label crop on the page use the render's own ratios (`VinylFilterGraphBuilder`), so the form is a WYSIWYG editor, not a mock-up. That claim is checked, not asserted: real renders matched the caption-fit estimate within 0.6% of frame width, a split red/green image proved the crop lands where the editor shows it, and a gate test fails if the video's glow drifts from the page accent.
+- **Why is the accent darker than the design started with?** axe measured white text on the original blue at 3.14:1, under the 4.5:1 AA minimum. Brand brightness lost to legibility; the brighter tone survives only in glows and gradients where no text sits. CI audits both colour schemes so the trade cannot quietly reverse.
+- **What did cross-browser testing find?** Turning on Firefox exposed a real bug: the PWA service worker answered `/api` download navigations with `index.html` under the compose deployment. A live 200 MB upload exposed another: when the window was not producing frames, the view transition never ran its callback and the screen stayed on the form. Both were fixed with the cause written down - the animation now can never gate the state change.
+- **What was deliberately not built?** Lazy-loading the example strip was tried and reverted: the caption fonts it would have deferred already load for the form's font picker, so it saved nothing and risked hiding content where IntersectionObserver never fires.
+
 ## Honest tradeoffs
 
 The filesystem is not a distributed queue. More workers require atomic claims and durable coordination. Egress budgets reset after restart and overcount partial/aborted responses. Long mixes produce large files even with cheap encoding. Free hosting may sleep or restart; enterprise availability is not implied.
