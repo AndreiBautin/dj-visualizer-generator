@@ -183,12 +183,31 @@ function App({ now = Date.now }: { now?: () => number } = {}) {
     const reduceMotion = window.matchMedia?.(
       '(prefers-reduced-motion: reduce)',
     ).matches
-    if (typeof document.startViewTransition === 'function' && !reduceMotion) {
-      const transition = document.startViewTransition(() =>
-        flushSync(() => setJobIdState(next)),
-      )
-      // A hidden tab aborts the animation (the state update still runs); that rejection is
-      // expected, not an error.
+    if (
+      typeof document.startViewTransition === 'function' &&
+      !reduceMotion &&
+      document.visibilityState === 'visible'
+    ) {
+      let applied = false
+      const apply = () => {
+        if (applied) return
+        applied = true
+        flushSync(() => setJobIdState(next))
+      }
+      const transition = document.startViewTransition(apply)
+      // The screen change must never depend on the animation. A transition waits for a frame
+      // to capture the old view, and a page that is not producing frames (a backgrounded or
+      // occluded window when a long upload finishes) never gives it one - the URL had updated
+      // while the form stayed on screen. If it has not run promptly, skip it and switch anyway.
+      const fallback = window.setTimeout(() => {
+        if (!applied) {
+          transition.skipTransition()
+          apply()
+        }
+      }, 400)
+      const clear = () => window.clearTimeout(fallback)
+      transition.updateCallbackDone.then(clear, clear)
+      // A skipped or aborted animation rejects these; that is expected, not an error.
       transition.ready.catch(() => {})
     } else {
       setJobIdState(next)
