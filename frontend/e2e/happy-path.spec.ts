@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright'
 import { test, expect } from '@playwright/test'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -131,6 +132,13 @@ test('upload a short mix, watch it render, and download the mp4', async ({
 
   const downloadLink = page.getByRole('link', { name: /download mp4/i })
   await expect(downloadLink).toBeVisible({ timeout: 120_000 })
+
+  // The finished screen is only reachable after a real render, so it is audited here rather
+  // than in accessibility.spec.ts.
+  const audit = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .analyze()
+  expect(audit.violations).toEqual([])
 
   const downloadPromise = page.waitForEvent('download')
   await downloadLink.click()
