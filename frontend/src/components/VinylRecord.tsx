@@ -52,8 +52,12 @@ export function VinylRecord({
       else setAtRest(true)
     }
     frame = requestAnimationFrame(step)
+    // Animation frames do not run in a hidden tab, and a render often finishes while the
+    // visitor is elsewhere - so a timer guarantees the record is at rest when they return.
+    const settle = setTimeout(() => setAtRest(true), SPIN_DOWN_MS + 100)
     return () => {
       cancelAnimationFrame(frame)
+      clearTimeout(settle)
       spin.updatePlaybackRate(1)
     }
   }, [motion])
