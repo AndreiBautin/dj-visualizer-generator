@@ -1,4 +1,4 @@
-import { render, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WaveformPreview } from './WaveformPreview'
 
@@ -8,8 +8,9 @@ function makeFile(name: string, size: number, type = 'audio/mpeg'): File {
   return file
 }
 
-function makeFakeAudioBuffer(samples: number[]): AudioBuffer {
+function makeFakeAudioBuffer(samples: number[], duration = 1): AudioBuffer {
   return {
+    duration,
     getChannelData: () => Float32Array.from(samples),
   } as unknown as AudioBuffer
 }
@@ -88,5 +89,22 @@ describe('WaveformPreview', () => {
     expect(sliceSpy).toHaveBeenCalledWith(0, expect.any(Number))
     const requestedBytes = sliceSpy.mock.calls[0]![1] as number
     expect(requestedBytes).toBeLessThan(file.size)
+  })
+
+  it('says how much of a long file the preview covers, and nothing for a short one', async () => {
+    fakeContext.decodeAudioData.mockResolvedValue(
+      makeFakeAudioBuffer([0.5, 0.2], 83),
+    )
+    const { unmount } = render(
+      <WaveformPreview file={makeFile('long.mp3', 200 * 1024 * 1024)} />,
+    )
+    expect(await screen.findByText('first 1:23')).toBeInTheDocument()
+    unmount()
+
+    render(<WaveformPreview file={makeFile('short.mp3', 1024)} />)
+    await waitFor(() =>
+      expect(document.querySelectorAll('rect').length).toBeGreaterThan(0),
+    )
+    expect(screen.queryByText(/^first /)).toBeNull()
   })
 })

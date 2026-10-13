@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useObjectUrl } from '../hooks/useObjectUrl'
+import { formatClock } from '../lib/renderTiming'
 
 // Best-effort preview of the file prefix, not the whole mix. This limits encoded input;
 // decoded PCM can be larger. Some containers cannot decode a partial file.
@@ -117,6 +118,13 @@ export function WaveformPreview({ file }: WaveformPreviewProps) {
           )
         })}
       </svg>
+      {/* Only the first PREVIEW_BYTES are decoded, which is seconds of WAV but minutes of MP3 -
+          so say how much the bars and the play button actually cover. */}
+      {file.size > PREVIEW_BYTES && prefixSeconds > 0 && (
+        <span className="shrink-0 text-[11px] text-ink-faint tabular-nums">
+          first {formatClock(prefixSeconds * 1000)}
+        </span>
+      )}
       {audioUrl && (
         <audio
           ref={audioRef}
