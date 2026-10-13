@@ -66,21 +66,25 @@ export function UploadCard({
         // important modifier) deterministically overrides those two specific utilities for the
         // active-drag state instead of leaving two same-property classes to fight over cascade
         // order.
-        isDragActive
-          ? 'border-accent/70! bg-accent/10! shadow-[0_0_0_4px_color-mix(in_oklch,var(--color-accent)_15%,transparent)]!'
-          : 'hover:border-line-strong hover:bg-white/[0.05]'
+        error && !isDragActive
+          ? 'border-danger/60! bg-danger/[0.06]! motion-safe:animate-[shake_380ms_ease-in-out]'
+          : isDragActive
+            ? 'border-accent/70! bg-accent/10! shadow-[0_0_0_4px_color-mix(in_oklch,var(--color-accent)_15%,transparent)]!'
+            : 'hover:border-line-strong hover:bg-white/[0.05]'
       }`}
     >
       <div className="flex items-center gap-4">
         <div
           aria-hidden="true"
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors ${
-            file
-              ? 'border-accent/40 bg-accent/15 text-accent-glow'
-              : 'border-line-strong bg-white/[0.04] text-ink-muted'
+            error
+              ? 'border-danger/40 bg-danger/15 text-danger'
+              : file
+                ? 'border-accent/40 bg-accent/15 text-accent-glow'
+                : 'border-line-strong bg-white/[0.04] text-ink-muted'
           }`}
         >
-          {file ? (
+          {file && !error ? (
             <svg
               viewBox="0 0 20 20"
               className="h-5 w-5 motion-safe:animate-[pop-in_260ms_cubic-bezier(.2,1.4,.4,1)]"
@@ -142,7 +146,10 @@ export function UploadCard({
       )}
 
       {error && (
-        <p role="alert" className="mt-2 text-xs text-danger">
+        <p
+          role="alert"
+          className="mt-3 flex items-center gap-1.5 text-xs font-medium text-danger"
+        >
           {error}
         </p>
       )}
