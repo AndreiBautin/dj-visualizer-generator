@@ -1,6 +1,19 @@
 # Spinner: senior developer portfolio demo readiness
 
-## Current result — 2026-09-26
+## Current result — 2026-10-13
+
+The existing product is ready for a portfolio walkthrough. The [public demo](https://dj-visualizer.onrender.com/) and [public source](https://github.com/AndreiBautin/dj-visualizer-generator) are available. AI listening and critique remain outside this application scope.
+
+Verified application revision: `d45712c` (a UI/UX overhaul: design tokens, light theme, label crop, audio preview, view transitions, accessibility and visual-regression suites).
+
+- Root `npm run verify` passed: architecture boundaries, lint, formatting, typed Release builds, **328 backend tests with zero skips**, **119 frontend tests**, the audit-gate regression test, and default/standalone frontend builds.
+- [CI for this revision](https://github.com/AndreiBautin/dj-visualizer-generator/actions/runs/38439789666) succeeded for `9c575bc`, and again for `d45712c`, including Playwright end-to-end with axe audits (form in both colour schemes, finished screen after a real render) and the advisory Linux visual job with committed baselines.
+- [Expected-revision deployment verification](https://github.com/AndreiBautin/dj-visualizer-generator/actions/runs/38443218150) succeeded against `d45712c`: SPA and API content-security policies, deep-link fallback, limits, and a sample job rendered in 139 s, downloaded and fully decoded (4,640,411 bytes).
+- Locally, a real render with a red/green split artwork produced a red label at crop focus 0 and green at focus 1, confirming the label crop reaches the video; the audio preview played under the real CSP in standalone mode.
+
+Not verified this round: Firefox and Safari (Playwright's Firefox would not launch on the development machine), the clipboard behaviour of Copy link, and a public-browser session against the deployed UI.
+
+## Previous result — 2026-09-26
 
 The existing product is ready for a portfolio walkthrough. The [public demo](https://dj-visualizer.onrender.com/) and [public source](https://github.com/AndreiBautin/dj-visualizer-generator) are available. AI listening and critique remain outside this application scope.
 
