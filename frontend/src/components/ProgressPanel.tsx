@@ -1,5 +1,6 @@
 import { ApiError } from '../api/client'
 import { useEffect, useRef, useState } from 'react'
+import { setFaviconProgress } from '../lib/faviconProgress'
 import { estimateRemainingMs, formatClock } from '../lib/renderTiming'
 import { useJobStatus } from '../hooks/useJobStatus'
 import { BUTTON_SECONDARY } from '../lib/buttons'
@@ -142,6 +143,7 @@ export function ProgressPanel({
   // visitor tabbing away during a multi-minute render and having no way to tell it apart from a
   // frozen one without switching back.
   useEffect(() => {
+    setFaviconProgress(data?.status === 'Processing' ? data.progress : null)
     if (data?.status === 'Processing') {
       document.title = `${data.progress}% · ${DEFAULT_TITLE}`
     } else if (data?.status === 'Queued') {
@@ -156,6 +158,7 @@ export function ProgressPanel({
   useEffect(() => {
     return () => {
       document.title = DEFAULT_TITLE
+      setFaviconProgress(null)
     }
   }, [])
 
