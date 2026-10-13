@@ -66,6 +66,9 @@ describe('App', () => {
       progress: 0,
       errorMessage: null,
       downloadsRemaining: 5,
+      preset: '1080p',
+      captionFont: 'sans-bold',
+      rotationSpeedSeconds: 18,
     })
     const user = userEvent.setup()
     renderApp()
@@ -92,6 +95,9 @@ describe('App', () => {
       progress: 0,
       errorMessage: null,
       downloadsRemaining: 5,
+      preset: '1080p',
+      captionFont: 'sans-bold',
+      rotationSpeedSeconds: 18,
     })
     const user = userEvent.setup()
     renderApp()

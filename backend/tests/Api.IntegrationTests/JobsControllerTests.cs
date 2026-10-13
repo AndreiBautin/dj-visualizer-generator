@@ -83,6 +83,13 @@ public class JobsControllerTests : IDisposable
         var response = await _client.PostAsync("/jobs", BuildValidForm(rotationSpeedSeconds: 30.0, captionFont: "mono-bold"));
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        // The status reports the job's own settings back, not defaults - a page reopened from a
+        // link describes the render with these, so a default leaking through would mislabel it.
+        var created = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var status = await _client.GetFromJsonAsync<JsonElement>($"/jobs/{created.GetProperty("jobId").GetString()}");
+        status.GetProperty("captionFont").GetString().Should().Be("mono-bold");
+        status.GetProperty("rotationSpeedSeconds").GetDouble().Should().Be(30.0);
     }
 
     [Fact]
@@ -115,6 +122,10 @@ public class JobsControllerTests : IDisposable
         status.GetProperty("status").GetString().Should().Be("Queued");
         status.GetProperty("progress").GetInt32().Should().Be(0);
         status.GetProperty("downloadsRemaining").GetInt32().Should().Be(5);
+        // The job's own settings, so a page reopened from a link can describe what is rendering.
+        status.GetProperty("preset").GetString().Should().NotBeNullOrEmpty();
+        status.GetProperty("captionFont").GetString().Should().NotBeNullOrEmpty();
+        status.GetProperty("rotationSpeedSeconds").GetDouble().Should().BePositive();
     }
 
     [Fact]

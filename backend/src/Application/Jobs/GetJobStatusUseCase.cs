@@ -30,6 +30,9 @@ public sealed class GetJobStatusUseCase(IJobRepository jobRepository) : IGetJobS
             job.Status.ToString(),
             job.Progress,
             job.ErrorMessage,
-            job.DownloadsRemaining));
+            job.DownloadsRemaining,
+            job.Preset.Name,
+            job.CaptionFont.Name,
+            job.RotationSpeed.SecondsPerRotation));
     }
 }

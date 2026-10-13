@@ -35,6 +35,9 @@ export interface JobStatusResponse {
   errorMessage: string | null
   /** Saves left of the job's five; previewing does not spend them. */
   downloadsRemaining: number
+  preset: VideoPreset
+  captionFont: CaptionFont
+  rotationSpeedSeconds: number
 }
 
 async function parseErrorDetail(response: Response): Promise<string> {

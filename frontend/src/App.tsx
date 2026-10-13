@@ -9,6 +9,7 @@ import {
   isSampleMixEnabled,
 } from './api/client'
 import { Backdrop } from './components/Backdrop'
+import { SettingsRecap } from './components/SettingsRecap'
 import { CopyJobLink } from './components/CopyJobLink'
 import { BrandMark } from './components/BrandMark'
 import { BuildFooter } from './components/BuildFooter'
@@ -47,16 +48,21 @@ function LiveVinylRecord({
   artworkFile,
   motion,
   celebrate,
+  jobSettings,
 }: {
   artworkFile: File | null
   motion?: 'idle' | 'rendering' | 'stopped'
   celebrate?: boolean
+  /** A job's own settings win over the form's - after a reload the form holds defaults. */
+  jobSettings?: { rotationSpeedSeconds: number; captionFont: string }
 }) {
-  const rotationSpeedSeconds = useWatch<RenderSettingsInput>({
+  const formSpeed = useWatch<RenderSettingsInput>({
     name: 'rotationSpeedSeconds',
   })
+  const rotationSpeedSeconds = jobSettings?.rotationSpeedSeconds ?? formSpeed
   const title = useWatch<RenderSettingsInput>({ name: 'title' })
-  const captionFont = useWatch<RenderSettingsInput>({ name: 'captionFont' })
+  const formFont = useWatch<RenderSettingsInput>({ name: 'captionFont' })
+  const captionFont = jobSettings?.captionFont ?? formFont
   const caption = typeof title === 'string' ? title.trim() : ''
   const fontFamily = CAPTION_FONT_OPTIONS.find(
     (option) => option.value === captionFont,
@@ -114,6 +120,7 @@ function JobVinylRecord({
       artworkFile={artworkFile}
       motion={motion}
       celebrate={sawInProgress && data?.status === 'Completed'}
+      jobSettings={data}
     />
   )
 }
@@ -257,6 +264,7 @@ function App() {
               <h1 className="-mt-3 bg-gradient-to-b from-ink to-ink/60 bg-clip-text text-3xl font-semibold tracking-[-0.03em] text-transparent">
                 DJ Visualizer Generator
               </h1>
+              <SettingsRecap jobId={jobId} />
               <ProgressPanel
                 jobId={jobId}
                 onReset={handleReset}
