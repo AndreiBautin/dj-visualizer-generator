@@ -1,4 +1,7 @@
+import { useEffect, useRef, useState } from 'react'
 import { useObjectUrl } from '../hooks/useObjectUrl'
+
+const SPIN_DOWN_MS = 1400
 
 interface VinylRecordProps {
   /** The artwork the visitor has selected, if any - shown as the record's center label. */
@@ -24,6 +27,36 @@ export function VinylRecord({
   motion = 'idle',
 }: VinylRecordProps) {
   const labelUrl = useObjectUrl(artworkFile)
+  const discRef = useRef<HTMLDivElement>(null)
+  const [atRest, setAtRest] = useState(false)
+
+  // A turntable coasts to a stop. CSS can only pause on the spot, so this ramps the running
+  // animation's playback rate down over SPIN_DOWN_MS and then pauses it where it landed.
+  // Without the Web Animations API (jsdom, very old browsers) it just stops.
+  useEffect(() => {
+    if (motion !== 'stopped') {
+      setAtRest(false)
+      return
+    }
+    const spin = discRef.current?.getAnimations?.()[0]
+    if (!spin || typeof spin.updatePlaybackRate !== 'function') {
+      setAtRest(true)
+      return
+    }
+    let frame = 0
+    const start = performance.now()
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / SPIN_DOWN_MS)
+      spin.updatePlaybackRate(Math.max(0.0001, (1 - t) ** 2))
+      if (t < 1) frame = requestAnimationFrame(step)
+      else setAtRest(true)
+    }
+    frame = requestAnimationFrame(step)
+    return () => {
+      cancelAnimationFrame(frame)
+      spin.updatePlaybackRate(1)
+    }
+  }, [motion])
 
   return (
     <div
@@ -31,6 +64,7 @@ export function VinylRecord({
       className="relative isolate aspect-square w-full max-w-[22rem]"
     >
       <div
+        ref={discRef}
         className="absolute inset-0 rounded-full motion-safe:animate-[spin_var(--vinyl-duration)_linear_infinite]"
         style={
           {
@@ -39,7 +73,7 @@ export function VinylRecord({
                 ? Math.max(1, rotationSpeedSeconds / 3)
                 : rotationSpeedSeconds
             }s`,
-            animationPlayState: motion === 'stopped' ? 'paused' : 'running',
+            animationPlayState: atRest ? 'paused' : 'running',
             background:
               'repeating-radial-gradient(circle at center, #0a0a0a 0, #0a0a0a 2px, #1c1c1c 3px, #0a0a0a 4px)',
             boxShadow:
