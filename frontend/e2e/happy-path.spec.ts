@@ -88,6 +88,8 @@ function buildTinyPng(size = 32): Buffer {
 
 test('upload a short mix, watch it render, and download the mp4', async ({
   page,
+  context,
+  browserName,
 }) => {
   const workDir = mkdtempSync(join(tmpdir(), 'djvisualizer-e2e-'))
   const audioPath = join(workDir, 'mix.wav')
@@ -148,6 +150,17 @@ test('upload a short mix, watch it render, and download the mp4', async ({
   expect(audit.violations).toEqual([])
 
   await expect(page.getByText('5 saves left')).toBeVisible()
+
+  // Copy link writes the job URL - the only way back to this render from another device.
+  // Clipboard permissions can only be granted in Chromium, so the check runs there.
+  if (browserName === 'chromium') {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    await page.getByRole('button', { name: 'Copy link' }).click()
+    await expect(page.getByText('Link copied')).toBeVisible()
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      page.url(),
+    )
+  }
   const downloadPromise = page.waitForEvent('download')
   await downloadLink.click()
   const download = await downloadPromise
