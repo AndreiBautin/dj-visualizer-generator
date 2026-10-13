@@ -4,7 +4,7 @@ export const MIN_ROTATION_SPEED_SECONDS = 12
 export const MAX_ROTATION_SPEED_SECONDS = 90
 export const DEFAULT_ROTATION_SPEED_SECONDS = 18
 
-export const CAPTION_FONTS = ['sans-bold', 'serif-bold', 'mono-bold'] as const
+const CAPTION_FONTS = ['sans-bold', 'serif-bold', 'mono-bold'] as const
 
 export const renderSettingsSchema = z.object({
   title: z
@@ -32,4 +32,3 @@ export const renderSettingsSchema = z.object({
 
 export type RenderSettingsValues = z.output<typeof renderSettingsSchema>
 export type RenderSettingsInput = z.input<typeof renderSettingsSchema>
-export type CaptionFont = (typeof CAPTION_FONTS)[number]

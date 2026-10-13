@@ -1,8 +1,8 @@
-export const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.m4a']
-export const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png']
+const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.m4a']
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png']
 export const MAX_AUDIO_BYTES = 2_147_483_648 // 2 GB
 export const MAX_IMAGE_BYTES = 26_214_400 // 25 MB
-export const MAX_DURATION_SECONDS = 21_600 // 6 hours
+const MAX_DURATION_SECONDS = 21_600 // 6 hours
 
 /**
  * The self-hosted defaults, used only until the server's own limits load (see useUploadLimits).

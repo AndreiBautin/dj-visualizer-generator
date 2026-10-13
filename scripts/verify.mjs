@@ -1,3 +1,4 @@
+import { checkUnusedExports } from './unused-exports.mjs'
 import { checkBudget, entryGzipKb } from './bundle-budget.mjs'
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs'
@@ -21,6 +22,7 @@ run(process.execPath, ['scripts/architecture.mjs'])
 run(process.execPath, ['--test', 'scripts/gates.test.mjs'])
 front(['run', 'lint'])
 run(process.execPath, ['scripts/format.mjs'])
+console.log(checkUnusedExports())
 run('dotnet', [
   'build',
   'backend/DjVisualizer.sln',

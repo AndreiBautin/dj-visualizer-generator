@@ -44,3 +44,17 @@ test('the bundle budget passes under the limit and fails over it', async () => {
   doesNotThrow(() => checkBudget(100, 130))
   throws(() => checkBudget(131, 130))
 })
+
+test('an export nothing imports is reported; an imported or test-imported one is not', async () => {
+  const { findUnusedExports } = await import('./unused-exports.mjs')
+  const { deepStrictEqual } = await import('node:assert/strict')
+  const files = [
+    {
+      path: 'a.ts',
+      text: 'export const used = 1\nexport function orphan() {}\nexport type Shape = {}',
+    },
+    { path: 'b.ts', text: "import { used } from './a'" },
+    { path: 'a.test.ts', text: "import { type Shape } from './a'" },
+  ]
+  deepStrictEqual(findUnusedExports(files), ['a.ts: orphan'])
+})

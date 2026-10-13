@@ -10,10 +10,10 @@ export class ApiError extends Error {
   }
 }
 
-export type VideoPreset = '1080p' | '720p'
-export type CaptionFont = 'sans-bold' | 'serif-bold' | 'mono-bold'
+type VideoPreset = '1080p' | '720p'
+type CaptionFont = 'sans-bold' | 'serif-bold' | 'mono-bold'
 
-export interface CreateJobRequest {
+interface CreateJobRequest {
   title: string
   preset: VideoPreset
   rotationSpeedSeconds: number
@@ -24,11 +24,11 @@ export interface CreateJobRequest {
   labelCrop?: { focusX: number; focusY: number; zoom: number }
 }
 
-export interface CreateJobResponse {
+interface CreateJobResponse {
   jobId: string
 }
 
-export type JobStatusValue = 'Queued' | 'Processing' | 'Completed' | 'Failed'
+type JobStatusValue = 'Queued' | 'Processing' | 'Completed' | 'Failed'
 
 export interface JobStatusResponse {
   jobId: string
@@ -134,7 +134,7 @@ export function downloadUrl(jobId: string): string {
   return `${BASE_URL}/jobs/${encodeURIComponent(jobId)}/download`
 }
 
-export interface CreateSampleJobRequest {
+interface CreateSampleJobRequest {
   title?: string
   preset?: VideoPreset
   rotationSpeedSeconds?: number
