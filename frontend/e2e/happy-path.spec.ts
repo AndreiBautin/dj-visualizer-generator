@@ -140,10 +140,15 @@ test('upload a short mix, watch it render, and download the mp4', async ({
     .analyze()
   expect(audit.violations).toEqual([])
 
+  await expect(page.getByText('5 saves left')).toBeVisible()
   const downloadPromise = page.waitForEvent('download')
   await downloadLink.click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toMatch(/\.mp4$/)
+
+  // The server counts the save when the transfer starts and the panel re-reads it once after
+  // the click, so the allowance on screen must drop from five to four.
+  await expect(page.getByText('4 saves left')).toBeVisible({ timeout: 10_000 })
 
   await page.getByRole('button', { name: /another/i }).click()
   await expect(
