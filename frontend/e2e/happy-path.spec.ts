@@ -128,7 +128,12 @@ test('upload a short mix, watch it render, and download the mp4', async ({
 
   // Queued or already Processing - either shows the progress bar. Matched by role, not text:
   // the stage track names both states, so a text match is ambiguous.
-  await expect(page.getByRole('progressbar')).toBeVisible()
+  // A short mix can finish before this check runs, so the finished state counts too.
+  await expect(
+    page
+      .getByRole('progressbar')
+      .or(page.getByRole('link', { name: /download mp4/i })),
+  ).toBeVisible()
 
   const downloadLink = page.getByRole('link', { name: /download mp4/i })
   await expect(downloadLink).toBeVisible({ timeout: 120_000 })

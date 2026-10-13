@@ -50,7 +50,11 @@ export default defineConfig({
         ],
         // The API responses (job status, downloads) must never be served from cache - only the
         // built SPA shell and its assets are precached.
+        // A download link click is a navigation, so a missing entry here makes the worker answer
+        // it with index.html - Firefox then saved "download.html" instead of the MP4. Both the
+        // standalone paths (/jobs/...) and the prefixed ones (/api/...) must be excluded.
         navigateFallbackDenylist: [
+          /^\/api\//,
           /^\/jobs\//,
           /^\/health/,
           /^\/version/,
