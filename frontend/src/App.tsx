@@ -8,6 +8,7 @@ import {
   createSampleJob,
   isSampleMixEnabled,
 } from './api/client'
+import { Backdrop } from './components/Backdrop'
 import { BuildFooter } from './components/BuildFooter'
 import { ProgressPanel } from './components/ProgressPanel'
 import { RenderSettings } from './components/RenderSettings'
@@ -134,14 +135,14 @@ function App() {
   if (jobId) {
     return (
       <FormProvider {...methods}>
-        <main className="relative min-h-screen overflow-hidden bg-black text-ink">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,color-mix(in_oklch,var(--color-accent)_14%,transparent),transparent_55%)]" />
+        <main className="relative min-h-screen overflow-hidden bg-canvas text-ink">
+          <Backdrop />
           <div className="relative mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center gap-8 p-8 sm:flex-row sm:gap-12">
             <div className="w-full max-w-[16rem] shrink-0 sm:max-w-[18rem]">
               <LiveVinylRecord artworkFile={artworkFile} />
             </div>
             <div className="flex w-full max-w-sm flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-              <h1 className="text-3xl font-semibold tracking-tight">
+              <h1 className="bg-gradient-to-b from-white to-white/60 bg-clip-text text-3xl font-semibold tracking-[-0.03em] text-transparent">
                 DJ Visualizer Generator
               </h1>
               <ProgressPanel jobId={jobId} onReset={handleReset} />
@@ -161,18 +162,21 @@ function App() {
 
   return (
     <FormProvider {...methods}>
-      <main className="relative min-h-screen overflow-hidden bg-black text-ink">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,color-mix(in_oklch,var(--color-accent)_14%,transparent),transparent_55%)]" />
+      <main className="relative min-h-screen overflow-hidden bg-canvas text-ink">
+        <Backdrop />
         <div className="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-10 p-6 sm:p-10 lg:flex-row lg:items-center lg:gap-16">
           <div className="flex flex-col items-center gap-6 text-center lg:sticky lg:top-10 lg:w-2/5 lg:items-start lg:text-left">
             <div className="w-full max-w-[20rem]">
               <LiveVinylRecord artworkFile={artworkFile} />
             </div>
             <div>
-              <h1 className="text-4xl font-semibold tracking-tight text-balance">
+              <p className="text-xs font-medium tracking-[0.2em] text-accent-glow uppercase">
+                Mix to video
+              </p>
+              <h1 className="mt-3 bg-gradient-to-b from-white to-white/60 bg-clip-text text-5xl font-semibold tracking-[-0.035em] text-balance text-transparent">
                 DJ Visualizer Generator
               </h1>
-              <p className="mt-2 text-ink-muted">
+              <p className="mt-3 text-lg text-ink-muted">
                 Upload a mix, get a spinning-record video.
               </p>
             </div>

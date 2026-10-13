@@ -74,3 +74,13 @@ body {
     transform: scale(1);
   }
 }
+
+/* The backdrop glows - slow enough to read as light, not motion. */
+@keyframes drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(8%, 6%, 0) scale(1.1);
+  }
+}
