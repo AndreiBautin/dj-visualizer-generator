@@ -128,12 +128,14 @@ test('upload a short mix, watch it render, and download the mp4', async ({
 
   // Queued or already Processing - either shows the progress bar. Matched by role, not text:
   // the stage track names both states, so a text match is ambiguous.
-  // A short mix can finish before this check runs, so the finished state counts too.
+  // A short mix can finish before this check runs, so the finished state counts too. The
+  // wait covers upload plus the first status poll, which CI's three parallel browsers on one
+  // stack pushed past the default 5s in WebKit.
   await expect(
     page
       .getByRole('progressbar')
       .or(page.getByRole('link', { name: /download mp4/i })),
-  ).toBeVisible()
+  ).toBeVisible({ timeout: 30_000 })
 
   const downloadLink = page.getByRole('link', { name: /download mp4/i })
   await expect(downloadLink).toBeVisible({ timeout: 120_000 })
