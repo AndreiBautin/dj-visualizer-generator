@@ -32,6 +32,8 @@ The script requires curl, ffprobe and ffmpeg — no Python. It checks the page, 
 
 There are no migrations. Demo fixtures are bundled, not imported from personal storage. Cleanup expires temporary jobs; never reset a real user's jobs directory for a test. Use a separate root for smoke runs.
 
+**Every deploy drops jobs in flight.** Each push to `main` that passes CI redeploys, which replaces the instance and its ephemeral disk: a render in progress, and every finished file, disappears, and their links return 404 (the page says the render expired or the server restarted, and removes it from recent renders). This was observed on 2026-10-13, when a 40-minute render at 67% vanished on a redeploy. Do not push during a demo or while someone's long render is running; a persistent disk would be the fix, and is a paid feature on this host.
+
 Both video endpoints reserve the whole file per request. Preview does not spend the five-save count, but range requests can conservatively consume the process budget faster than actual transferred bytes. The budget resets on restart. Rate limits and caps reduce abuse rather than guarantee availability. Long files still cost disk and bandwidth; the 45-minute public ceiling has not been load-tested on hosted hardware in this pass.
 
 | Symptom | Action |
