@@ -34,7 +34,7 @@ export function VinylRecord({
   return (
     <div
       aria-hidden="true"
-      className="relative aspect-square w-full max-w-[22rem]"
+      className="relative isolate aspect-square w-full max-w-[22rem]"
     >
       <div
         className="absolute inset-0 rounded-full motion-safe:animate-[spin_var(--vinyl-duration)_linear_infinite]"
@@ -44,7 +44,7 @@ export function VinylRecord({
             background:
               'repeating-radial-gradient(circle at center, #0a0a0a 0, #0a0a0a 2px, #1c1c1c 3px, #0a0a0a 4px)',
             boxShadow:
-              '0 25px 60px -15px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(255,255,255,0.06)',
+              '0 40px 80px -20px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.05), inset 0 0 0 1px rgba(255,255,255,0.06)',
           } as React.CSSProperties
         }
       >
@@ -60,6 +60,13 @@ export function VinylRecord({
         </div>
         <div className="absolute inset-[47%] rounded-full bg-black shadow-[0_0_0_2px_rgba(255,255,255,0.15)]" />
       </div>
+      {/*
+        Page-only lighting, outside the spinning layer so it stays put while the grooves turn
+        under it - which is what sells the record as a physical object. The render worker does
+        not draw this; it is light falling on the preview, not part of the record's geometry.
+      */}
+      <div className="pointer-events-none absolute inset-0 rounded-full bg-[conic-gradient(from_200deg,transparent_0deg,rgb(255_255_255/0.07)_30deg,transparent_70deg,transparent_180deg,rgb(255_255_255/0.05)_210deg,transparent_250deg)] mix-blend-screen" />
+      <div className="pointer-events-none absolute -inset-[8%] -z-10 rounded-full bg-[radial-gradient(circle,color-mix(in_oklch,var(--color-accent)_18%,transparent),transparent_65%)] blur-2xl" />
     </div>
   )
 }
