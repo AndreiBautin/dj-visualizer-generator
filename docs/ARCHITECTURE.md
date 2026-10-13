@@ -175,7 +175,10 @@ content the same way the existing ones do:
 
 - **Tokens** (`frontend/src/index.css`, `@theme`): `accent`/`accent-glow` for the one thing
   happening now, `ink`/`ink-muted`/`ink-faint` for three text levels, `line`/`line-strong` for
-  borders, `danger`, and `canvas` for the page. Components use these, not raw `white/NN`.
+  borders, `danger`, `canvas` for the page, and `tint`/`sunken` for translucent fills. Components
+  use these, not raw `white/NN`: a `prefers-color-scheme: light` block in `index.css` flips the
+  token values, which is the whole light theme. The accent stays at oklch 52% because white text
+  on it must clear 4.5:1 - `e2e/accessibility.spec.ts` audits both schemes with axe.
   `canvas`'s hex value is repeated in `index.html`, `vite.config.ts` and `public/favicon.svg`,
   because a manifest and a meta tag cannot read CSS variables.
 - **Surfaces** (`lib/surfaces.ts`): base, raised and sunken - a card on the page, a card on a
