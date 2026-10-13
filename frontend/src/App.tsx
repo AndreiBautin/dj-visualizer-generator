@@ -46,9 +46,11 @@ import {
 function LiveVinylRecord({
   artworkFile,
   motion,
+  celebrate,
 }: {
   artworkFile: File | null
   motion?: 'idle' | 'rendering' | 'stopped'
+  celebrate?: boolean
 }) {
   const rotationSpeedSeconds = useWatch<RenderSettingsInput>({
     name: 'rotationSpeedSeconds',
@@ -69,6 +71,7 @@ function LiveVinylRecord({
             : DEFAULT_ROTATION_SPEED_SECONDS
         }
         motion={motion}
+        celebrate={celebrate}
       />
       {/* Where and how the render's drawtext stage burns the title: centred under the
           record, white with a soft shadow, in the chosen caption face. */}
@@ -92,13 +95,27 @@ function JobVinylRecord({
   artworkFile: File | null
 }) {
   const { data } = useJobStatus(jobId)
+  // Celebrate a job seen finishing, not one reopened already finished from a link.
+  const [sawInProgress, setSawInProgress] = useState(false)
+  if (
+    !sawInProgress &&
+    (data?.status === 'Queued' || data?.status === 'Processing')
+  ) {
+    setSawInProgress(true)
+  }
   const motion =
     data?.status === 'Processing'
       ? 'rendering'
       : data?.status === 'Completed' || data?.status === 'Failed'
         ? 'stopped'
         : 'idle'
-  return <LiveVinylRecord artworkFile={artworkFile} motion={motion} />
+  return (
+    <LiveVinylRecord
+      artworkFile={artworkFile}
+      motion={motion}
+      celebrate={sawInProgress && data?.status === 'Completed'}
+    />
+  )
 }
 
 function App() {

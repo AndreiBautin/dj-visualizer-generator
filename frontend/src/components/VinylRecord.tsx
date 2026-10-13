@@ -13,6 +13,8 @@ interface VinylRecordProps {
   /** `idle` turns at the chosen speed (the form), `rendering` turns faster while the job runs,
    * `stopped` comes to rest once there is nothing left to wait for. */
   motion?: 'idle' | 'rendering' | 'stopped'
+  /** Plays a single ring burst behind the record - the video is ready. */
+  celebrate?: boolean
 }
 
 /**
@@ -25,6 +27,7 @@ export function VinylRecord({
   artworkFile,
   rotationSpeedSeconds,
   motion = 'idle',
+  celebrate = false,
 }: VinylRecordProps) {
   const labelUrl = useObjectUrl(artworkFile)
   const discRef = useRef<HTMLDivElement>(null)
@@ -106,6 +109,12 @@ export function VinylRecord({
       <div
         className={`pointer-events-none absolute -inset-[8%] -z-10 rounded-full transition-[opacity,scale] duration-1000 ${motion === 'stopped' ? 'opacity-100 scale-110' : 'opacity-70'} bg-[radial-gradient(circle,color-mix(in_oklch,var(--mood)_18%,transparent),transparent_65%)] blur-2xl`}
       />
+      {celebrate && (
+        <>
+          <div className="pointer-events-none absolute inset-0 -z-10 rounded-full border-2 border-[var(--mood)] opacity-0 motion-safe:animate-[burst_1100ms_cubic-bezier(.2,.7,.3,1)_both]" />
+          <div className="pointer-events-none absolute inset-0 -z-10 rounded-full border border-[var(--mood)] opacity-0 motion-safe:animate-[burst_1300ms_cubic-bezier(.2,.7,.3,1)_180ms_both]" />
+        </>
+      )}
     </div>
   )
 }

@@ -217,3 +217,15 @@ body {
     transform: translateX(5px);
   }
 }
+
+/* The job-complete ring burst behind the record - see VinylRecord's celebrate prop. */
+@keyframes burst {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.45);
+  }
+}
