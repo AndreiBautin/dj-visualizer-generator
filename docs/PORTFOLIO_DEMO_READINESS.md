@@ -1,6 +1,18 @@
 # Spinner: senior developer portfolio demo readiness
 
-## Current result — 2026-10-13
+## Current result — 2026-10-13 (second pass)
+
+Verified application revision: `2dcb15f`.
+
+- Root `npm run verify` passed, including a gate test that the rendered video's glow matches the page accent; `npm audit` reports no vulnerabilities.
+- CI succeeded with the browser suite in **Chromium, Firefox and WebKit** (Firefox's first run found, and this revision fixes, the service worker answering `/api` downloads with `index.html` under the compose deployment).
+- [Expected-revision deployment verification](https://github.com/AndreiBautin/dj-visualizer-generator/actions/runs/38466922674) succeeded: sample rendered in 338 s (the free instance was also rendering a manual test job), downloaded and decoded (4,653,434 bytes).
+- A manual session on the live site: audio preview played under the production CSP; an upload with a label crop rendered, and the decoded live video's label showed the cropped region (red left of centre, green right, as the crop placed it); the finished screen showed the settings recap, 5 saves left, the artwork poster and Copy link; a reload returned to the job without replaying the completion burst, and the recent-renders list held it.
+- Caption-fit estimates matched three real renders within 0.6% of frame width.
+
+Not verified: Safari proper (WebKit is the engine-level proxy), the clipboard write of Copy link, and saving the MP4 from the live page (the browser test covers saves dropping 5 → 4 on the compose stack).
+
+## Earlier result — 2026-10-13
 
 The existing product is ready for a portfolio walkthrough. The [public demo](https://dj-visualizer.onrender.com/) and [public source](https://github.com/AndreiBautin/dj-visualizer-generator) are available. AI listening and critique remain outside this application scope.
 
