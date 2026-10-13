@@ -29,6 +29,9 @@
 
 :root {
   --vignette: rgb(0 0 0 / 0.55);
+  /* The atmosphere colour: the artwork's, once one is chosen (App sets --mood on main). Only
+     glows and the progress fill use it - never a surface text has to sit on. */
+  --mood: var(--color-accent);
   --shadow: rgb(0 0 0 / 0.65);
   --shadow-inset: rgb(0 0 0 / 0.4);
   color-scheme: dark;

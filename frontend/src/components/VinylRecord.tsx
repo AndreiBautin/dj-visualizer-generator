@@ -104,7 +104,7 @@ export function VinylRecord({
       */}
       <div className="pointer-events-none absolute inset-0 rounded-full bg-[conic-gradient(from_200deg,transparent_0deg,rgb(255_255_255/0.07)_30deg,transparent_70deg,transparent_180deg,rgb(255_255_255/0.05)_210deg,transparent_250deg)] mix-blend-screen" />
       <div
-        className={`pointer-events-none absolute -inset-[8%] -z-10 rounded-full transition-[opacity,scale] duration-1000 ${motion === 'stopped' ? 'opacity-100 scale-110' : 'opacity-70'} bg-[radial-gradient(circle,color-mix(in_oklch,var(--color-accent)_18%,transparent),transparent_65%)] blur-2xl`}
+        className={`pointer-events-none absolute -inset-[8%] -z-10 rounded-full transition-[opacity,scale] duration-1000 ${motion === 'stopped' ? 'opacity-100 scale-110' : 'opacity-70'} bg-[radial-gradient(circle,color-mix(in_oklch,var(--mood)_18%,transparent),transparent_65%)] blur-2xl`}
       />
     </div>
   )

@@ -253,7 +253,7 @@ export function ProgressPanel({
           <div className="h-full w-1/3 rounded-full bg-accent/70 motion-safe:animate-[progress-sweep_1.4s_ease-in-out_infinite]" />
         ) : (
           <div
-            className="h-full rounded-full bg-gradient-to-r from-accent to-accent-glow shadow-[0_0_16px_var(--color-accent)] transition-[width] duration-700 ease-out"
+            className="h-full rounded-full bg-gradient-to-r from-[var(--mood)] to-[color-mix(in_oklch,var(--mood),white_25%)] shadow-[0_0_16px_var(--mood)] transition-colors transition-[width] duration-700 ease-out"
             style={{ width: `${data.progress}%` }}
           />
         )}

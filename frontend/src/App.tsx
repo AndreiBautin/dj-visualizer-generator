@@ -24,6 +24,7 @@ import { VinylRecord } from './components/VinylRecord'
 import { useJobStatus } from './hooks/useJobStatus'
 import { usePageFileDrop } from './hooks/usePageFileDrop'
 import { jobIdFromSearch, withJobId } from './lib/jobUrl'
+import { useArtworkColor } from './hooks/useArtworkColor'
 import { useUploadLimits } from './hooks/useUploadLimits'
 import {
   formatBytes,
@@ -114,6 +115,10 @@ function App() {
     window.history.replaceState(null, '', withJobId(window.location.href, next))
   }
   const limits = useUploadLimits()
+  const artworkColor = useArtworkColor(artworkError ? null : artworkFile)
+  const moodStyle = artworkColor
+    ? ({ '--mood': artworkColor } as React.CSSProperties)
+    : undefined
 
   // Form and progress are two different screens sharing one URL, so the browser keeps the
   // old scroll offset across the swap - on a phone that opened the next screen part-way down.
@@ -220,7 +225,10 @@ function App() {
   if (jobId) {
     return (
       <FormProvider {...methods}>
-        <main className="relative min-h-screen overflow-clip bg-canvas text-ink">
+        <main
+          className="relative min-h-screen overflow-clip bg-canvas text-ink"
+          style={moodStyle}
+        >
           <Backdrop />
           <div className="relative mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center gap-8 p-8 sm:flex-row sm:gap-12">
             <div className="w-full max-w-[16rem] shrink-0 sm:max-w-[18rem]">
@@ -253,7 +261,10 @@ function App() {
 
   return (
     <FormProvider {...methods}>
-      <main className="relative min-h-screen overflow-clip bg-canvas text-ink">
+      <main
+        className="relative min-h-screen overflow-clip bg-canvas text-ink"
+        style={moodStyle}
+      >
         <Backdrop />
         <div
           aria-hidden="true"
