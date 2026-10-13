@@ -17,10 +17,8 @@ import { ExampleStrip } from './components/ExampleStrip'
 import { HowItWorks } from './components/HowItWorks'
 import { ProgressPanel } from './components/ProgressPanel'
 import { Spinner } from './components/Spinner'
-import {
-  CAPTION_FONT_OPTIONS,
-  RenderSettings,
-} from './components/RenderSettings'
+import { RenderSettings } from './components/RenderSettings'
+import { CAPTION_FONT_OPTIONS } from './lib/captionFonts'
 import { UploadCard } from './components/UploadCard'
 import { VinylRecord } from './components/VinylRecord'
 import { useJobStatus } from './hooks/useJobStatus'
@@ -369,7 +367,7 @@ function App() {
                     createJobMutation.error ?? sampleJobMutation.error
                   return error instanceof ApiError
                     ? error.message
-                    : "That upload didn't make it — mind trying again?"
+                    : 'The upload didn’t go through. Check your connection and try again.'
                 })()}
               </p>
             )}
@@ -392,7 +390,7 @@ function App() {
                     />
                     <Spinner />
                     <span className="relative tabular-nums">
-                      Uploading...
+                      Uploading…
                       {uploadFraction > 0 &&
                         ` ${Math.round(uploadFraction * 100)}%`}
                     </span>
@@ -431,7 +429,7 @@ function App() {
                   {sampleJobMutation.isPending ? (
                     <>
                       <Spinner />
-                      Starting...
+                      Starting…
                     </>
                   ) : (
                     'Render a sample mix'

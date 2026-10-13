@@ -1,4 +1,4 @@
-import { CAPTION_FONT_OPTIONS } from './RenderSettings'
+import { CAPTION_FONT_OPTIONS } from '../lib/captionFonts'
 
 // Drawn, not screenshotted: no demo media or artwork ships in the bundle (see AGENTS.md), and a
 // CSS miniature stays true to the render's layout - record centred, caption under it.

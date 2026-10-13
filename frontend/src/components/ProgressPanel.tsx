@@ -167,7 +167,7 @@ export function ProgressPanel({
       // Same shape as the progress view it is about to become, so nothing jumps when the
       // first status lands - most visible when a shared link or a reload opens this screen.
       <div className="flex w-full flex-col items-center gap-5 sm:items-start">
-        <p className="sr-only">Checking on your render...</p>
+        <p className="sr-only">Checking on your render…</p>
         <div
           aria-hidden="true"
           className="h-4 w-48 rounded-full bg-tint/[0.07] motion-safe:animate-pulse"
@@ -190,7 +190,7 @@ export function ProgressPanel({
   if (error instanceof ApiError && error.status === 404) {
     return (
       <ErrorState
-        title="This render has expired or the server restarted. Please create another video."
+        title="This render is no longer available — it expired, or the server restarted."
         action="Create another video"
         onAction={onReset}
       />
@@ -200,7 +200,7 @@ export function ProgressPanel({
   if (isError || !data) {
     return (
       <p className="text-center text-danger">
-        Lost the connection for a moment - retrying...
+        Lost the connection for a moment — retrying…
       </p>
     )
   }
@@ -262,9 +262,7 @@ export function ProgressPanel({
         )}
       </div>
       {isIndeterminate ? (
-        <p className="text-sm text-ink-faint">
-          Waiting for a worker to pick this up...
-        </p>
+        <p className="text-sm text-ink-faint">Waiting for a free renderer…</p>
       ) : (
         renderStartedAt.current !== null && (
           <TimingLine

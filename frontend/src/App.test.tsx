@@ -150,7 +150,7 @@ describe('App', () => {
 
     expect(
       await screen.findByText(
-        "That upload didn't make it — mind trying again?",
+        'The upload didn’t go through. Check your connection and try again.',
       ),
     ).toBeInTheDocument()
   })

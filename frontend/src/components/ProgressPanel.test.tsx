@@ -28,7 +28,7 @@ describe('ProgressPanel', () => {
 
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
 
-    expect(screen.getByText('Checking on your render...')).toBeInTheDocument()
+    expect(screen.getByText('Checking on your render…')).toBeInTheDocument()
   })
 
   it('shows a reassuring retry message if a status check fails', async () => {
@@ -75,9 +75,7 @@ describe('ProgressPanel', () => {
     renderWithClient(<ProgressPanel jobId="abc" onReset={vi.fn()} />)
 
     expect(await screen.findByText('Queued')).toBeInTheDocument()
-    expect(
-      screen.getByText('Waiting for a worker to pick this up...'),
-    ).toBeInTheDocument()
+    expect(screen.getByText('Waiting for a free renderer…')).toBeInTheDocument()
   })
 
   it('shows the render progress percentage while processing', async () => {

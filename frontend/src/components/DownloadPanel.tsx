@@ -90,7 +90,7 @@ export function DownloadPanel({
         aria-live="polite"
         className={`-mt-2 text-xs text-accent-glow transition-opacity duration-300 ${justStarted ? 'opacity-100' : 'opacity-0'}`}
       >
-        {justStarted ? 'Download started - check your downloads.' : ''}
+        {justStarted ? 'Download started — check your downloads.' : ''}
       </p>
       {/*
         Stated up front because the alternative is a visitor meeting the limit as a raw 429 from a

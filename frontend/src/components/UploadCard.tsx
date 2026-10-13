@@ -119,8 +119,10 @@ export function UploadCard({
           </label>
           {!file && (
             <p className="mt-0.5 text-xs text-ink-faint">
-              <span className="text-ink-muted">Drop a file or browse</span> ·{' '}
-              <span>{hint}</span>
+              <span className="text-ink-muted">
+                Drop a file or click to browse
+              </span>{' '}
+              · <span>{hint}</span>
             </p>
           )}
         </div>

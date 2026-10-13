@@ -46,7 +46,7 @@ export function CopyJobLink() {
           {state === 'copied'
             ? 'Link copied'
             : state === 'failed'
-              ? 'Copy failed - use the address bar'
+              ? 'Couldn’t copy — use the address bar'
               : 'Copy link'}
         </span>
       </button>

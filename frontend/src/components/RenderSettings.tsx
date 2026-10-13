@@ -1,4 +1,5 @@
 import { useFormContext, useWatch } from 'react-hook-form'
+import { CAPTION_FONT_OPTIONS } from '../lib/captionFonts'
 import { SURFACE_SUNKEN } from '../lib/surfaces'
 import {
   DEFAULT_ROTATION_SPEED_SECONDS,
@@ -6,24 +7,6 @@ import {
   MIN_ROTATION_SPEED_SECONDS,
   type RenderSettingsInput,
 } from '../schemas/renderSettingsSchema'
-
-export const CAPTION_FONT_OPTIONS = [
-  {
-    value: 'sans-bold',
-    label: 'Sans',
-    previewFontFamily: "'Caption Sans', sans-serif",
-  },
-  {
-    value: 'serif-bold',
-    label: 'Serif',
-    previewFontFamily: "'Caption Serif', serif",
-  },
-  {
-    value: 'mono-bold',
-    label: 'Mono',
-    previewFontFamily: "'Caption Mono', monospace",
-  },
-] as const
 
 const PRESET_OPTIONS = [
   { value: '1080p', label: '1080p' },

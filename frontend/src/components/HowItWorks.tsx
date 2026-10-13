@@ -7,7 +7,7 @@ const STEPS = [
     title: 'Pick the look',
     body: 'Resolution, spin speed and a caption face.',
   },
-  { title: 'Download the MP4', body: 'Rendered on the server, ready to post.' },
+  { title: 'Download the MP4', body: 'Rendered for you, ready to post.' },
 ] as const
 
 /** Three numbered steps under the form, so a first-time visitor knows the whole trip. */

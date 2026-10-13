@@ -1,5 +1,5 @@
 import { useJobStatus } from '../hooks/useJobStatus'
-import { CAPTION_FONT_OPTIONS } from './RenderSettings'
+import { CAPTION_FONT_OPTIONS } from '../lib/captionFonts'
 
 /** What this job is rendering, from the server's copy of its settings - correct even when the
  * page was reopened from a link and the form below never held them. */
