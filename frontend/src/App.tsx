@@ -268,7 +268,7 @@ function App() {
                 onReset={handleReset}
                 posterFile={artworkFile}
               />
-              <CopyJobLink />
+              <CopyJobLink jobId={jobId} />
             </div>
           </div>
           <div className="relative flex justify-center pb-6">

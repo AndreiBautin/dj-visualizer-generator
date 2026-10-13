@@ -14,13 +14,15 @@ The gate runs project-boundary checks, guardrail regression tests, frontend lint
 - API: binding, safe errors, sample configuration, range responses, preview budget enforcement and concurrent download admission. Ten simultaneous download requests must admit exactly five.
 - Frontend: file/settings validation, progress/recovery states, sample submission, previews and accessible controls. An expired job offers recovery instead of endless polling.
 - Browser: synthetic upload through real rendering and download. Run `E2E_BASE_URL=http://localhost:5080 npm --prefix frontend run test:e2e` against standalone mode, or the default 5173 compose stack. Playwright's Chromium must be installed.
+- Accessibility: axe audits the form in both colour schemes and the finished screen after a real render (`e2e/`), so a contrast regression fails CI's browser job.
+- Visual: `npm --prefix frontend run test:visual` screenshots the form, rendering, finished and failed screens in both themes against a mocked API. Baselines live in `frontend/visual/__screenshots__/<platform>/`; after an intended change, review the diff and rerun with `-- --update-snapshots`.
 - Release: Docker image smoke checks and a live expected-commit check that downloads and decodes a sample MP4.
 
 Current totals and actual run results are recorded in PORTFOLIO_DEMO_READINESS.md. Historical counts are not a substitute for executing the gate.
 
 ## Deliberately not tested
 
-Pixel-perfect FFmpeg snapshots are brittle across encoder/platform builds; inspect a real output visually. Timing is recorded as a measurement, not a pass/fail assertion on shared hardware. Multiple workers are unsupported and rejected by a lease; a distributed queue is outside this product. Hosted load/cost limits need separate measurements on actual hardware. We test our integration with FFmpeg and ASP.NET, not their internal implementations.
+Pixel-perfect FFmpeg snapshots are brittle across encoder/platform builds; inspect a real output visually. Timing is recorded as a measurement, not a pass/fail assertion on shared hardware. Multiple workers are unsupported and rejected by a lease; a distributed queue is outside this product. Hosted load/cost limits need separate measurements on actual hardware. We test our integration with FFmpeg and ASP.NET, not their internal implementations. The visual suite is not in `verify` or CI: font rasterisation differs between Windows and CI's Linux runner, so one set of baselines cannot pass both, and a gate that fails on antialiasing gets ignored. It is a local review tool, run before shipping a UI change.
 
 ## Helpers
 

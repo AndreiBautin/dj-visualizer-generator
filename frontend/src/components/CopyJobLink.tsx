@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
+import { useJobStatus } from '../hooks/useJobStatus'
 import { BUTTON_GHOST } from '../lib/buttons'
 
 /**
  * Copies the current address, which carries the job id. Says plainly that the link is the
  * only key - the app has no accounts, so this must not read as a private share.
  */
-export function CopyJobLink() {
+export function CopyJobLink({ jobId }: { jobId: string }) {
+  const { data } = useJobStatus(jobId)
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle')
 
   useEffect(() => {
@@ -22,6 +24,9 @@ export function CopyJobLink() {
       setState('failed')
     }
   }
+
+  // Only a job that is, or will be, downloadable is worth sharing.
+  if (!data || data.status === 'Failed') return null
 
   return (
     <div className="flex flex-col items-center gap-1 sm:items-start">
