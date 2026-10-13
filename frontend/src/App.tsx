@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { FormProvider, useForm, useWatch } from 'react-hook-form'
 import {
   ApiError,
@@ -134,8 +135,23 @@ function App() {
     jobIdFromSearch(window.location.search),
   )
   function setJobId(next: string | null) {
-    setJobIdState(next)
     window.history.replaceState(null, '', withJobId(window.location.href, next))
+    // Form and job screens are different layouts; a view transition cross-fades them and
+    // moves the record (view-transition-name: vinyl) from one position to the other instead
+    // of the page jumping. Skipped where unsupported or when the visitor asked for less motion.
+    const reduceMotion = window.matchMedia?.(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+    if (typeof document.startViewTransition === 'function' && !reduceMotion) {
+      const transition = document.startViewTransition(() =>
+        flushSync(() => setJobIdState(next)),
+      )
+      // A hidden tab aborts the animation (the state update still runs); that rejection is
+      // expected, not an error.
+      transition.ready.catch(() => {})
+    } else {
+      setJobIdState(next)
+    }
   }
   const limits = useUploadLimits()
   const artworkColor = useArtworkColor(artworkError ? null : artworkFile)
@@ -254,7 +270,7 @@ function App() {
         >
           <Backdrop />
           <div className="relative mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center gap-8 p-8 sm:flex-row sm:gap-12">
-            <div className="w-full max-w-[16rem] shrink-0 sm:max-w-[18rem]">
+            <div className="w-full max-w-[16rem] shrink-0 [view-transition-name:vinyl] sm:max-w-[18rem]">
               <JobVinylRecord jobId={jobId} artworkFile={artworkFile} />
             </div>
             <div className="flex w-full max-w-sm flex-col items-center gap-6 text-center sm:items-start sm:text-left">
@@ -300,7 +316,7 @@ function App() {
         </div>
         <div className="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-10 p-6 sm:p-10 lg:flex-row lg:items-center lg:gap-16">
           <div className="flex flex-col items-center gap-6 text-center motion-safe:animate-[rise-in_600ms_cubic-bezier(.2,.8,.2,1)_both] lg:sticky lg:top-10 lg:w-2/5 lg:items-start lg:text-left">
-            <div className="w-full max-w-[20rem]">
+            <div className="w-full max-w-[20rem] [view-transition-name:vinyl]">
               <LiveVinylRecord artworkFile={artworkFile} />
             </div>
             <div>

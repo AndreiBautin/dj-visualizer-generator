@@ -252,3 +252,14 @@ body {
     transform: scale(1.45);
   }
 }
+
+/* Form <-> job screen swap (see setJobId in App): a quick cross-fade, with the record gliding
+   between its two positions on a slightly longer, eased curve. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 260ms;
+}
+::view-transition-group(vinyl) {
+  animation-duration: 520ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
