@@ -15,6 +15,7 @@ import { Spinner } from './components/Spinner'
 import { RenderSettings } from './components/RenderSettings'
 import { UploadCard } from './components/UploadCard'
 import { VinylRecord } from './components/VinylRecord'
+import { useJobStatus } from './hooks/useJobStatus'
 import { useUploadLimits } from './hooks/useUploadLimits'
 import {
   formatBytes,
@@ -32,7 +33,13 @@ import {
 
 /** Isolates the one field VinylRecord needs, so dragging the rotation-speed slider re-renders
  * just the record rather than the whole two-column layout. */
-function LiveVinylRecord({ artworkFile }: { artworkFile: File | null }) {
+function LiveVinylRecord({
+  artworkFile,
+  motion,
+}: {
+  artworkFile: File | null
+  motion?: 'idle' | 'rendering' | 'stopped'
+}) {
   const rotationSpeedSeconds = useWatch<RenderSettingsInput>({
     name: 'rotationSpeedSeconds',
   })
@@ -44,8 +51,27 @@ function LiveVinylRecord({ artworkFile }: { artworkFile: File | null }) {
           ? rotationSpeedSeconds
           : DEFAULT_ROTATION_SPEED_SECONDS
       }
+      motion={motion}
     />
   )
+}
+
+/** Shares the progress panel's polling query (same key), so this adds no requests. */
+function JobVinylRecord({
+  jobId,
+  artworkFile,
+}: {
+  jobId: string
+  artworkFile: File | null
+}) {
+  const { data } = useJobStatus(jobId)
+  const motion =
+    data?.status === 'Processing'
+      ? 'rendering'
+      : data?.status === 'Completed' || data?.status === 'Failed'
+        ? 'stopped'
+        : 'idle'
+  return <LiveVinylRecord artworkFile={artworkFile} motion={motion} />
 }
 
 function App() {
@@ -147,7 +173,7 @@ function App() {
           <Backdrop />
           <div className="relative mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center gap-8 p-8 sm:flex-row sm:gap-12">
             <div className="w-full max-w-[16rem] shrink-0 sm:max-w-[18rem]">
-              <LiveVinylRecord artworkFile={artworkFile} />
+              <JobVinylRecord jobId={jobId} artworkFile={artworkFile} />
             </div>
             <div className="flex w-full max-w-sm flex-col items-center gap-6 text-center sm:items-start sm:text-left">
               <h1 className="bg-gradient-to-b from-white to-white/60 bg-clip-text text-3xl font-semibold tracking-[-0.03em] text-transparent">

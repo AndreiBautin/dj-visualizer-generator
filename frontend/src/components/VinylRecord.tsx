@@ -7,6 +7,9 @@ interface VinylRecordProps {
    * the video it stands in for turn at the same speed. It was multiplied by six here and not
    * in the render, so a "3s per spin" setting spun for 18s on this page and 3s in the video. */
   rotationSpeedSeconds: number
+  /** `idle` turns at the chosen speed (the form), `rendering` turns faster while the job runs,
+   * `stopped` comes to rest once there is nothing left to wait for. */
+  motion?: 'idle' | 'rendering' | 'stopped'
 }
 
 /**
@@ -18,6 +21,7 @@ interface VinylRecordProps {
 export function VinylRecord({
   artworkFile,
   rotationSpeedSeconds,
+  motion = 'idle',
 }: VinylRecordProps) {
   const [labelUrl, setLabelUrl] = useState<string | null>(null)
 
@@ -40,7 +44,12 @@ export function VinylRecord({
         className="absolute inset-0 rounded-full motion-safe:animate-[spin_var(--vinyl-duration)_linear_infinite]"
         style={
           {
-            '--vinyl-duration': `${rotationSpeedSeconds}s`,
+            '--vinyl-duration': `${
+              motion === 'rendering'
+                ? Math.max(1, rotationSpeedSeconds / 3)
+                : rotationSpeedSeconds
+            }s`,
+            animationPlayState: motion === 'stopped' ? 'paused' : 'running',
             background:
               'repeating-radial-gradient(circle at center, #0a0a0a 0, #0a0a0a 2px, #1c1c1c 3px, #0a0a0a 4px)',
             boxShadow:
@@ -66,7 +75,9 @@ export function VinylRecord({
         not draw this; it is light falling on the preview, not part of the record's geometry.
       */}
       <div className="pointer-events-none absolute inset-0 rounded-full bg-[conic-gradient(from_200deg,transparent_0deg,rgb(255_255_255/0.07)_30deg,transparent_70deg,transparent_180deg,rgb(255_255_255/0.05)_210deg,transparent_250deg)] mix-blend-screen" />
-      <div className="pointer-events-none absolute -inset-[8%] -z-10 rounded-full bg-[radial-gradient(circle,color-mix(in_oklch,var(--color-accent)_18%,transparent),transparent_65%)] blur-2xl" />
+      <div
+        className={`pointer-events-none absolute -inset-[8%] -z-10 rounded-full transition-[opacity,scale] duration-1000 ${motion === 'stopped' ? 'opacity-100 scale-110' : 'opacity-70'} bg-[radial-gradient(circle,color-mix(in_oklch,var(--color-accent)_18%,transparent),transparent_65%)] blur-2xl`}
+      />
     </div>
   )
 }
