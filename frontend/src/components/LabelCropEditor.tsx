@@ -1,4 +1,10 @@
-import { useRef, type KeyboardEvent, type PointerEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent,
+} from 'react'
 import { useObjectUrl } from '../hooks/useObjectUrl'
 import {
   DEFAULT_LABEL_CROP,
@@ -26,6 +32,35 @@ export function LabelCropEditor({
   onChange,
 }: LabelCropEditorProps) {
   const url = useObjectUrl(file)
+  // Which way the artwork overhangs the square label decides which presets mean anything.
+  const [shape, setShape] = useState<'wide' | 'tall' | 'square' | null>(null)
+  useEffect(() => {
+    if (!url) return
+    const image = new Image()
+    image.onload = () =>
+      setShape(
+        image.naturalWidth > image.naturalHeight * 1.05
+          ? 'wide'
+          : image.naturalHeight > image.naturalWidth * 1.05
+            ? 'tall'
+            : 'square',
+      )
+    image.src = url
+  }, [url])
+  const presets =
+    shape === 'wide'
+      ? [
+          { label: 'Left', crop: { focusX: 0, focusY: 0.5 } },
+          { label: 'Centre', crop: { focusX: 0.5, focusY: 0.5 } },
+          { label: 'Right', crop: { focusX: 1, focusY: 0.5 } },
+        ]
+      : shape === 'tall'
+        ? [
+            { label: 'Top', crop: { focusX: 0.5, focusY: 0 } },
+            { label: 'Centre', crop: { focusX: 0.5, focusY: 0.5 } },
+            { label: 'Bottom', crop: { focusX: 0.5, focusY: 1 } },
+          ]
+        : []
   const drag = useRef<{ x: number; y: number; crop: LabelCrop } | null>(null)
   const frame = useRef<HTMLDivElement>(null)
 
@@ -117,13 +152,29 @@ export function LabelCropEditor({
             } as React.CSSProperties
           }
         />
-        <button
-          type="button"
-          onClick={() => onChange(DEFAULT_LABEL_CROP)}
-          className={`-ml-3 ${BUTTON_GHOST} py-1 text-xs`}
-        >
-          Reset
-        </button>
+        <div className="mt-1 flex flex-wrap items-center gap-1">
+          {presets.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              aria-pressed={
+                Math.abs(crop.focusX - preset.crop.focusX) < 0.01 &&
+                Math.abs(crop.focusY - preset.crop.focusY) < 0.01
+              }
+              onClick={() => onChange(clampCrop({ ...crop, ...preset.crop }))}
+              className="rounded-md px-2 py-1 text-[11px] font-medium text-ink-muted ring-1 ring-line transition-colors hover:text-ink aria-pressed:bg-accent aria-pressed:text-accent-content aria-pressed:ring-accent"
+            >
+              {preset.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => onChange(DEFAULT_LABEL_CROP)}
+            className={`${BUTTON_GHOST} px-2 py-1 text-[11px]`}
+          >
+            Reset
+          </button>
+        </div>
       </div>
     </div>
   )
