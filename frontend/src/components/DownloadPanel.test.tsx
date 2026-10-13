@@ -109,4 +109,24 @@ describe('DownloadPanel', () => {
 
     expect(screen.getByText('1 save left')).toBeInTheDocument()
   })
+
+  it('confirms a download started, since the browser gives no in-page sign', async () => {
+    const onDownloadStarted = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <DownloadPanel
+        jobId="abc-123"
+        downloadsRemaining={5}
+        onDownloadStarted={onDownloadStarted}
+        onReset={vi.fn()}
+      />,
+    )
+    const link = screen.getByText('Download MP4').closest('a')!
+    link.addEventListener('click', (event) => event.preventDefault())
+
+    await user.click(link)
+
+    expect(onDownloadStarted).toHaveBeenCalledOnce()
+    expect(screen.getByText(/download started/i)).toBeInTheDocument()
+  })
 })

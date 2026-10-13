@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { downloadUrl, previewUrl } from '../api/client'
 import { useObjectUrl } from '../hooks/useObjectUrl'
 import { BUTTON_GHOST, BUTTON_PRIMARY } from '../lib/buttons'
@@ -20,6 +21,15 @@ export function DownloadPanel({
 }: DownloadPanelProps) {
   const posterUrl = useObjectUrl(posterFile)
   const exhausted = downloadsRemaining <= 0
+  const [justStarted, setJustStarted] = useState(false)
+
+  // A download gives no in-page sign it began - the browser's tray is easy to miss - so the
+  // page says so for a few seconds while the saves count refreshes.
+  useEffect(() => {
+    if (!justStarted) return
+    const timer = setTimeout(() => setJustStarted(false), 4000)
+    return () => clearTimeout(timer)
+  }, [justStarted])
   return (
     <div className="flex w-full flex-col items-center gap-5 text-center sm:items-start sm:text-left motion-safe:animate-[panel-in_220ms_ease-out]">
       <div className="flex items-center gap-3">
@@ -52,7 +62,14 @@ export function DownloadPanel({
         href={exhausted ? undefined : downloadUrl(jobId)}
         download
         aria-disabled={exhausted}
-        onClick={exhausted ? undefined : onDownloadStarted}
+        onClick={
+          exhausted
+            ? undefined
+            : () => {
+                setJustStarted(true)
+                onDownloadStarted()
+              }
+        }
         className={`w-full sm:w-auto ${BUTTON_PRIMARY} ${exhausted ? 'pointer-events-none opacity-40' : ''}`}
       >
         <svg
@@ -69,6 +86,12 @@ export function DownloadPanel({
         </svg>
         Download MP4
       </a>
+      <p
+        aria-live="polite"
+        className={`-mt-2 text-xs text-accent-glow transition-opacity duration-300 ${justStarted ? 'opacity-100' : 'opacity-0'}`}
+      >
+        {justStarted ? 'Download started - check your downloads.' : ''}
+      </p>
       {/*
         Stated up front because the alternative is a visitor meeting the limit as a raw 429 from a
         plain <a download>, which navigates away from the app to a JSON error document. The link
