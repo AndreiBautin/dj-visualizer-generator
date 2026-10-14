@@ -18,10 +18,11 @@ public class CreateJobUseCaseTests
     private readonly IAudioProbe _audioProbe = Substitute.For<IAudioProbe>();
     private readonly IClock _clock = Substitute.For<IClock>();
     private readonly IDiskSpaceChecker _diskSpaceChecker = Substitute.For<IDiskSpaceChecker>();
+    private readonly UploadDiskReservations _reservations = new();
     private readonly UploadLimits _limits = new(maxAudioBytes: 1000, maxImageBytes: 1000, maxDurationSeconds: 21_600, minFreeDiskBytes: 1000);
 
     private CreateJobUseCase CreateSut() =>
-        new(_jobQueue, _fileStorage, _audioProbe, _diskSpaceChecker, _limits, _clock, NullLogger<CreateJobUseCase>.Instance);
+        new(_jobQueue, _fileStorage, _audioProbe, _diskSpaceChecker, _reservations, _limits, _clock, NullLogger<CreateJobUseCase>.Instance);
 
     private static CreateJobRequest ValidRequest() => new(
         Title: "Friday Night Set",

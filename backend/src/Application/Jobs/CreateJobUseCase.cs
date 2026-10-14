@@ -12,6 +12,7 @@ public sealed class CreateJobUseCase(
     IJobFileStorage fileStorage,
     IAudioProbe audioProbe,
     IDiskSpaceChecker diskSpaceChecker,
+    UploadDiskReservations diskReservations,
     UploadLimits limits,
     IClock clock,
     ILogger<CreateJobUseCase> logger) : ICreateJobUseCase
@@ -25,7 +26,10 @@ public sealed class CreateJobUseCase(
 
     public async Task<Result<CreateJobResult>> ExecuteAsync(CreateJobRequest request, CancellationToken cancellationToken)
     {
-        if (diskSpaceChecker.GetAvailableFreeBytes() < limits.MinFreeDiskBytes)
+        // Held for the whole request, so a concurrent upload sees this one's worst case as spent.
+        using var reservation = diskReservations.TryReserve(
+            diskSpaceChecker.GetAvailableFreeBytes(), limits.MinFreeDiskBytes, limits.MaxAudioBytes + limits.MaxImageBytes);
+        if (reservation is null)
         {
             return Result<CreateJobResult>.Failure(new Error(
                 ErrorCodes.Unavailable,
