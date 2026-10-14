@@ -3,9 +3,10 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { gzipSync } from 'node:zlib'
 
-// 2026-10-14: the entry chunk was 113 KB gzipped. The budget leaves room for ordinary features;
-// raising it should come with a reason in the commit message.
-export const ENTRY_BUDGET_KB = 130
+// 2026-10-14: the entry chunk was 113 KB gzipped; moving to zod/mini took it to 99 KB, and the
+// budget came down with it so that saving cannot drift back unnoticed. It leaves room for
+// ordinary features; raising it should come with a reason in the commit message.
+export const ENTRY_BUDGET_KB = 110
 
 export function entryGzipKb(assetsDir) {
   const entry = readdirSync(assetsDir).find((name) =>
