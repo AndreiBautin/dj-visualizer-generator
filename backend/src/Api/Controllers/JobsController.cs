@@ -174,10 +174,13 @@ public sealed class JobsController(
         return File(System.IO.File.OpenRead(result.Value!.FilePath), "video/mp4", enableRangeProcessing: true);
     }
 
-    private IActionResult MapError(Error error) => error.Code switch
+    /// <summary>Every <see cref="ErrorCodes"/> value has its own arm. An unknown code throws rather
+    /// than falling through to a guessed status, and ErrorMappingTests fails if a new constant is
+    /// added without one.</summary>
+    internal static IActionResult MapError(Error error) => error.Code switch
     {
         ErrorCodes.Validation => BadRequestProblem(error.Message),
-        ErrorCodes.NotFound => NotFound(new ProblemDetails
+        ErrorCodes.NotFound => new NotFoundObjectResult(new ProblemDetails
         {
             Title = "Not Found",
             Status = StatusCodes.Status404NotFound,
@@ -207,10 +210,18 @@ public sealed class JobsController(
             Detail = error.Message,
         })
         { StatusCode = StatusCodes.Status503ServiceUnavailable },
-        _ => Problem(title: "Request Failed", detail: error.Message, statusCode: StatusCodes.Status502BadGateway),
+        // A dependency (ffprobe, the store) failed: the request was fine, something behind it was not.
+        ErrorCodes.Failure => new ObjectResult(new ProblemDetails
+        {
+            Title = "Request Failed",
+            Status = StatusCodes.Status502BadGateway,
+            Detail = error.Message,
+        })
+        { StatusCode = StatusCodes.Status502BadGateway },
+        _ => throw new InvalidOperationException($"No HTTP mapping for error code '{error.Code}'."),
     };
 
-    private ObjectResult BadRequestProblem(string detail) => new(new ProblemDetails
+    private static ObjectResult BadRequestProblem(string detail) => new(new ProblemDetails
     {
         Title = "Validation Failed",
         Status = StatusCodes.Status400BadRequest,

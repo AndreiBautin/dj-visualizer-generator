@@ -21,4 +21,8 @@
     <ProjectReference Include="..\Worker.Hosting\DjVisualizer.Worker.Hosting.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="DjVisualizer.Api.IntegrationTests" />
+  </ItemGroup>
+
 </Project>
