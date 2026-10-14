@@ -96,7 +96,7 @@ public class FfmpegArgumentsBuilderTests
     [Fact]
     public void BuildMuxArguments_Loops_The_Segment_Indefinitely_And_Copies_The_Video_Stream()
     {
-        var args = FfmpegArgumentsBuilder.BuildMuxArguments("/jobs/x/.loop.mp4", Request);
+        var args = FfmpegArgumentsBuilder.BuildMuxArguments("/jobs/x/.loop.mp4", Request, copyAudio: false);
 
         // -c:v copy is the whole point: no video re-encoding for the full (possibly hours-long)
         // duration, only cheap container-level repackaging of the looped segment's bytes.
@@ -118,8 +118,36 @@ public class FfmpegArgumentsBuilderTests
         // roughly a minute or more, regardless of the audio's length. An explicit -t using the
         // duration already known from probing the audio makes the cutoff exact and deterministic
         // instead of depending on that inference.
-        var args = FfmpegArgumentsBuilder.BuildMuxArguments("/jobs/x/.loop.mp4", Request);
+        var args = FfmpegArgumentsBuilder.BuildMuxArguments("/jobs/x/.loop.mp4", Request, copyAudio: false);
 
         args.Should().ContainInConsecutiveOrder("-t", "2700");
     }
+
+    [Fact]
+    public void BuildMuxArguments_Copies_Audio_When_Asked_Instead_Of_Reencoding()
+    {
+        // Re-encoding a long mix's audio was most of its render time; an AAC input goes in as-is.
+        var args = FfmpegArgumentsBuilder.BuildMuxArguments("/jobs/x/.loop.mp4", Request, copyAudio: true);
+
+        args.Should().ContainInConsecutiveOrder("-c:a", "copy");
+        args.Should().NotContain("-b:a");
+    }
+
+    [Fact]
+    public void BuildMuxArguments_Reencodes_Other_Audio_To_Aac()
+    {
+        var args = FfmpegArgumentsBuilder.BuildMuxArguments("/jobs/x/.loop.mp4", Request, copyAudio: false);
+
+        args.Should().ContainInConsecutiveOrder("-c:a", "aac", "-b:a", FfmpegArgumentsBuilder.ReencodedAudioBitrate);
+    }
+
+    [Theory]
+    [InlineData("aac", true)]
+    [InlineData("mp3", false)]
+    [InlineData("pcm_s16le", false)]
+    [InlineData("alac", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void CanCopyAudioCodec_Only_Accepts_Aac(string? codec, bool expected) =>
+        FfmpegArgumentsBuilder.CanCopyAudioCodec(codec).Should().Be(expected);
 }

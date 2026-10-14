@@ -249,6 +249,45 @@ public class FfmpegVideoRendererTests : IDisposable
         process.ExitCode.Should().Be(0);
     }
 
+    [RequiresFfmpegFact]
+    public async Task RenderAsync_Copies_Aac_Audio_Instead_Of_Reencoding_It()
+    {
+        // Encoded at 64k: a copy keeps that bitrate, a re-encode would land near ReencodedAudioBitrate.
+        var audioPath = Path.Combine(_workDir, "audio.m4a");
+        var artworkPath = Path.Combine(_workDir, "artwork.png");
+        var outputPath = Path.Combine(_workDir, "video.mp4");
+        var duration = TimeSpan.FromSeconds(2);
+        await RunFfmpegAsync("-y", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100:duration=2", "-c:a", "aac", "-b:a", "64k", audioPath);
+        await RunFfmpegAsync("-y", "-f", "lavfi", "-i", "color=c=red:s=64x64", "-frames:v", "1", artworkPath);
+
+        var request = new RenderRequest(
+            audioPath, artworkPath, outputPath, VideoPreset.Hd720p, "Copy", duration,
+            RotationPeriodSeconds: 2.0, CaptionFont: CaptionFont.SansBold, LabelCrop: LabelCrop.Default);
+
+        await new FfmpegVideoRenderer(FontFilePaths).RenderAsync(request, (_, _) => Task.CompletedTask, CancellationToken.None);
+
+        var (codec, bitRate) = await ProbeAudioAsync(outputPath);
+        codec.Should().Be("aac");
+        bitRate.Should().BeLessThan(100_000);
+    }
+
+    private static async Task<(string CodecName, long BitRate)> ProbeAudioAsync(string path)
+    {
+        var startInfo = new ProcessStartInfo("ffprobe") { RedirectStandardOutput = true, UseShellExecute = false };
+        foreach (var arg in new[] { "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name,bit_rate", "-of", "json", path })
+        {
+            startInfo.ArgumentList.Add(arg);
+        }
+
+        using var process = Process.Start(startInfo)!;
+        var json = await process.StandardOutput.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        using var document = JsonDocument.Parse(json);
+        var stream = document.RootElement.GetProperty("streams")[0];
+        return (stream.GetProperty("codec_name").GetString()!, long.Parse(stream.GetProperty("bit_rate").GetString()!));
+    }
+
     private static async Task<(int Width, int Height, string CodecName, double DurationSeconds)> ProbeVideoAsync(string path)
     {
         var startInfo = new ProcessStartInfo("ffprobe")

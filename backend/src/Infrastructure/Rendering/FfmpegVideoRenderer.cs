@@ -29,7 +29,8 @@ public sealed class FfmpegVideoRenderer(
     IReadOnlyDictionary<CaptionFont, string> fontFilePaths,
     string videoCodec = "libx264",
     string x264Preset = "veryfast",
-    string ffmpegPath = "ffmpeg") : IVideoRenderer
+    string ffmpegPath = "ffmpeg",
+    string ffprobePath = "ffprobe") : IVideoRenderer
 {
     public async Task RenderAsync(RenderRequest request, RenderProgressCallback onProgress, CancellationToken cancellationToken)
     {
@@ -145,7 +146,8 @@ public sealed class FfmpegVideoRenderer(
         RenderProgressCallback onProgress,
         CancellationToken cancellationToken)
     {
-        var arguments = FfmpegArgumentsBuilder.BuildMuxArguments(loopSegmentPath, request);
+        var copyAudio = FfmpegArgumentsBuilder.CanCopyAudioCodec(await ProbeAudioCodecAsync(request.AudioFilePath, cancellationToken));
+        var arguments = FfmpegArgumentsBuilder.BuildMuxArguments(loopSegmentPath, request, copyAudio);
 
         // No local de-duplication: the shared gate in RenderAsync already drops repeats, and doing
         // it here as well would only hide which pass a value came from.
@@ -156,6 +158,51 @@ public sealed class FfmpegVideoRenderer(
                 await onProgress(RenderProgressScale.ForMux(FfmpegProgressParser.CalculatePercent(elapsed, request.Duration), RenderProgressScale.LoopSegmentEndFor(request.Duration)), ct);
             }
         });
+    }
+
+    /// <summary>
+    /// The first audio stream's codec name, or null when it cannot be determined. Null only ever
+    /// costs speed: the caller then re-encodes, which is always correct.
+    /// </summary>
+    private async Task<string?> ProbeAudioCodecAsync(string audioFilePath, CancellationToken cancellationToken)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = ffprobePath,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        foreach (var arg in new[] { "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name", "-of", "default=noprint_wrappers=1:nokey=1", audioFilePath })
+        {
+            startInfo.ArgumentList.Add(arg);
+        }
+
+        using var process = new Process { StartInfo = startInfo };
+        try
+        {
+            process.Start();
+        }
+        catch (Win32Exception)
+        {
+            return null;
+        }
+
+        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        try
+        {
+            await process.WaitForExitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            KillIfRunning(process);
+            throw;
+        }
+
+        var stdout = await stdoutTask;
+        await stderrTask;
+        return process.ExitCode == 0 ? stdout.Trim() : null;
     }
 
     private string ResolveFontPath(CaptionFont captionFont) =>

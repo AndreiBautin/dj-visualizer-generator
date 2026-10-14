@@ -93,6 +93,11 @@ internal static class FfmpegArgumentsBuilder
         ];
     }
 
+    public const string ReencodedAudioBitrate = "192k";
+
+    /// <summary>Whether an input audio stream with this ffprobe <c>codec_name</c> can be copied into the MP4 unchanged.</summary>
+    public static bool CanCopyAudioCodec(string? codecName) => string.Equals(codecName, "aac", StringComparison.Ordinal);
+
     /// <summary>
     /// Loops the short rendered segment indefinitely and muxes in the real audio, stopping at the
     /// audio's actual duration. Uses <c>-c:v copy</c> - the video stream's already-encoded bytes
@@ -104,8 +109,12 @@ internal static class FfmpegArgumentsBuilder
     /// time it has actually written per loop and overshoot the audio's real end by a large,
     /// non-proportional amount. <c>-t</c>, using the duration already known from probing the
     /// audio at upload time, makes the cutoff exact instead of depending on that inference -
-    /// <c>-shortest</c> is kept only as a harmless secondary bound.</remarks>
-    public static IReadOnlyList<string> BuildMuxArguments(string loopSegmentPath, RenderRequest request) =>
+    /// <c>-shortest</c> is kept only as a harmless secondary bound.
+    /// <para>Audio that is already AAC is copied rather than re-encoded: re-encoding was most of a
+    /// long render's wall time on the free instance (about 1,050 s of a 40-minute mix's 21.6
+    /// minutes). Anything else is encoded at <see cref="ReencodedAudioBitrate"/>. MP3 is not
+    /// copied even though MP4 can hold it, because Safari playback of MP3-in-MP4 is unverified.</para></remarks>
+    public static IReadOnlyList<string> BuildMuxArguments(string loopSegmentPath, RenderRequest request, bool copyAudio) =>
     [
         "-y",
         "-stream_loop", "-1",
@@ -114,8 +123,7 @@ internal static class FfmpegArgumentsBuilder
         "-map", "0:v",
         "-map", "1:a",
         "-c:v", "copy",
-        "-c:a", "aac",
-        "-b:a", "320k",
+        .. (copyAudio ? ["-c:a", "copy"] : new[] { "-c:a", "aac", "-b:a", ReencodedAudioBitrate }),
         "-t", request.Duration.TotalSeconds.ToString(CultureInfo.InvariantCulture),
         "-shortest",
         "-progress", "pipe:1",
