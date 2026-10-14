@@ -31,6 +31,19 @@ public sealed class Job
 
     public bool DownloadLimitReached => DownloadCount >= MaxDownloads;
 
+    /// <summary>The message a job gets when it is abandoned mid-render.</summary>
+    public const string StaleFailureMessage = "Worker stopped responding while processing this job.";
+
+    /// <summary>Processing with no progress for longer than <paramref name="threshold"/>: its
+    /// worker is gone. Progress updates <see cref="UpdatedAt"/>, so a slow render is not stale.</summary>
+    public bool IsStale(DateTimeOffset now, TimeSpan threshold) =>
+        Status == JobStatus.Processing && now - UpdatedAt > threshold;
+
+    /// <summary>Finished, and untouched for longer than <paramref name="retention"/>, so its files
+    /// can go. Downloads do not touch <see cref="UpdatedAt"/>, so they do not extend this.</summary>
+    public bool IsPastRetention(DateTimeOffset now, TimeSpan retention) =>
+        Status is JobStatus.Completed or JobStatus.Failed && now - UpdatedAt > retention;
+
     public int DownloadsRemaining => Math.Max(0, MaxDownloads - DownloadCount);
 
     private Job(

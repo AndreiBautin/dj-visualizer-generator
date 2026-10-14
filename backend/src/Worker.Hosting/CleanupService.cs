@@ -75,9 +75,9 @@ public sealed class CleanupService(
 
     private async Task SweepJobAsync(Job job, DateTimeOffset now, TimeSpan staleThreshold, TimeSpan retention, CancellationToken cancellationToken)
     {
-        if (job.Status == JobStatus.Processing && now - job.UpdatedAt > staleThreshold)
+        if (job.IsStale(now, staleThreshold))
         {
-            job.Fail("Worker stopped responding while processing this job.", now);
+            job.Fail(Job.StaleFailureMessage, now);
             await jobRepository.SaveAsync(job, cancellationToken);
             logger.LogWarning(
                 "Marked stale job {JobId} as Failed after {Minutes} minutes without progress.",
@@ -86,8 +86,7 @@ public sealed class CleanupService(
             return;
         }
 
-        var isTerminal = job.Status is JobStatus.Completed or JobStatus.Failed;
-        if (isTerminal && now - job.UpdatedAt > retention)
+        if (job.IsPastRetention(now, retention))
         {
             await jobRepository.DeleteAsync(job.Id, cancellationToken);
             logger.LogInformation("Deleted {Status} job {JobId} after its retention period.", job.Status, job.Id);

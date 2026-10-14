@@ -231,4 +231,30 @@ public class JobTests
         job.DownloadCount.Should().Be(Job.MaxDownloads);
         job.DownloadLimitReached.Should().BeTrue();
     }
+
+    [Fact]
+    public void Only_A_Processing_Job_Without_Recent_Progress_Is_Stale()
+    {
+        var start = new DateTimeOffset(2026, 7, 31, 12, 0, 0, TimeSpan.Zero);
+        var job = Job.Create(JobTitle.Create("Set"), VideoPreset.FullHd1080p, RotationSpeed.Default, CaptionFont.Default, start);
+        job.IsStale(start.AddHours(5), TimeSpan.FromMinutes(15)).Should().BeFalse("a queued job is waiting, not abandoned");
+
+        job.Start(start);
+        job.UpdateProgress(40, start.AddMinutes(10));
+        job.IsStale(start.AddMinutes(20), TimeSpan.FromMinutes(15)).Should().BeFalse("progress resets the clock");
+        job.IsStale(start.AddMinutes(26), TimeSpan.FromMinutes(15)).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Only_A_Finished_Job_Past_Its_Retention_Can_Be_Deleted()
+    {
+        var start = new DateTimeOffset(2026, 7, 31, 12, 0, 0, TimeSpan.Zero);
+        var job = Job.Create(JobTitle.Create("Set"), VideoPreset.FullHd1080p, RotationSpeed.Default, CaptionFont.Default, start);
+        job.Start(start);
+        job.IsPastRetention(start.AddDays(1), TimeSpan.FromMinutes(30)).Should().BeFalse("a running job is never deleted");
+
+        job.Complete(start);
+        job.IsPastRetention(start.AddMinutes(29), TimeSpan.FromMinutes(30)).Should().BeFalse();
+        job.IsPastRetention(start.AddMinutes(31), TimeSpan.FromMinutes(30)).Should().BeTrue();
+    }
 }
