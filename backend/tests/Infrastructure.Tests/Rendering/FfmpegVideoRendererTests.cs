@@ -178,7 +178,7 @@ public class FfmpegVideoRendererTests : IDisposable
 
         // The substance of the fix: something is reported while the static and rotation passes
         // run, not only once the mux begins.
-        var loopSegmentEnd = RenderProgressScale.LoopSegmentEndFor(request.Duration);
+        var loopSegmentEnd = RenderProgressScale.LoopSegmentEndFor(request.Duration, copyAudio: false); // WAV input
         reported.Should().Contain(percent => percent > 0 && percent < loopSegmentEnd,
             "the passes before the mux should move the bar");
         reported.Should().Contain(loopSegmentEnd);

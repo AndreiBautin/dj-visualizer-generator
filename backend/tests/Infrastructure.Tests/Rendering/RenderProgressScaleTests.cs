@@ -11,7 +11,7 @@ namespace DjVisualizer.Infrastructure.Tests.Rendering;
 /// </summary>
 public class RenderProgressScaleTests
 {
-    private static readonly int End = RenderProgressScale.LoopSegmentEndFor(TimeSpan.FromMinutes(5));
+    private static readonly int End = RenderProgressScale.LoopSegmentEndFor(TimeSpan.FromMinutes(5), copyAudio: false);
 
     [Fact]
     public void The_Phases_Cover_The_Bar_In_Order_Without_Gaps_Or_Overlap()
@@ -26,9 +26,18 @@ public class RenderProgressScaleTests
     [Fact]
     public void A_Long_Mix_Hands_The_Bar_To_The_Mux_Early_And_A_Short_One_Late()
     {
-        RenderProgressScale.LoopSegmentEndFor(TimeSpan.FromMinutes(40)).Should().BeInRange(20, 30);
-        RenderProgressScale.LoopSegmentEndFor(TimeSpan.FromSeconds(24)).Should().Be(90);
-        RenderProgressScale.LoopSegmentEndFor(TimeSpan.FromHours(6)).Should().Be(20, "each pass keeps a visible slice");
+        RenderProgressScale.LoopSegmentEndFor(TimeSpan.FromMinutes(40), copyAudio: false).Should().BeInRange(20, 30);
+        RenderProgressScale.LoopSegmentEndFor(TimeSpan.FromSeconds(24), copyAudio: false).Should().Be(90);
+        RenderProgressScale.LoopSegmentEndFor(TimeSpan.FromHours(6), copyAudio: false).Should().Be(20, "each pass keeps a visible slice");
+    }
+
+    /// <summary>A copied mux is seconds whatever the length, so even a long set spends the bar on
+    /// the rotation pass; otherwise a 40-minute AAC mix would crawl to 25% and then jump to 100.</summary>
+    [Fact]
+    public void A_Copied_Mux_Gets_The_Minimum_Slice_Whatever_The_Length()
+    {
+        RenderProgressScale.LoopSegmentEndFor(TimeSpan.FromMinutes(40), copyAudio: true).Should().Be(90);
+        RenderProgressScale.LoopSegmentEndFor(TimeSpan.FromSeconds(24), copyAudio: true).Should().Be(90);
     }
 
     [Theory]

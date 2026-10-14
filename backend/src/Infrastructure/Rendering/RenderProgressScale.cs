@@ -37,9 +37,17 @@ internal static class RenderProgressScale
 
     /// <summary>Where the rotation pass hands over to the mux: late for a short sample (the mux is
     /// trivial), early for a long set (the mux is most of the work). Clamped so each pass always
-    /// keeps a visible slice of the bar.</summary>
-    public static int LoopSegmentEndFor(TimeSpan audioDuration)
+    /// keeps a visible slice of the bar. When the audio is copied rather than re-encoded the mux
+    /// is I/O only (a 10-minute mix took half a second locally) whatever its length, so it gets
+    /// the minimum slice. The re-encode balance above was measured at 320k; 192k encoded at
+    /// about the same speed locally, so it still stands.</summary>
+    public static int LoopSegmentEndFor(TimeSpan audioDuration, bool copyAudio)
     {
+        if (copyAudio)
+        {
+            return 90;
+        }
+
         var seconds = Math.Max(0, audioDuration.TotalSeconds);
         var muxShare = seconds / (seconds + MuxBalanceSeconds);
         var end = 100 - (int)Math.Round(muxShare * (100 - LoopSegmentStart));

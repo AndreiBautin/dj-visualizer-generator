@@ -79,8 +79,12 @@ public sealed class FfmpegVideoRenderer(
             await RenderBackgroundAsync(request, fontFilePath, hasCaption ? titleFilePath : null, backgroundImagePath, cancellationToken);
             await ReportAsync(RenderProgressScale.BackgroundComplete, cancellationToken);
 
-            await RenderLoopSegmentAsync(request, vinylImagePath, backgroundImagePath, loopSegmentPath, ReportAsync, cancellationToken);
-            await MuxFinalVideoAsync(request, loopSegmentPath, ReportAsync, cancellationToken);
+            // Probed before the rotation pass because it decides where that pass hands the bar over.
+            var copyAudio = FfmpegArgumentsBuilder.CanCopyAudioCodec(await ProbeAudioCodecAsync(request.AudioFilePath, cancellationToken));
+            var loopSegmentEnd = RenderProgressScale.LoopSegmentEndFor(request.Duration, copyAudio);
+
+            await RenderLoopSegmentAsync(request, vinylImagePath, backgroundImagePath, loopSegmentPath, loopSegmentEnd, ReportAsync, cancellationToken);
+            await MuxFinalVideoAsync(request, loopSegmentPath, copyAudio, loopSegmentEnd, ReportAsync, cancellationToken);
 
             // The mux reports against the audio's duration, which ffmpeg can undershoot by a
             // fraction of a second; finish the bar explicitly rather than leaving it at 99.
@@ -117,6 +121,7 @@ public sealed class FfmpegVideoRenderer(
         string vinylImagePath,
         string backgroundImagePath,
         string loopSegmentPath,
+        int loopSegmentEnd,
         RenderProgressCallback onProgress,
         CancellationToken cancellationToken)
     {
@@ -125,7 +130,6 @@ public sealed class FfmpegVideoRenderer(
         var arguments = FfmpegArgumentsBuilder.BuildLoopSegmentArguments(
             vinylImagePath, backgroundImagePath, filterGraph, videoCodec, x264Preset, loopDurationSeconds, loopSegmentPath);
         var loopDuration = TimeSpan.FromSeconds(loopDurationSeconds);
-        var loopSegmentEnd = RenderProgressScale.LoopSegmentEndFor(request.Duration);
 
         await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: true), cancellationToken, onOutputLine: async (line, ct) =>
         {
@@ -141,10 +145,11 @@ public sealed class FfmpegVideoRenderer(
     private async Task MuxFinalVideoAsync(
         RenderRequest request,
         string loopSegmentPath,
+        bool copyAudio,
+        int loopSegmentEnd,
         RenderProgressCallback onProgress,
         CancellationToken cancellationToken)
     {
-        var copyAudio = FfmpegArgumentsBuilder.CanCopyAudioCodec(await ProbeAudioCodecAsync(request.AudioFilePath, cancellationToken));
         var arguments = FfmpegArgumentsBuilder.BuildMuxArguments(loopSegmentPath, request, copyAudio);
 
         // No local de-duplication: the shared gate in RenderAsync already drops repeats, and doing
@@ -153,7 +158,7 @@ public sealed class FfmpegVideoRenderer(
         {
             if (FfmpegProgressParser.TryParseElapsed(line, out var elapsed))
             {
-                await onProgress(RenderProgressScale.ForMux(FfmpegProgressParser.CalculatePercent(elapsed, request.Duration), RenderProgressScale.LoopSegmentEndFor(request.Duration)), ct);
+                await onProgress(RenderProgressScale.ForMux(FfmpegProgressParser.CalculatePercent(elapsed, request.Duration), loopSegmentEnd), ct);
             }
         });
     }
