@@ -30,7 +30,7 @@ COPY backend/ .
 RUN dotnet publish src/Api/DjVisualizer.Api.csproj -c Release -o /app --no-self-contained
 
 # --- Stage 3: runtime ------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/aspnet:9.0@sha256:4d94cf3204df98d321e8dbf8d6d06e0b34fd136aa75c945abf4390ee07eb30dd
+FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:d5633778c754e89a386882eddf8dbee6942447a8a4b8267c19cf1e1158d0b0ac
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg curl \
     && rm -rf /var/lib/apt/lists/*
