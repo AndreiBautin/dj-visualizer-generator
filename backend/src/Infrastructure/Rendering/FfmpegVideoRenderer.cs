@@ -177,7 +177,7 @@ public sealed class FfmpegVideoRenderer(
             RedirectStandardError = true,
             UseShellExecute = false,
         };
-        foreach (var arg in new[] { "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name", "-of", "default=noprint_wrappers=1:nokey=1", audioFilePath })
+        foreach (var arg in new[] { "-v", "error" }.Concat(FfmpegInputFormat.For(audioFilePath)).Concat(["-select_streams", "a:0", "-show_entries", "stream=codec_name", "-of", "default=noprint_wrappers=1:nokey=1", audioFilePath]))
         {
             startInfo.ArgumentList.Add(arg);
         }

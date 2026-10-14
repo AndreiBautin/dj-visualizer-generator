@@ -16,6 +16,7 @@ internal static class FfmpegArgumentsBuilder
         // A second bound behind the upload check (ImageDimensions): the decoder refuses anything
         // over 8192x8192 rather than allocating for it.
         "-max_pixels", "67108864",
+        .. FfmpegInputFormat.For(request.ArtworkFilePath),
         "-i", request.ArtworkFilePath,
         "-filter_complex", filterGraph,
         "-map", "[vinyl_static]",
@@ -132,6 +133,7 @@ internal static class FfmpegArgumentsBuilder
         "-y",
         "-stream_loop", "-1",
         "-i", loopSegmentPath,
+        .. FfmpegInputFormat.For(request.AudioFilePath),
         "-i", request.AudioFilePath,
         "-map", "0:v",
         "-map", "1:a",

@@ -176,4 +176,16 @@ public class FfmpegArgumentsBuilderTests
 
         args.Should().NotContain("-threads").And.NotContain("-filter_threads");
     }
+
+    [Fact]
+    public void Uploaded_Inputs_Are_Read_As_Their_Extension_Says_And_Only_From_Local_Files()
+    {
+        var mux = FfmpegArgumentsBuilder.BuildMuxArguments("/jobs/x/.loop.mp4", Request, copyAudio: false).ToList();
+        var audioInput = mux.LastIndexOf("-i");
+        mux.Skip(audioInput - 4).Take(4).Should().Equal("-protocol_whitelist", "file", "-f", "mp3");
+
+        var vinyl = FfmpegArgumentsBuilder.BuildStaticVinylArguments(Request, "graph", "/jobs/x/.vinyl.png").ToList();
+        var artworkInput = vinyl.IndexOf("-i");
+        vinyl.Skip(artworkInput - 4).Take(4).Should().Equal("-protocol_whitelist", "file", "-f", "png_pipe");
+    }
 }

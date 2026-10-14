@@ -17,6 +17,11 @@ public sealed class FfmpegAudioProbe(string ffprobePath = "ffprobe") : IAudioPro
         };
         startInfo.ArgumentList.Add("-v");
         startInfo.ArgumentList.Add("error");
+        foreach (var arg in Rendering.FfmpegInputFormat.For(filePath))
+        {
+            startInfo.ArgumentList.Add(arg);
+        }
+
         startInfo.ArgumentList.Add("-show_entries");
         startInfo.ArgumentList.Add("format=duration");
         startInfo.ArgumentList.Add("-of");
