@@ -171,7 +171,7 @@ rejects.
 
 `FileSystemInstanceLease` holds an exclusive OS handle per API/worker role. `InstanceLeaseService` acquires it before workers start. A second process using the same jobs directory fails startup. This is local filesystem coordination, not a distributed lock.
 
-`JobDownloadGate` serializes download admission through persistence; transfer occurs after releasing it. Writes use unique temp files. Readers permit atomic rename on Windows. `/jobs/{id}/preview` supports ranges without incrementing saves; `/download` serves an attachment and increments saves. Both reserve against process-local egress before sending: a download the whole file, a preview the bytes of its one satisfiable range (`Api/Downloads/PreviewRange.cs`; anything served whole is charged whole). Aborted transfers are still overcounted.
+`JobDownloadGate` serializes download admission through persistence; transfer occurs after releasing it. Writes use unique temp files. Readers permit atomic rename on Windows. `/jobs/{id}/preview` supports ranges without incrementing saves; `/download` serves an attachment and increments saves. Both reserve against the process-local egress budget before sending; the exact charging rules live in [SECURITY.md, "F-5" and "Hardening batch"](SECURITY.md).
 
 `scripts/architecture.mjs` enforces dependency direction in `npm run verify`. One worker owns processing updates. Cleanup can race with expiring file transfers; ephemeral storage loss on host restart remains a demo limitation.
 
