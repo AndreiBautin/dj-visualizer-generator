@@ -40,7 +40,14 @@ builder.Services.AddOptions<JobsOptions>().Configure<IConfiguration>((options, c
     options.MaxEgressBytesPerWindow = parsed.MaxEgressBytesPerWindow;
     options.EgressWindowHours = parsed.EgressWindowHours;
 });
-builder.Services.Configure<DemoOptions>(builder.Configuration.GetSection(DemoOptions.SectionName));
+builder.Services.AddOptions<DemoOptions>().Configure<IConfiguration>((options, configuration) =>
+{
+    var parsed = DemoOptionsFactory.Create(configuration, out _);
+    options.Enabled = parsed.Enabled;
+    options.AudioFilePath = parsed.AudioFilePath;
+    options.ArtworkFilePath = parsed.ArtworkFilePath;
+    options.Title = parsed.Title;
+});
 
 // All configuration reads below are deferred into factory delegates (rather than read eagerly
 // into local variables here) so they run after the host is fully built, when every configuration
@@ -180,8 +187,10 @@ var app = builder.Build();
 // Re-parsed against the built host's configuration, which is the fully merged one, and reported
 // now because logging does not exist until this point. Parsing is pure, so doing it twice costs
 // nothing. A malformed variable is a warning and a documented fallback, never a failed startup.
-JobsOptionsFactory.Create(app.Services.GetRequiredService<IConfiguration>(), out var configurationWarnings);
-foreach (var warning in configurationWarnings)
+var builtConfiguration = app.Services.GetRequiredService<IConfiguration>();
+JobsOptionsFactory.Create(builtConfiguration, out var jobsWarnings);
+DemoOptionsFactory.Create(builtConfiguration, out var demoWarnings);
+foreach (var warning in jobsWarnings.Concat(demoWarnings))
 {
     app.Logger.LogWarning("Ignoring malformed configuration value. {Warning}", warning);
 }

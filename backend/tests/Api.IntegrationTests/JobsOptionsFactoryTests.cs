@@ -153,4 +153,18 @@ public class JobsOptionsFactoryTests
 
         warnings.Should().HaveCount(3);
     }
+
+    [Theory]
+    [InlineData("yes", true)]
+    [InlineData("on", true)]
+    [InlineData("nope", false)]
+    public void Demo_Enabled_Accepts_Dashboard_Spellings_And_Never_Crashes_On_A_Typo(string raw, bool expected)
+    {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Demo:Enabled"] = raw }).Build();
+
+        var options = DemoOptionsFactory.Create(configuration, out var warnings);
+
+        options.Enabled.Should().Be(expected);
+        warnings.Should().HaveCount(expected ? 0 : 1);
+    }
 }

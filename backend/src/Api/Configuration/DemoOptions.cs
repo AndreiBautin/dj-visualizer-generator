@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Configuration;
+
 namespace DjVisualizer.Api.Configuration;
 
 /// <summary>
@@ -23,4 +25,30 @@ public sealed class DemoOptions
     public string ArtworkFilePath { get; set; } = "demo/sample-artwork.png";
 
     public string Title { get; set; } = "Sample Demo Mix";
+}
+
+/// <summary>
+/// Parses <see cref="DemoOptions"/> the way <see cref="JobsOptionsFactory"/> parses the jobs
+/// settings. Bound plainly, <c>Demo__Enabled=yes</c> (or any spelling the binder does not accept)
+/// aborted host construction; it is now a warning and the default.
+/// </summary>
+public static class DemoOptionsFactory
+{
+    public static DemoOptions Create(IConfiguration configuration, out IReadOnlyList<string> warnings)
+    {
+        var section = configuration.GetSection(DemoOptions.SectionName);
+        var collected = new List<string>();
+        var defaults = new DemoOptions();
+
+        var options = new DemoOptions
+        {
+            Enabled = JobsOptionsFactory.ParseFlag(section["Enabled"], defaults.Enabled, "Demo:Enabled", collected),
+            AudioFilePath = string.IsNullOrWhiteSpace(section["AudioFilePath"]) ? defaults.AudioFilePath : section["AudioFilePath"]!,
+            ArtworkFilePath = string.IsNullOrWhiteSpace(section["ArtworkFilePath"]) ? defaults.ArtworkFilePath : section["ArtworkFilePath"]!,
+            Title = string.IsNullOrWhiteSpace(section["Title"]) ? defaults.Title : section["Title"]!,
+        };
+
+        warnings = collected;
+        return options;
+    }
 }
