@@ -109,4 +109,29 @@ public class RollingWindowEgressBudgetTests
 
         construct.Should().Throw<ArgumentOutOfRangeException>();
     }
+
+    /// <summary>RemainingBytes is what the instance reports; it must read the reset window, not the
+    /// spent one, the moment the window has rolled over - before anything new is reserved.</summary>
+    [Fact]
+    public void RemainingBytes_Reads_The_Full_Budget_As_Soon_As_The_Window_Rolls_Over()
+    {
+        var clock = new MovableClock(Start);
+        var sut = new RollingWindowEgressBudget(1000, Day, clock);
+        sut.TryReserve(1000);
+
+        clock.Advance(Day);
+
+        sut.RemainingBytes.Should().Be(1000);
+    }
+
+    [Fact]
+    public async Task Concurrent_Reservations_Never_Admit_More_Than_The_Budget()
+    {
+        var sut = new RollingWindowEgressBudget(1000, Day, new MovableClock(Start));
+
+        var admitted = await Task.WhenAll(Enumerable.Range(0, 200).Select(_ => Task.Run(() => sut.TryReserve(10))));
+
+        admitted.Count(ok => ok).Should().Be(100);
+        sut.RemainingBytes.Should().Be(0);
+    }
 }
