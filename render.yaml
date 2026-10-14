@@ -69,7 +69,7 @@ services:
       # sits on disk for the retention window and re-serving it costs nothing but bytes.
       #
       # Process-local reservation guardrail, reset on restart; not a monthly billing ceiling.
-      # Preview ranges reserve a whole file conservatively. Provider account controls remain
+      # A preview reserves the bytes its range sends; a download the whole file. Provider account controls remain
       # necessary. Zero is unlimited for local/self-hosted use.
       - key: Jobs__MaxEgressBytesPerWindow
         value: "3221225472" # 3 GB

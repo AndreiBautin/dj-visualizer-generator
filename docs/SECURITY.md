@@ -230,8 +230,9 @@ log precisely so it does not go to the caller.
 
 CI fails on **high or critical** vulnerabilities, for both ecosystems:
 
-- `dotnet list package --vulnerable --include-transitive`, with the result grepped for
-  High/Critical (the command itself exits 0 regardless, so the gate has to read the output).
+- `dotnet list package --vulnerable --include-transitive --format json`, parsed by
+  `scripts/audit-nuget.mjs` (the command itself exits 0 regardless, so the gate has to read the
+  output; unparseable output fails rather than passes).
 - `npm audit --audit-level=high`.
 
 Gated at high rather than low deliberately: low-severity noise in build-time transitive packages
@@ -279,8 +280,12 @@ resolving something that was never tested.
 5. **ffmpeg parses untrusted media.** A malicious file targeting an ffmpeg parser vulnerability is
    the most plausible remote-code-execution path in this system. Signature checks reduce the file
    types that reach it; they do not make ffmpeg safe. The realistic mitigations are keeping the
-   base image current (the Dockerfiles install ffmpeg from the distro, so a rebuild picks up
-   patches) and the fact that the container holds nothing worth stealing. Not mitigated:
+   base image current - images are pinned by digest, so patches arrive through Dependabot's weekly
+   pin updates rather than silently on rebuild (ffmpeg comes from the distro packages in that
+   image) - and the fact that the container holds nothing worth stealing. Every read of an upload
+   forces the demuxer its extension promised and allows only the file protocol
+   (`FfmpegInputFormat`), so a file cannot be sniffed into a playlist or concat script that opens
+   other files; artwork over 8192x8192 is refused before anything decodes it. Not mitigated:
    sandboxing ffmpeg further, e.g. seccomp or a separate unprivileged container per render.
 
 6. **The container runs as root.** The .NET base images default to it and this was not changed —

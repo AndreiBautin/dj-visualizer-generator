@@ -31,7 +31,7 @@ implementing them, and two thin composition roots. Uploads are validated by exte
 `Content-Length`, job IDs are strictly GUID-parsed, path construction is re-validated against the
 jobs root, ffmpeg is invoked with an argument **list** rather than a shell string, and job
 creation is rate-limited. The render pipeline is genuinely clever, rendering one rotation period
-and looping it makes render cost independent of mix length.
+and looping it makes the video encoding independent of mix length (the audio and the mux still scale with it).
 
 So this assessment does not propose a rewrite. It fixes two real security defects, closes the
 gap that actually blocks a reviewer (no deployment, no demo path), and documents the rest.

@@ -13,7 +13,7 @@ deployability and correctness, not features) and the current pipeline in
 Effort is rough and assumes the current stack (ffmpeg via argument lists, no database,
 Clean Architecture boundaries). Each item names the tradeoff it would introduce, not just
 the upside — several of these are in tension with the "render one rotation and loop"
-trick that makes render time length-independent, which is worth protecting on purpose
+trick that keeps the video encoding length-independent (audio and muxing still grow with the mix), which is worth protecting on purpose
 rather than losing by accident.
 
 ## Tier 1 — the actual wow gap
@@ -155,7 +155,7 @@ progress on together.
 **#1 (audio-reactive motion) if the goal is a portfolio piece that gets remembered.**
 **#2 (live preview) if the goal is the best return per hour spent**, since it's pure
 frontend, has no interaction with the render pipeline's guarantees, and is the fastest
-way to make the tool feel alive during the several seconds a render still takes.
+way to make the tool feel alive during the minutes a long render still takes.
 
 ---
 

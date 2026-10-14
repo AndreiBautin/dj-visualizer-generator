@@ -10,7 +10,7 @@ Verified application revision: `61293e8`.
 - On the live site, a 600 MB file was refused before upload, and a 202 MB WAV uploaded with a steadily climbing percentage (about 2.5 minutes). That upload exposed a bug - the screen did not switch to the job when the window was not producing frames - fixed and confirmed in the same conditions.
 - Main-thread profiling at 4x CPU: steady-state style recalculation is zero (the record spin is compositor-only); the remaining blocking time is the first React render of the form.
 
-Not verified: real Safari (see the manual checklist in TESTING.md), and a 40-minute render to completion on the hosted instance - the one attempted was lost to a redeploy (see DEPLOYMENT.md).
+Not verified: real Safari (see the manual checklist in TESTING.md). A 40-minute render was since completed on the hosted instance (435 s, see DEPLOYMENT.md). **This result covers `61293e8` only:** the later performance and security work (through `ad8078c` and the code-quality commits after it) passed `npm run verify` and CI but has not been deployed - Render stopped creating deployments after `cf7f963` - so none of it is verified live.
 
 ## Earlier result — 2026-10-13 (second pass)
 
