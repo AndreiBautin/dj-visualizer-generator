@@ -109,6 +109,22 @@ public sealed class FileSystemJobFileStorage(string rootPath, IFileSignatureVali
             return Result<SavedFile>.Failure(Error.Validation($"The uploaded {targetBaseName} file exceeds the maximum allowed size."));
         }
 
+        if (category == FileCategory.Image)
+        {
+            (int Width, int Height)? dimensions;
+            await using (var saved = File.OpenRead(destinationPath))
+            {
+                dimensions = ImageDimensions.TryRead(saved, extension);
+            }
+
+            if (dimensions is not { Width: > 0 and <= ImageDimensions.MaxSide, Height: > 0 and <= ImageDimensions.MaxSide })
+            {
+                File.Delete(destinationPath);
+                return Result<SavedFile>.Failure(Error.Validation(
+                    $"The uploaded {targetBaseName} must be a readable image no larger than {ImageDimensions.MaxSide}x{ImageDimensions.MaxSide} pixels."));
+            }
+        }
+
         return Result<SavedFile>.Success(new SavedFile(destinationPath, totalBytes));
     }
 

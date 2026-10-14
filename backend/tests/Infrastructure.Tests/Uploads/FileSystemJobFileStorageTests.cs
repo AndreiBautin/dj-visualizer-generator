@@ -13,7 +13,8 @@ public class FileSystemJobFileStorageTests : IDisposable
         [0x49, 0x44, 0x33, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
 
     private static readonly byte[] ValidPngBytes =
-        [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x01, 0x02, 0x03, 0x04];
+        // Signature, then an IHDR claiming 64x64: enough for the signature and dimension checks.
+        [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x40];
 
     public FileSystemJobFileStorageTests()
     {
@@ -57,6 +58,24 @@ public class FileSystemJobFileStorageTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         result.Value!.AbsolutePath.Should().Be(Path.Combine(_rootPath, jobId.ToString(), "input", "artwork.png"));
         File.Exists(result.Value.AbsolutePath).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SaveArtworkAsync_Rejects_An_Image_Too_Large_To_Decode_And_Keeps_No_File()
+    {
+        var sut = CreateSut();
+        var jobId = JobId.New();
+        // 30000x30000: a few-megabyte PNG of one colour decodes to about 3.6 GB.
+        byte[] bomb =
+        [
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+            0x00, 0x00, 0x75, 0x30, 0x00, 0x00, 0x75, 0x30,
+        ];
+
+        var result = await sut.SaveArtworkAsync(jobId, new MemoryStream(bomb), "cover.png", CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        File.Exists(Path.Combine(_rootPath, jobId.ToString(), "input", "artwork.png")).Should().BeFalse();
     }
 
     [Fact]

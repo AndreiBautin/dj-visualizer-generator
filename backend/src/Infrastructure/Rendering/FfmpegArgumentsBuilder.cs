@@ -13,6 +13,9 @@ internal static class FfmpegArgumentsBuilder
     public static IReadOnlyList<string> BuildStaticVinylArguments(RenderRequest request, string filterGraph, string vinylImagePath) =>
     [
         "-y",
+        // A second bound behind the upload check (ImageDimensions): the decoder refuses anything
+        // over 8192x8192 rather than allocating for it.
+        "-max_pixels", "67108864",
         "-i", request.ArtworkFilePath,
         "-filter_complex", filterGraph,
         "-map", "[vinyl_static]",
