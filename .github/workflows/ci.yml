@@ -56,7 +56,7 @@ jobs:
         working-directory: frontend
         run: npm run test:visual -- --update-snapshots=missing || echo "::warning::Visual differences found - see the visual-screenshots artifact"
       - if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: visual-screenshots
           path: |
@@ -88,7 +88,7 @@ jobs:
           npx --yes lighthouse@12.8.2 http://localhost:4173/ --chrome-flags="--headless=new --no-sandbox"             --only-categories=performance,accessibility,best-practices,seo             --output=json --output=html --output-path=./lighthouse || echo "::warning::Lighthouse did not complete"
           node -e "const r=require('./lighthouse.report.json');const l=Object.values(r.categories).map(c=>'| '+c.title+' | '+Math.round(c.score*100)+' |');console.log(['| Category | Score |','| --- | --- |',...l].join('\n'))" >> "$GITHUB_STEP_SUMMARY" || true
       - if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: lighthouse
           path: lighthouse.report.*
