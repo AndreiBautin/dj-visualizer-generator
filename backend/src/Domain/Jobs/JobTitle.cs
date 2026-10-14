@@ -31,8 +31,24 @@ public sealed class JobTitle
             throw new InvalidJobTitleException($"Title must not exceed {MaxLength} characters.");
         }
 
+        if (trimmed.Any(IsDisallowed))
+        {
+            throw new InvalidJobTitleException("Title must be a single line of visible text, without control or text-direction characters.");
+        }
+
         return new JobTitle(trimmed);
     }
+
+    /// <summary>
+    /// The title is drawn into the video and becomes the download's file name. Control characters
+    /// and line breaks have no place in either, and the bidirectional overrides can make a name
+    /// display reversed - "mix\u202Ekcod.mp4" shows as "mixdocx.mp4"-style spoofing of the
+    /// extension. Other format characters (the zero-width joiners in emoji sequences) are kept.
+    /// </summary>
+    private static bool IsDisallowed(char c) =>
+        char.IsControl(c)
+        || char.GetUnicodeCategory(c) is System.Globalization.UnicodeCategory.LineSeparator or System.Globalization.UnicodeCategory.ParagraphSeparator
+        || c is '\u061C' or '\u200E' or '\u200F' or (>= '\u202A' and <= '\u202E') or (>= '\u2066' and <= '\u2069');
 
     public override string ToString() => Value;
 }
