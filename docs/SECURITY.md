@@ -149,7 +149,8 @@ break a legitimate download. Past the budget, downloads answer 503 and rendering
 
 `GET /jobs/{id}` also picked up a rate limit (240/min per IP). That one is a hammering guard, not
 a cost control: status responses are a few hundred bytes. It is sized against the real client —
-the SPA polls every 2 seconds, so a visitor watching one render spends about 45 requests a minute.
+the SPA polls every 2 seconds while progress moves (5 while it does not), so a visitor watching
+one render spends at most about 30 requests a minute.
 
 Two details worth keeping:
 
