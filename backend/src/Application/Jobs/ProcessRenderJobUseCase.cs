@@ -25,6 +25,28 @@ public sealed class ProcessRenderJobUseCase(
 
     public async Task ExecuteAsync(Job job, CancellationToken cancellationToken)
     {
+        try
+        {
+            await RenderAsync(job, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            // Anything not already turned into a failure above - a disk error preparing the output,
+            // a failed progress save, a domain rule tripped mid-render. Escaping here left the job
+            // Processing behind a frozen bar until the stale sweep, an hour later by default.
+            if (job.Status == JobStatus.Processing)
+            {
+                logger.LogError(ex, "Processing failed unexpectedly for job {JobId}.", job.Id);
+                await FailAsync(job, RenderFailedMessage);
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    private async Task RenderAsync(Job job, CancellationToken cancellationToken)
+    {
         var inputFiles = await inputFileLocator.LocateAsync(job.Id, cancellationToken);
         if (inputFiles is null)
         {

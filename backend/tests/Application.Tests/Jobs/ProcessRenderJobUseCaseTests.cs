@@ -123,6 +123,43 @@ public class ProcessRenderJobUseCaseTests
 
 
     /// <summary>
+    /// Only render and probe failures were caught; anything else escaped and left the job
+    /// Processing behind a frozen progress bar until the stale sweep.
+    /// </summary>
+    [Fact]
+    public async Task ExecuteAsync_Fails_The_Job_When_Saving_Progress_Throws()
+    {
+        var job = CreateProcessingJob();
+        _inputFileLocator.LocateAsync(job.Id, Arg.Any<CancellationToken>()).Returns(InputFiles);
+        _audioProbe.GetDurationAsync(InputFiles.AudioFilePath, Arg.Any<CancellationToken>()).Returns(TimeSpan.FromMinutes(45));
+        _videoRenderer
+            .RenderAsync(Arg.Any<RenderRequest>(), Arg.Any<RenderProgressCallback>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(call => call.Arg<RenderProgressCallback>()!(10, CancellationToken.None));
+        _jobRepository.SaveAsync(Arg.Is<Job>(j => j!.Status == JobStatus.Processing), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new IOException("disk full")));
+
+        await CreateSut().ExecuteAsync(job, CancellationToken.None);
+
+        job.Status.Should().Be(JobStatus.Failed);
+        job.ErrorMessage.Should().Be(ProcessRenderJobUseCase.RenderFailedMessage);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Fails_The_Job_When_The_Output_Path_Cannot_Be_Prepared()
+    {
+        var job = CreateProcessingJob();
+        _inputFileLocator.LocateAsync(job.Id, Arg.Any<CancellationToken>()).Returns(InputFiles);
+        _audioProbe.GetDurationAsync(InputFiles.AudioFilePath, Arg.Any<CancellationToken>()).Returns(TimeSpan.FromMinutes(45));
+        _fileStorage.PrepareOutputFilePathAsync(job.Id, Arg.Any<CancellationToken>())
+            .Returns<Task<string>>(_ => throw new UnauthorizedAccessException("C:\\jobs denied"));
+
+        await CreateSut().ExecuteAsync(job, CancellationToken.None);
+
+        job.Status.Should().Be(JobStatus.Failed);
+        job.ErrorMessage.Should().NotContain("jobs");
+    }
+
+    /// <summary>
     /// A job's ErrorMessage is served verbatim by GET /jobs/{id}, so it is a trust boundary on
     /// the way out. ffmpeg reports failures with the full command line, which embeds absolute
     /// server paths and the internal filter graph - none of that may reach a caller.
