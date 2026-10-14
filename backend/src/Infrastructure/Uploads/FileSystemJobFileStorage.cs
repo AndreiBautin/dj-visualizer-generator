@@ -59,7 +59,9 @@ public sealed class FileSystemJobFileStorage(string rootPath, IFileSignatureVali
         var extension = Path.GetExtension(originalFileName).ToLowerInvariant();
         if (!allowedExtensions.Contains(extension))
         {
-            return Result<SavedFile>.Failure(Error.Validation($"Unsupported file extension '{extension}'."));
+            // The allowed list, not the caller's own extension: echoing client input back is pointless at
+            // best, and an arbitrary-length string at worst.
+            return Result<SavedFile>.Failure(Error.Validation($"Unsupported {targetBaseName} file type. Use one of: {string.Join(", ", allowedExtensions)}."));
         }
 
         var headerBuffer = new byte[HeaderBufferSize];
