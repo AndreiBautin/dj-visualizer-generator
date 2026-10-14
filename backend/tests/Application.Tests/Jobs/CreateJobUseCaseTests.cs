@@ -182,6 +182,52 @@ public class CreateJobUseCaseTests
         await _jobQueue.DidNotReceiveWithAnyArgs().EnqueueAsync(default!, default);
     }
 
+    /// <summary>
+    /// A client dropping a large upload halfway throws out of the save. Before the job is
+    /// enqueued its folder has no status.json, so cleanup never sees it: it has to go here, and
+    /// with a token that is not the aborted request's.
+    /// </summary>
+    [Fact]
+    public async Task ExecuteAsync_Deletes_A_Partial_Upload_When_The_Request_Is_Aborted()
+    {
+        using var aborted = new CancellationTokenSource();
+        await aborted.CancelAsync();
+        _fileStorage.SaveAudioAsync(Arg.Any<JobId>(), Arg.Any<Stream>(), "mix.mp3", Arg.Any<CancellationToken>())
+            .Returns<Task<Result<SavedFile>>>(_ => throw new OperationCanceledException());
+
+        var act = () => CreateSut().ExecuteAsync(ValidRequest(), aborted.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        await _fileStorage.Received(1).DeleteJobFilesAsync(Arg.Any<JobId>(), Arg.Is<CancellationToken>(t => !t.IsCancellationRequested));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Deletes_The_Job_Folder_When_The_Audio_Is_Rejected()
+    {
+        _fileStorage.SaveAudioAsync(Arg.Any<JobId>(), Arg.Any<Stream>(), "mix.mp3", Arg.Any<CancellationToken>())
+            .Returns(Result<SavedFile>.Failure(Error.Validation("too large")));
+
+        var result = await CreateSut().ExecuteAsync(ValidRequest(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        await _fileStorage.Received(1).DeleteJobFilesAsync(Arg.Any<JobId>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Keeps_The_Files_Of_A_Job_It_Enqueued()
+    {
+        _fileStorage.SaveAudioAsync(Arg.Any<JobId>(), Arg.Any<Stream>(), "mix.mp3", Arg.Any<CancellationToken>())
+            .Returns(Result<SavedFile>.Success(new SavedFile("/data/jobs/x/input/audio.mp3", 500)));
+        _fileStorage.SaveArtworkAsync(Arg.Any<JobId>(), Arg.Any<Stream>(), "cover.jpg", Arg.Any<CancellationToken>())
+            .Returns(Result<SavedFile>.Success(new SavedFile("/data/jobs/x/input/artwork.jpg", 200)));
+        _audioProbe.GetDurationAsync("/data/jobs/x/input/audio.mp3", Arg.Any<CancellationToken>())
+            .Returns(TimeSpan.FromMinutes(5));
+
+        (await CreateSut().ExecuteAsync(ValidRequest(), CancellationToken.None)).IsSuccess.Should().BeTrue();
+
+        await _fileStorage.DidNotReceiveWithAnyArgs().DeleteJobFilesAsync(default!, default);
+    }
+
     [Fact]
     public async Task ExecuteAsync_Rejects_Audio_Longer_Than_The_Configured_Maximum_Duration_And_Cleans_Up()
     {

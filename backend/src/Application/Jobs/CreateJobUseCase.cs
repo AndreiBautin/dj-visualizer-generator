@@ -95,6 +95,45 @@ public sealed class CreateJobUseCase(
 
         var job = Job.Create(title, preset, rotationSpeed, captionFont, clock.UtcNow, labelCrop);
 
+        // Until the job is enqueued nothing else knows its folder exists: cleanup only sweeps
+        // folders with a status.json. So any way out before that - a rejected file, an unreadable
+        // probe, or an exception such as a client dropping a 500 MB upload halfway - must remove
+        // what was written here, or it stays on the disk until the instance restarts.
+        var enqueued = false;
+        try
+        {
+            var result = await SaveProbeAndEnqueueAsync(job, request, cancellationToken);
+            enqueued = result.IsSuccess;
+            return result;
+        }
+        finally
+        {
+            if (!enqueued)
+            {
+                await DeleteAbandonedUploadAsync(job.Id);
+            }
+        }
+    }
+
+    private async Task DeleteAbandonedUploadAsync(JobId jobId)
+    {
+        try
+        {
+            // Not the request's token: an aborted request is exactly the case that needs this.
+            await fileStorage.DeleteJobFilesAsync(jobId, CancellationToken.None);
+        }
+        catch (IOException ex)
+        {
+            logger.LogWarning(ex, "Could not delete the abandoned upload for job {JobId}.", jobId);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            logger.LogWarning(ex, "Could not delete the abandoned upload for job {JobId}.", jobId);
+        }
+    }
+
+    private async Task<Result<CreateJobResult>> SaveProbeAndEnqueueAsync(Job job, CreateJobRequest request, CancellationToken cancellationToken)
+    {
         var audioResult = await fileStorage.SaveAudioAsync(job.Id, request.AudioStream, request.AudioFileName, cancellationToken);
         if (!audioResult.IsSuccess)
         {
@@ -104,7 +143,6 @@ public sealed class CreateJobUseCase(
         var artworkResult = await fileStorage.SaveArtworkAsync(job.Id, request.ArtworkStream, request.ArtworkFileName, cancellationToken);
         if (!artworkResult.IsSuccess)
         {
-            await fileStorage.DeleteJobFilesAsync(job.Id, cancellationToken);
             return Result<CreateJobResult>.Failure(artworkResult.Error!);
         }
 
@@ -116,13 +154,11 @@ public sealed class CreateJobUseCase(
         catch (AudioProbeException ex)
         {
             logger.LogError(ex, "Probing audio failed for job {JobId}.", job.Id);
-            await fileStorage.DeleteJobFilesAsync(job.Id, cancellationToken);
             return Result<CreateJobResult>.Failure(Error.Failure(AudioUnreadableMessage));
         }
 
         if (duration > TimeSpan.FromSeconds(limits.MaxDurationSeconds))
         {
-            await fileStorage.DeleteJobFilesAsync(job.Id, cancellationToken);
             return Result<CreateJobResult>.Failure(Error.Validation(
                 $"Audio duration {duration:hh\\:mm\\:ss} exceeds the maximum allowed duration of {TimeSpan.FromSeconds(limits.MaxDurationSeconds):hh\\:mm\\:ss}."));
         }
