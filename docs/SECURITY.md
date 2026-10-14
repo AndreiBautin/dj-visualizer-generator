@@ -264,9 +264,13 @@ resolving something that was never tested.
    (see `RollingWindowEgressBudget`), and the reason the platform's own suspension-on-overrun
    remains a backstop worth having rather than a redundancy.
 
-3. **The rate limiter partitions on `RemoteIpAddress`.** Behind a proxy that is the proxy's
-   address unless forwarded headers are configured, so it degrades toward a global limit. On the
-   single-container deployment the app is the origin, so this is accurate there.
+3. **The rate limiter partitions on the client address.** Behind a proxy that is the proxy's
+   address, so it degraded toward one global limit - and Render's edge does proxy the
+   single-container deployment, which this section used to say was its own origin.
+   `Hosting__TrustForwardedFor=true` (set in `render.yaml`) takes the client from the last
+   `X-Forwarded-For` hop, the one the proxy appended; a hop a client writes itself is ignored.
+   It stays off elsewhere, because exposed directly the header would let callers pick their own
+   partition. IPv6 callers are grouped by /64.
 
 4. **A job id is a bearer token.** Anyone with the GUID can read a job's status and download its
    video. GUIDs are unguessable and jobs are deleted within the retention window, but a leaked URL

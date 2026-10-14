@@ -48,6 +48,9 @@ services:
       # 45 minutes of 16-bit 44.1 kHz stereo is 476 MB, so 500 MB is what makes the duration limit
       # true for every format the app takes. The upload streams to disk, not memory, and the
       # free-disk floor above still refuses a job cleanly if the instance is short of space.
+      # Render's edge proxies every request; without this every visitor shares one rate limit.
+      - key: Hosting__TrustForwardedFor
+        value: "true"
       - key: Jobs__MaxAudioBytes
         value: "524288000" # 500 MB
       - key: Jobs__MaxImageBytes

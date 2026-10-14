@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.HttpOverrides;
+using DjVisualizer.Api.RateLimiting;
 using System.Threading.RateLimiting;
 using DjVisualizer.Api.Configuration;
 using DjVisualizer.Api.HealthChecks;
@@ -71,7 +73,7 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddPolicy("job-creation", context => RateLimitPartition.GetFixedWindowLimiter(
-        partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        partitionKey: ClientPartition.For(context.Connection.RemoteIpAddress),
         factory: _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 10,
@@ -86,7 +88,7 @@ builder.Services.AddRateLimiter(options =>
     // 20 per 5 minutes is far above a visitor's needs (Job.MaxDownloads caps them at 5 per job
     // anyway) and far below a useful transfer rate for anyone scripting it.
     options.AddPolicy("job-download", context => RateLimitPartition.GetFixedWindowLimiter(
-        partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        partitionKey: ClientPartition.For(context.Connection.RemoteIpAddress),
         factory: _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 20,
@@ -99,7 +101,7 @@ builder.Services.AddRateLimiter(options =>
     // render, which on the free instance is ~90 seconds, so a visitor watching one job spends
     // ~45 requests a minute. 240 leaves room for several tabs before anyone legitimate is told no.
     options.AddPolicy("job-status", context => RateLimitPartition.GetFixedWindowLimiter(
-        partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        partitionKey: ClientPartition.For(context.Connection.RemoteIpAddress),
         factory: _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 240,
@@ -181,6 +183,21 @@ JobsOptionsFactory.Create(app.Services.GetRequiredService<IConfiguration>(), out
 foreach (var warning in configurationWarnings)
 {
     app.Logger.LogWarning("Ignoring malformed configuration value. {Warning}", warning);
+}
+
+// Behind a reverse proxy (Render's edge terminates TLS), every request arrives from the proxy's
+// address, so per-IP rate limits would become one limit shared by every visitor. When the host
+// says it sits behind exactly one proxy, take the client from the last X-Forwarded-For hop - the
+// one that proxy appended. ForwardLimit = 1 ignores anything a client wrote into the header
+// itself. Off by default: exposed directly, trusting the header would let any caller choose its
+// own partition.
+if (string.Equals(app.Configuration["Hosting:TrustForwardedFor"], "true", StringComparison.OrdinalIgnoreCase))
+{
+    var forwarded = new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor, ForwardLimit = 1 };
+    // The proxy's own address is not known in advance on this host.
+    forwarded.KnownNetworks.Clear();
+    forwarded.KnownProxies.Clear();
+    app.UseForwardedHeaders(forwarded);
 }
 
 app.UseExceptionHandler();

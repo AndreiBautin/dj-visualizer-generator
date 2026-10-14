@@ -256,6 +256,46 @@ public class JobsControllerTests : IDisposable
         response.Headers.Should().ContainKey("X-Content-Type-Options");
     }
 
+    /// <summary>
+    /// Behind Render's proxy every request came from the proxy's address, so one client's burst
+    /// would have locked every visitor out of creating jobs.
+    /// </summary>
+    [Fact]
+    public async Task Behind_A_Trusted_Proxy_Each_Forwarded_Client_Gets_Its_Own_Job_Creation_Limit()
+    {
+        using var factory = new JobsApiFactory { ExtraConfiguration = { ["Hosting:TrustForwardedFor"] = "true" } };
+        using var client = factory.CreateClient();
+
+        for (var i = 0; i < 10; i++)
+        {
+            (await PostFromAsync(client, "203.0.113.7")).StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+
+        (await PostFromAsync(client, "203.0.113.7")).StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+        (await PostFromAsync(client, "198.51.100.9")).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        // A client prepending its own hop does not escape: only the proxy-appended last hop counts.
+        (await PostFromAsync(client, "192.0.2.1, 203.0.113.7")).StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+    }
+
+    [Fact]
+    public async Task X_Forwarded_For_Is_Ignored_Unless_The_Host_Trusts_A_Proxy()
+    {
+        for (var i = 0; i < 10; i++)
+        {
+            await PostFromAsync(_client, $"203.0.113.{i}");
+        }
+
+        (await PostFromAsync(_client, "203.0.113.99")).StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+    }
+
+    private static async Task<HttpResponseMessage> PostFromAsync(HttpClient client, string forwardedFor)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/jobs") { Content = BuildValidForm() };
+        request.Headers.Add("X-Forwarded-For", forwardedFor);
+        return await client.SendAsync(request);
+    }
+
     [Fact]
     public async Task Post_Jobs_Rate_Limits_Repeated_Requests_From_The_Same_Client()
     {
