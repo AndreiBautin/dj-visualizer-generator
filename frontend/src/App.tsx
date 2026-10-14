@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { FormProvider, useForm, useWatch } from 'react-hook-form'
+import { FormProvider, useForm } from 'react-hook-form'
 import {
   ApiError,
   createJob,
@@ -9,8 +9,6 @@ import {
   isSampleMixEnabled,
 } from './api/client'
 import { Backdrop } from './components/Backdrop'
-import { SettingsRecap } from './components/SettingsRecap'
-import { CopyJobLink } from './components/CopyJobLink'
 import { BrandMark } from './components/BrandMark'
 import { BuildFooter } from './components/BuildFooter'
 import { ExampleStrip } from './components/ExampleStrip'
@@ -18,13 +16,11 @@ import { OfflineBanner } from './components/OfflineBanner'
 import { useOnline } from './hooks/useOnline'
 import { InstallButton } from './components/InstallButton'
 import { HowItWorks } from './components/HowItWorks'
-import { ProgressPanel } from './components/ProgressPanel'
+import { JobScreen } from './components/JobScreen'
+import { LiveVinylRecord } from './components/LiveVinylRecord'
 import { Spinner } from './components/Spinner'
 import { RenderSettings } from './components/RenderSettings'
-import { CAPTION_FONT_OPTIONS } from './lib/captionFonts'
 import { UploadCard } from './components/UploadCard'
-import { VinylRecord } from './components/VinylRecord'
-import { useJobStatus } from './hooks/useJobStatus'
 import { useJobIdRoute } from './hooks/useJobIdRoute'
 import { useRecentJobs } from './hooks/useRecentJobs'
 import { usePageFileDrop } from './hooks/usePageFileDrop'
@@ -46,101 +42,6 @@ import {
   type RenderSettingsInput,
   type RenderSettingsValues,
 } from './schemas/renderSettingsSchema'
-
-/** Isolates the one field VinylRecord needs, so dragging the rotation-speed slider re-renders
- * just the record rather than the whole two-column layout. */
-function LiveVinylRecord({
-  artworkFile,
-  motion,
-  celebrate,
-  jobSettings,
-  labelCrop,
-}: {
-  artworkFile: File | null
-  motion?: 'idle' | 'rendering' | 'stopped'
-  celebrate?: boolean
-  /** A job's own settings win over the form's - after a reload the form holds defaults. */
-  jobSettings?: { rotationSpeedSeconds: number; captionFont: string }
-  labelCrop?: LabelCrop
-}) {
-  const formSpeed = useWatch<RenderSettingsInput>({
-    name: 'rotationSpeedSeconds',
-  })
-  const rotationSpeedSeconds = jobSettings?.rotationSpeedSeconds ?? formSpeed
-  const title = useWatch<RenderSettingsInput>({ name: 'title' })
-  const formFont = useWatch<RenderSettingsInput>({ name: 'captionFont' })
-  const captionFont = jobSettings?.captionFont ?? formFont
-  const caption = typeof title === 'string' ? title.trim() : ''
-  const fontFamily = CAPTION_FONT_OPTIONS.find(
-    (option) => option.value === captionFont,
-  )?.previewFontFamily
-  return (
-    <div className="flex flex-col items-center gap-4">
-      <VinylRecord
-        artworkFile={artworkFile}
-        rotationSpeedSeconds={
-          typeof rotationSpeedSeconds === 'number'
-            ? rotationSpeedSeconds
-            : DEFAULT_ROTATION_SPEED_SECONDS
-        }
-        motion={motion}
-        celebrate={celebrate}
-        labelCrop={labelCrop}
-      />
-      {/* Where and how the render's drawtext stage burns the title: centred under the
-          record, white with a soft shadow, in the chosen caption face. */}
-      <p
-        aria-hidden="true"
-        className={`max-w-full truncate text-center text-xl text-white transition-opacity duration-300 [text-shadow:2px_2px_0_rgb(0_0_0/0.5)] ${caption ? 'opacity-100' : 'opacity-0'}`}
-        style={{ fontFamily }}
-      >
-        {caption || ' '}
-      </p>
-    </div>
-  )
-}
-
-/** Shares the progress panel's polling query (same key), so this adds no requests. */
-function JobVinylRecord({
-  jobId,
-  artworkFile,
-}: {
-  jobId: string
-  artworkFile: File | null
-}) {
-  const { data } = useJobStatus(jobId)
-  // Celebrate a job seen finishing, not one reopened already finished from a link.
-  const [sawInProgress, setSawInProgress] = useState(false)
-  if (
-    !sawInProgress &&
-    (data?.status === 'Queued' || data?.status === 'Processing')
-  ) {
-    setSawInProgress(true)
-  }
-  const motion =
-    data?.status === 'Processing'
-      ? 'rendering'
-      : data?.status === 'Completed' || data?.status === 'Failed'
-        ? 'stopped'
-        : 'idle'
-  return (
-    <LiveVinylRecord
-      artworkFile={artworkFile}
-      motion={motion}
-      celebrate={sawInProgress && data?.status === 'Completed'}
-      jobSettings={data}
-      labelCrop={
-        data
-          ? {
-              focusX: data.labelFocusX,
-              focusY: data.labelFocusY,
-              zoom: data.labelZoom,
-            }
-          : undefined
-      }
-    />
-  )
-}
 
 /** `now` is the clock, injectable so recent-render times are testable. */
 function App({ now = Date.now }: { now?: () => number } = {}) {
@@ -271,35 +172,13 @@ function App({ now = Date.now }: { now?: () => number } = {}) {
   if (jobId) {
     return (
       <FormProvider {...methods}>
-        <main
-          className="relative min-h-screen overflow-clip bg-canvas text-ink"
-          style={moodStyle}
-        >
-          <Backdrop />
-          <OfflineBanner />
-          <div className="relative mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center gap-8 p-8 sm:flex-row sm:gap-12">
-            <div className="w-full max-w-[16rem] shrink-0 [view-transition-name:vinyl] sm:max-w-[18rem]">
-              <JobVinylRecord jobId={jobId} artworkFile={artworkFile} />
-            </div>
-            <div className="flex w-full max-w-sm flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-              <BrandMark className="h-8 w-8" />
-              <h1 className="-mt-3 bg-gradient-to-b from-ink to-ink/60 bg-clip-text text-3xl font-semibold tracking-[-0.03em] text-transparent">
-                DJ Visualizer Generator
-              </h1>
-              <SettingsRecap jobId={jobId} />
-              <ProgressPanel
-                jobId={jobId}
-                onReset={handleReset}
-                posterFile={artworkFile}
-                onExpired={() => forgetJob(jobId)}
-              />
-              <CopyJobLink jobId={jobId} />
-            </div>
-          </div>
-          <div className="relative flex justify-center pb-6">
-            <BuildFooter />
-          </div>
-        </main>
+        <JobScreen
+          jobId={jobId}
+          artworkFile={artworkFile}
+          moodStyle={moodStyle}
+          onReset={handleReset}
+          onExpired={() => forgetJob(jobId)}
+        />
       </FormProvider>
     )
   }
