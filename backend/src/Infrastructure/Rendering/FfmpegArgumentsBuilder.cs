@@ -113,7 +113,9 @@ internal static class FfmpegArgumentsBuilder
     /// <para>Audio that is already AAC is copied rather than re-encoded: re-encoding was most of a
     /// long render's wall time on the free instance (about 1,050 s of a 40-minute mix's 21.6
     /// minutes). Anything else is encoded at <see cref="ReencodedAudioBitrate"/>. MP3 is not
-    /// copied even though MP4 can hold it, because Safari playback of MP3-in-MP4 is unverified.</para></remarks>
+    /// copied even though MP4 can hold it, because Safari playback of MP3-in-MP4 is unverified.</para>
+    /// <para><c>+faststart</c> moves the index to the front so the preview can start playing without
+    /// first fetching the end of a several-hundred-megabyte file.</para></remarks>
     public static IReadOnlyList<string> BuildMuxArguments(string loopSegmentPath, RenderRequest request, bool copyAudio) =>
     [
         "-y",
@@ -126,6 +128,7 @@ internal static class FfmpegArgumentsBuilder
         .. (copyAudio ? ["-c:a", "copy"] : new[] { "-c:a", "aac", "-b:a", ReencodedAudioBitrate }),
         "-t", request.Duration.TotalSeconds.ToString(CultureInfo.InvariantCulture),
         "-shortest",
+        "-movflags", "+faststart",
         "-progress", "pipe:1",
         "-nostats",
         "-loglevel", "error",

@@ -141,6 +141,14 @@ public class FfmpegArgumentsBuilderTests
         args.Should().ContainInConsecutiveOrder("-c:a", "aac", "-b:a", FfmpegArgumentsBuilder.ReencodedAudioBitrate);
     }
 
+    [Fact]
+    public void BuildMuxArguments_Puts_The_Index_At_The_Front_So_Preview_Plays_Before_The_Whole_File_Arrives()
+    {
+        var args = FfmpegArgumentsBuilder.BuildMuxArguments("/jobs/x/.loop.mp4", Request, copyAudio: false);
+
+        args.Should().ContainInConsecutiveOrder("-movflags", "+faststart");
+    }
+
     [Theory]
     [InlineData("aac", true)]
     [InlineData("mp3", false)]

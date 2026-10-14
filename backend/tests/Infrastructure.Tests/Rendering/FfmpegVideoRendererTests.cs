@@ -72,6 +72,10 @@ public class FfmpegVideoRendererTests : IDisposable
         probe.CodecName.Should().Be("h264");
         probe.DurationSeconds.Should().BeApproximately(duration.TotalSeconds, 0.5);
 
+        // +faststart: the index precedes the media data, so a preview can play from the first bytes.
+        var bytes = await File.ReadAllBytesAsync(outputPath);
+        IndexOf(bytes, "moov"u8).Should().BeLessThan(IndexOf(bytes, "mdat"u8));
+
         // The two-pass render (static vinyl composite, then rotate-only per frame) should leave
         // no intermediate files behind in the job's output directory.
         Directory.GetFiles(_workDir).Should().BeEquivalentTo([audioPath, artworkPath, outputPath]);
@@ -269,6 +273,13 @@ public class FfmpegVideoRendererTests : IDisposable
         var (codec, bitRate) = await ProbeAudioAsync(outputPath);
         codec.Should().Be("aac");
         bitRate.Should().BeLessThan(100_000);
+    }
+
+    private static int IndexOf(byte[] haystack, ReadOnlySpan<byte> needle)
+    {
+        var index = haystack.AsSpan().IndexOf(needle);
+        index.Should().BeGreaterThanOrEqualTo(0);
+        return index;
     }
 
     private static async Task<(string CodecName, long BitRate)> ProbeAudioAsync(string path)
