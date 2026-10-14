@@ -4,7 +4,7 @@
 
 ```
                      ┌───────────────────────────────────────────┐
-                     │  React SPA (Vite, TanStack Query, RHF+Zod) │
+                     │  React SPA (Vite, TanStack Query, RHF+zod/mini)│
                      └──────────────────┬────────────────────────┘
                                         │ HTTP (multipart upload, JSON polling)
                      ┌──────────────────▼────────────────────────┐
@@ -96,7 +96,9 @@ reason: referencing the executable made both entry points' `appsettings.json` co
    them to the use case. It never touches the filesystem itself.
 
 2. **[`CreateJobUseCase.ExecuteAsync`](../backend/src/Application/Jobs/CreateJobUseCase.cs)**
-   Checks free disk via `IDiskSpaceChecker` (low → `Unavailable`, surfaced as 503), then builds
+   Reserves the upload's worst case against free disk (`UploadDiskReservations` over
+   `IDiskSpaceChecker`, counting other uploads still in flight; short → `Unavailable`, surfaced as
+   503), then builds
    the domain values: `JobTitle.Create`, `VideoPreset.FromName`, `RotationSpeed.Create`,
    `CaptionFont.FromName`. Each throws its own domain exception, which the use case converts into
    a validation `Error`. **Input validation lives in the Domain constructors, not the controller.**
@@ -110,12 +112,14 @@ reason: referencing the executable made both entry points' `appsettings.json` co
    Extension allowlist, then 16 header bytes checked against `FileSignatureValidator` — an `.mp3`
    whose bytes are a Windows executable is rejected. Then streams to disk, counting bytes and
    aborting past `UploadLimits.MaxAudioBytes`. The size limit is enforced **while writing**, never
-   by trusting `Content-Length`.
+   by trusting `Content-Length`. Artwork is then read for its pixel size from the PNG/JPEG header
+   and refused over 8192x8192 before anything decodes it.
 
 5. **[`FfmpegAudioProbe`](../backend/src/Infrastructure/Audio/FfmpegAudioProbe.cs)**
-   Shells out to `ffprobe` for the true duration. Over `MaxDurationSeconds` → files deleted,
-   validation error. An artwork failure at step 4 also deletes the audio already written: no path
-   leaves a half-created job behind.
+   Runs `ffprobe` (through `Processes/ProcessRunner`, with the demuxer forced from the extension by
+   `FfmpegInputFormat`) for the true duration. Over `MaxDurationSeconds` → validation error. Any
+   exit before step 6 - a rejected file, an unreadable probe, an aborted request - deletes the
+   job's folder in a `finally`: until `status.json` exists, nothing else knows the folder is there.
 
 6. **[`FileSystemJobStore.EnqueueAsync`](../backend/src/Infrastructure/Jobs/FileSystemJobStore.cs)**
    Writes `status.json`. That write *is* the enqueue. The controller returns 201 with the job id.

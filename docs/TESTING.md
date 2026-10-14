@@ -4,7 +4,7 @@
 
 Install locked frontend packages with `npm ci --prefix frontend`, then run `npm run verify` at the repository root. Node 24, .NET 9 SDK, FFmpeg and ffprobe must be on PATH. Install the pre-push hook with `npm run prepare`.
 
-The gate runs project-boundary checks, guardrail regression tests, frontend lint, .NET/Prettier format checks, strict backend build, backend tests, frontend tests, and both default and standalone typed frontend builds. It requires five backend TRX reports and rejects skipped tests. The media availability probe drains process output and has a bounded timeout; an unavailable dependency must not silently approve a release.
+The gate runs project-boundary checks, guardrail regression tests (including the service-worker denylist against every API route, and the caption ratio and glow constants against the renderer), frontend lint, an unused-export check, the 110 KB gzipped entry-bundle budget, .NET/Prettier format checks, strict backend build, backend tests, frontend tests, and both default and standalone typed frontend builds. It requires five backend TRX reports and rejects skipped tests. The media availability probe drains process output and has a bounded timeout; an unavailable dependency must not silently approve a release.
 
 ## What the tests protect
 
@@ -34,7 +34,7 @@ Playwright's WebKit is the automated stand-in; real Safari (macOS and iOS) diffe
 
 ## Deliberately not tested
 
-Pixel-perfect FFmpeg snapshots are brittle across encoder/platform builds; inspect a real output visually. Timing is recorded as a measurement, not a pass/fail assertion on shared hardware. Multiple workers are unsupported and rejected by a lease; a distributed queue is outside this product. Hosted load/cost limits need separate measurements on actual hardware. We test our integration with FFmpeg and ASP.NET, not their internal implementations. The visual suite is not a gate. Font rasterisation differs between Windows and Linux, so baselines are kept per platform; CI's `visual` job compares against the Linux set and reports differences as a warning with the screenshots attached, never a failed check, because Render deploys only after checks pass and antialiasing must not block a release.
+Pixel-perfect FFmpeg snapshots are brittle across encoder/platform builds; inspect a real output visually. Timing is recorded as a measurement, not a pass/fail assertion on shared hardware. Multiple workers are unsupported and rejected by a lease; a distributed queue is outside this product. Hosted load/cost limits need separate measurements on actual hardware: the encoder preset and thread count were chosen by timing live 40-minute renders, not by tests, and the open egress overrun (five saves of a long render exceeding the window) is a measured fact rather than a tested bound. Lighthouse runs in CI as an advisory job and never fails it. We test our integration with FFmpeg and ASP.NET, not their internal implementations. The visual suite is not a gate. Font rasterisation differs between Windows and Linux, so baselines are kept per platform; CI's `visual` job compares against the Linux set and reports differences as a warning with the screenshots attached, never a failed check, because Render deploys only after checks pass and antialiasing must not block a release.
 
 ## Helpers
 

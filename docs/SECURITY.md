@@ -181,6 +181,31 @@ cookies, and issues no password-reset links, so the usual host-header attacks ha
 on. Behind Render this is additionally moot — the platform routes by hostname before the request
 arrives. Documented rather than "fixed" with a setting that would change nothing.
 
+### Hardening batch (2026-10-14) — **fixed, not yet deployed**
+
+Found in a review of this file against the code. Each change has a test that fails without it.
+
+- **Preview drained the egress window.** Each preview reserved the whole file, so a few one-byte
+  range requests spent the 3 GB window and every download answered 503. A preview now reserves
+  the bytes its one satisfiable range sends (`Api/Downloads/PreviewRange.cs`); anything ASP.NET
+  serves whole is charged whole.
+- **Rate limits were per proxy, not per visitor.** Render's edge proxies every request, so all
+  visitors shared one partition. See risk 3 below (`Hosting__TrustForwardedFor`, IPv6 by /64).
+- **Decompression bombs.** Artwork over 8192x8192 is refused at upload from its PNG/JPEG header
+  (`ImageDimensions`), and ffmpeg also gets `-max_pixels` on that input.
+- **Content-sniffed demuxers.** Every read of an upload passes `-f` for its extension and
+  `-protocol_whitelist file` (`FfmpegInputFormat`); a `.wav` holding a concat script was
+  otherwise probed as concat.
+- **Disk exhaustion.** Uploads that do not reach the queue are deleted on every exit path,
+  including an aborted request; concurrent uploads each reserve their worst case against the
+  free-disk floor (`UploadDiskReservations`); cleanup removes folders with no readable status.
+- **HSTS** (`max-age=31536000`) is sent when the visitor reached the site over HTTPS, as reported
+  by the trusted proxy.
+- **Titles** reject control characters, line breaks and bidirectional overrides, which could make
+  the download's file name display a different extension (`JobTitle`).
+- **Supply chain.** Actions are pinned by commit SHA and base images by digest, with Dependabot
+  updating both; `ci.yml`'s token is read-only.
+
 ## Controls that were already in place
 
 These predate this work and are worth naming, because they are the reason the finding list is
