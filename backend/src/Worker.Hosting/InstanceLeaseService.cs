@@ -1,7 +1,7 @@
 using DjVisualizer.Infrastructure.Jobs;
 using Microsoft.Extensions.Hosting;
 
-namespace DjVisualizer.Worker;
+namespace DjVisualizer.Worker.Hosting;
 
 public sealed class InstanceLeaseService(string root, string role) : IHostedService, IDisposable
 {

@@ -2,12 +2,12 @@ using System.Diagnostics;
 using DjVisualizer.Application.Abstractions;
 using DjVisualizer.Application.Jobs;
 using DjVisualizer.Domain.Jobs;
-using DjVisualizer.Worker.Configuration;
+using DjVisualizer.Worker.Hosting.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace DjVisualizer.Worker;
+namespace DjVisualizer.Worker.Hosting;
 
 /// <summary>Polls for the next Queued job and processes it, one at a time - rendering is
 /// CPU-bound and this is a single-Worker MVP, so there is no benefit to concurrent renders.</summary>

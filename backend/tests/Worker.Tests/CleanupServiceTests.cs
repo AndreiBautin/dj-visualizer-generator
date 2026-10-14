@@ -1,6 +1,6 @@
 using DjVisualizer.Application.Abstractions;
 using DjVisualizer.Domain.Jobs;
-using DjVisualizer.Worker.Configuration;
+using DjVisualizer.Worker.Hosting.Configuration;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -21,11 +21,11 @@ public class CleanupServiceTests
         _clock.UtcNow.Returns(Now);
     }
 
-    private DjVisualizer.Worker.CleanupService CreateSut() => new(
+    private DjVisualizer.Worker.Hosting.CleanupService CreateSut() => new(
         _jobRepository,
         _clock,
         Options.Create(_options),
-        NullLogger<DjVisualizer.Worker.CleanupService>.Instance);
+        NullLogger<DjVisualizer.Worker.Hosting.CleanupService>.Instance);
 
     private static Job ProcessingJob(DateTimeOffset updatedAt)
     {

@@ -1,4 +1,4 @@
-namespace DjVisualizer.Worker.Configuration;
+namespace DjVisualizer.Worker.Hosting.Configuration;
 
 public sealed class WorkerOptions
 {

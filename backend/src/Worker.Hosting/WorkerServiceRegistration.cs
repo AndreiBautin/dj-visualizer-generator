@@ -3,13 +3,13 @@ using DjVisualizer.Application.Jobs;
 using DjVisualizer.Domain.Jobs;
 using DjVisualizer.Infrastructure.Rendering;
 using DjVisualizer.Infrastructure.Uploads;
-using DjVisualizer.Worker.Configuration;
+using DjVisualizer.Worker.Hosting.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace DjVisualizer.Worker;
+namespace DjVisualizer.Worker.Hosting;
 
 /// <summary>
 /// The render worker's own registrations, factored out of <c>Program.cs</c> so the same wiring

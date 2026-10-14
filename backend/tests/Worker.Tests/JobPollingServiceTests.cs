@@ -1,7 +1,7 @@
 using DjVisualizer.Application.Abstractions;
 using DjVisualizer.Application.Jobs;
 using DjVisualizer.Domain.Jobs;
-using DjVisualizer.Worker.Configuration;
+using DjVisualizer.Worker.Hosting.Configuration;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -16,11 +16,11 @@ public class JobPollingServiceTests
     private readonly IJobQueue _jobQueue = Substitute.For<IJobQueue>();
     private readonly IProcessRenderJobUseCase _processRenderJobUseCase = Substitute.For<IProcessRenderJobUseCase>();
 
-    private DjVisualizer.Worker.JobPollingService CreateSut() => new(
+    private DjVisualizer.Worker.Hosting.JobPollingService CreateSut() => new(
         _jobQueue,
         _processRenderJobUseCase,
         Options.Create(new WorkerOptions()),
-        NullLogger<DjVisualizer.Worker.JobPollingService>.Instance);
+        NullLogger<DjVisualizer.Worker.Hosting.JobPollingService>.Instance);
 
     private static Job CreateProcessingJob()
     {

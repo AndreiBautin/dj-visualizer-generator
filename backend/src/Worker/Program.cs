@@ -4,7 +4,7 @@ using DjVisualizer.Infrastructure.Audio;
 using DjVisualizer.Infrastructure.Jobs;
 using DjVisualizer.Infrastructure.Time;
 using DjVisualizer.Infrastructure.Uploads;
-using DjVisualizer.Worker;
+using DjVisualizer.Worker.Hosting;
 
 var builder = Host.CreateApplicationBuilder(args);
 

@@ -12,7 +12,7 @@ using DjVisualizer.Infrastructure.Egress;
 using DjVisualizer.Infrastructure.Jobs;
 using DjVisualizer.Infrastructure.Time;
 using DjVisualizer.Infrastructure.Uploads;
-using DjVisualizer.Worker;
+using DjVisualizer.Worker.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;

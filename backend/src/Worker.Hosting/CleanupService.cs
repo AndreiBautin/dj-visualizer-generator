@@ -1,11 +1,11 @@
 using DjVisualizer.Application.Abstractions;
 using DjVisualizer.Domain.Jobs;
-using DjVisualizer.Worker.Configuration;
+using DjVisualizer.Worker.Hosting.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace DjVisualizer.Worker;
+namespace DjVisualizer.Worker.Hosting;
 
 /// <summary>
 /// Periodically fails jobs stuck in Processing past a stale threshold (recovers from a crashed

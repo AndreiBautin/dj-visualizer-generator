@@ -1,4 +1,4 @@
-using DjVisualizer.Worker.Configuration;
+using DjVisualizer.Worker.Hosting.Configuration;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 

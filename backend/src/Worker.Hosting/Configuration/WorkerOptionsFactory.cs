@@ -1,7 +1,7 @@
 using System.Globalization;
 using Microsoft.Extensions.Configuration;
 
-namespace DjVisualizer.Worker.Configuration;
+namespace DjVisualizer.Worker.Hosting.Configuration;
 
 /// <summary>
 /// Builds <see cref="WorkerOptions"/> from raw configuration strings, the way JobsOptionsFactory
