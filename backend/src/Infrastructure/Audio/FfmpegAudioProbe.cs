@@ -1,6 +1,5 @@
-using System.ComponentModel;
-using System.Diagnostics;
 using DjVisualizer.Application.Abstractions;
+using DjVisualizer.Infrastructure.Processes;
 
 namespace DjVisualizer.Infrastructure.Audio;
 
@@ -8,49 +7,22 @@ public sealed class FfmpegAudioProbe(string ffprobePath = "ffprobe") : IAudioPro
 {
     public async Task<TimeSpan> GetDurationAsync(string filePath, CancellationToken cancellationToken)
     {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = ffprobePath,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        startInfo.ArgumentList.Add("-v");
-        startInfo.ArgumentList.Add("error");
-        foreach (var arg in Rendering.FfmpegInputFormat.For(filePath))
-        {
-            startInfo.ArgumentList.Add(arg);
-        }
-
-        startInfo.ArgumentList.Add("-show_entries");
-        startInfo.ArgumentList.Add("format=duration");
-        startInfo.ArgumentList.Add("-of");
-        startInfo.ArgumentList.Add("json");
-        startInfo.ArgumentList.Add(filePath);
-
-        using var process = new Process { StartInfo = startInfo };
-
+        string[] arguments = ["-v", "error", .. Rendering.FfmpegInputFormat.For(filePath), "-show_entries", "format=duration", "-of", "json", filePath];
+        ProcessResult result;
         try
         {
-            process.Start();
+            result = await ProcessRunner.RunAsync(ffprobePath, arguments, cancellationToken);
         }
-        catch (Win32Exception ex)
+        catch (ProcessRunner.StartException ex)
         {
-            throw new AudioProbeException($"ffprobe could not be started: {ex.Message}");
+            throw new AudioProbeException(ex.Message);
         }
 
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
-
-        var stdout = await stdoutTask;
-        var stderr = await stderrTask;
-
-        if (process.ExitCode != 0)
+        if (result.ExitCode != 0)
         {
-            throw new AudioProbeException($"ffprobe exited with code {process.ExitCode}: {stderr}");
+            throw new AudioProbeException($"ffprobe exited with code {result.ExitCode}: {result.StandardError}");
         }
 
-        return FfprobeOutputParser.ParseDuration(stdout);
+        return FfprobeOutputParser.ParseDuration(result.StandardOutput);
     }
 }

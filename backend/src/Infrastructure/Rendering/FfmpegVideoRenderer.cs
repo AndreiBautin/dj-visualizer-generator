@@ -1,8 +1,7 @@
-using System.ComponentModel;
-using System.Diagnostics;
 using System.Text;
 using DjVisualizer.Application.Abstractions;
 using DjVisualizer.Domain.Jobs;
+using DjVisualizer.Infrastructure.Processes;
 
 namespace DjVisualizer.Infrastructure.Rendering;
 
@@ -107,14 +106,14 @@ public sealed class FfmpegVideoRenderer(
     {
         var filterGraph = VinylFilterGraphBuilder.BuildStaticVinylGraph(request.Preset, request.LabelCrop);
         var arguments = FfmpegArgumentsBuilder.BuildStaticVinylArguments(request, filterGraph, vinylImagePath);
-        await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: false), cancellationToken, onOutputLine: null);
+        await RunFfmpegAsync(arguments, cancellationToken, onOutputLine: null);
     }
 
     private async Task RenderBackgroundAsync(RenderRequest request, string fontFilePath, string? titleFilePath, string backgroundImagePath, CancellationToken cancellationToken)
     {
         var filterGraph = VinylFilterGraphBuilder.BuildBackgroundGraph(request.Preset, titleFilePath, fontFilePath);
         var arguments = FfmpegArgumentsBuilder.BuildBackgroundArguments(filterGraph, backgroundImagePath);
-        await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: false), cancellationToken, onOutputLine: null);
+        await RunFfmpegAsync(arguments, cancellationToken, onOutputLine: null);
     }
 
     private async Task RenderLoopSegmentAsync(
@@ -132,7 +131,7 @@ public sealed class FfmpegVideoRenderer(
             vinylImagePath, backgroundImagePath, filterGraph, videoCodec, x264Preset, loopDurationSeconds, loopSegmentPath, encoderThreads);
         var loopDuration = TimeSpan.FromSeconds(loopDurationSeconds);
 
-        await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: true), cancellationToken, onOutputLine: async (line, ct) =>
+        await RunFfmpegAsync(arguments, cancellationToken, onOutputLine: async (line, ct) =>
         {
             if (FfmpegProgressParser.TryParseElapsed(line, out var elapsed))
             {
@@ -155,7 +154,7 @@ public sealed class FfmpegVideoRenderer(
 
         // No local de-duplication: the shared gate in RenderAsync already drops repeats, and doing
         // it here as well would only hide which pass a value came from.
-        await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: true), cancellationToken, onOutputLine: async (line, ct) =>
+        await RunFfmpegAsync(arguments, cancellationToken, onOutputLine: async (line, ct) =>
         {
             if (FfmpegProgressParser.TryParseElapsed(line, out var elapsed))
             {
@@ -170,43 +169,16 @@ public sealed class FfmpegVideoRenderer(
     /// </summary>
     private async Task<string?> ProbeAudioCodecAsync(string audioFilePath, CancellationToken cancellationToken)
     {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = ffprobePath,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        foreach (var arg in new[] { "-v", "error" }.Concat(FfmpegInputFormat.For(audioFilePath)).Concat(["-select_streams", "a:0", "-show_entries", "stream=codec_name", "-of", "default=noprint_wrappers=1:nokey=1", audioFilePath]))
-        {
-            startInfo.ArgumentList.Add(arg);
-        }
-
-        using var process = new Process { StartInfo = startInfo };
+        string[] arguments = ["-v", "error", .. FfmpegInputFormat.For(audioFilePath), "-select_streams", "a:0", "-show_entries", "stream=codec_name", "-of", "default=noprint_wrappers=1:nokey=1", audioFilePath];
         try
         {
-            process.Start();
+            var result = await ProcessRunner.RunAsync(ffprobePath, arguments, cancellationToken);
+            return result.ExitCode == 0 ? result.StandardOutput.Trim() : null;
         }
-        catch (Win32Exception)
+        catch (ProcessRunner.StartException)
         {
             return null;
         }
-
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-        try
-        {
-            await process.WaitForExitAsync(cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            KillIfRunning(process);
-            throw;
-        }
-
-        var stdout = await stdoutTask;
-        await stderrTask;
-        return process.ExitCode == 0 ? stdout.Trim() : null;
     }
 
     private string ResolveFontPath(CaptionFont captionFont) =>
@@ -214,86 +186,26 @@ public sealed class FfmpegVideoRenderer(
             ? path
             : throw new RenderException($"No font file is configured for caption font '{captionFont}'.");
 
-    private ProcessStartInfo BuildStartInfo(IReadOnlyList<string> arguments, bool redirectStandardOutput)
-    {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = ffmpegPath,
-            RedirectStandardOutput = redirectStandardOutput,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        foreach (var arg in arguments)
-        {
-            startInfo.ArgumentList.Add(arg);
-        }
-
-        return startInfo;
-    }
-
-    private static async Task RunFfmpegAsync(
-        ProcessStartInfo startInfo,
+    private async Task RunFfmpegAsync(
+        IReadOnlyList<string> arguments,
         CancellationToken cancellationToken,
         Func<string, CancellationToken, Task>? onOutputLine)
     {
-        using var process = new Process { StartInfo = startInfo };
-        var stderr = new StringBuilder();
-        process.ErrorDataReceived += (_, e) =>
-        {
-            if (e.Data is not null)
-            {
-                stderr.AppendLine(e.Data);
-            }
-        };
-
+        ProcessResult result;
         try
         {
-            process.Start();
+            // Output is always consumed: discarded when nobody wants the progress lines, so a
+            // chatty pass can never fill the pipe and stall.
+            result = await ProcessRunner.RunAsync(ffmpegPath, arguments, cancellationToken, onOutputLine ?? ((_, _) => Task.CompletedTask));
         }
-        catch (Win32Exception ex)
+        catch (ProcessRunner.StartException ex)
         {
-            throw new RenderException($"ffmpeg could not be started: {ex.Message}");
-        }
-
-        process.BeginErrorReadLine();
-
-        try
-        {
-            if (onOutputLine is not null)
-            {
-                string? line;
-                while ((line = await process.StandardOutput.ReadLineAsync(cancellationToken)) is not null)
-                {
-                    await onOutputLine(line, cancellationToken);
-                }
-            }
-
-            await process.WaitForExitAsync(cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            KillIfRunning(process);
-            throw;
+            throw new RenderException(ex.Message);
         }
 
-        if (process.ExitCode != 0)
+        if (result.ExitCode != 0)
         {
-            throw new RenderException($"ffmpeg exited with code {process.ExitCode}: {stderr}");
-        }
-    }
-
-    private static void KillIfRunning(Process process)
-    {
-        try
-        {
-            if (!process.HasExited)
-            {
-                process.Kill(entireProcessTree: true);
-            }
-        }
-        catch
-        {
-            // Best-effort cleanup during cancellation; the process may have already exited.
+            throw new RenderException($"ffmpeg exited with code {result.ExitCode}: {result.StandardError}");
         }
     }
 }
