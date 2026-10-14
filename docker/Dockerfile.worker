@@ -3,7 +3,7 @@ WORKDIR /src
 COPY backend/ .
 RUN dotnet publish src/Worker/DjVisualizer.Worker.csproj -c Release -o /app --no-self-contained
 
-FROM mcr.microsoft.com/dotnet/runtime:9.0@sha256:f0498f092ee240bb91f802b157054dc42c98d6fd6a853ba17e76965c555a9262
+FROM mcr.microsoft.com/dotnet/runtime:10.0@sha256:939555726cae4c916d212323ac3c0792996dcac2614f00e82cc40fcf059e1af3
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg \
     && rm -rf /var/lib/apt/lists/*
