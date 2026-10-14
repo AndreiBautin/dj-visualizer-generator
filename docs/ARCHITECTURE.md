@@ -133,12 +133,15 @@ The one genuinely non-obvious piece, in
 1. The record — grooved black disc, the artwork as its centre label, the spindle hole — →
    **one static PNG**. The per-pixel `geq` math runs once rather than on every frame. It is
    the homepage's `VinylRecord` drawn in ffmpeg: every proportion comes from that component.
-2. The backdrop — black with the page's accent glow — → **one static PNG**.
-3. **Exactly one rotation period** of the record spinning over that backdrop with the caption —
+2. The backdrop — black with the page's accent glow, and the caption — → **one static PNG**.
+   The caption sits below the disc, so nothing rotating passes over it and it need not be
+   redrawn per frame.
+3. **Exactly one rotation period** of the record spinning over that backdrop —
    540 frames at the default 18 seconds a turn, the same speed the homepage preview spins. The rotation is perfectly periodic, so these are the only visually unique
    frames that exist.
 4. `-stream_loop -1` that clip to the audio's real duration with **`-c:v copy`** — the encoded
-   bytes are repackaged, not re-encoded.
+   bytes are repackaged, not re-encoded. AAC audio is copied too; anything else is encoded to
+   AAC at 192k. `+faststart` puts the index first so the preview plays before the file arrives.
 
 Video encoding is reduced to one rotation. Audio processing, muxing, output size and transfer still grow with duration. The rotation period is snapped to a whole number of frames
 (`FfmpegArgumentsBuilder.SnapRotationPeriodToFrames`) so the loop wraps with no visible jump.

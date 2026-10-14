@@ -12,9 +12,9 @@ namespace DjVisualizer.Infrastructure.Rendering;
 ///
 /// 1. Draw the record - grooved disc, the artwork as its label, the spindle hole - as a single
 ///    static image (the expensive per-pixel <c>geq</c> math runs exactly once, not per frame).
-/// 2. Draw the backdrop - black with the page's accent glow - also as one static image.
+/// 2. Draw the backdrop - black with the page's accent glow, and the title - also as one static image.
 /// 3. Render exactly one rotation period of the record spinning over that
-///    background, with the title overlaid - the rotation is perfectly periodic, so these are the
+///    background - the rotation is perfectly periodic, so these are the
 ///    *only* visually unique frames that ever need generating, regardless of how long the final
 ///    video is. The requested period is snapped to a whole number of frames so the loop wraps
 ///    seamlessly.
@@ -47,7 +47,7 @@ public sealed class FfmpegVideoRenderer(
         try
         {
             // The caption is handed to drawtext as a file rather than inlined into the filter
-            // graph - see VinylFilterGraphBuilder.BuildRotatingCompositeGraph for why. UTF-8
+            // graph - see VinylFilterGraphBuilder.BuildBackgroundGraph for why. UTF-8
             // without a BOM: drawtext would otherwise render the BOM as a visible glyph.
             // A title is optional; with none there is no caption file and no drawtext stage.
             var hasCaption = !string.IsNullOrWhiteSpace(request.Title);
@@ -76,10 +76,10 @@ public sealed class FfmpegVideoRenderer(
             await RenderStaticVinylAsync(request, vinylImagePath, cancellationToken);
             await ReportAsync(RenderProgressScale.StaticVinylComplete, cancellationToken);
 
-            await RenderBackgroundAsync(request, backgroundImagePath, cancellationToken);
+            await RenderBackgroundAsync(request, fontFilePath, hasCaption ? titleFilePath : null, backgroundImagePath, cancellationToken);
             await ReportAsync(RenderProgressScale.BackgroundComplete, cancellationToken);
 
-            await RenderLoopSegmentAsync(request, fontFilePath, hasCaption ? titleFilePath : null, vinylImagePath, backgroundImagePath, loopSegmentPath, ReportAsync, cancellationToken);
+            await RenderLoopSegmentAsync(request, vinylImagePath, backgroundImagePath, loopSegmentPath, ReportAsync, cancellationToken);
             await MuxFinalVideoAsync(request, loopSegmentPath, ReportAsync, cancellationToken);
 
             // The mux reports against the audio's duration, which ffmpeg can undershoot by a
@@ -105,17 +105,15 @@ public sealed class FfmpegVideoRenderer(
         await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: false), cancellationToken, onOutputLine: null);
     }
 
-    private async Task RenderBackgroundAsync(RenderRequest request, string backgroundImagePath, CancellationToken cancellationToken)
+    private async Task RenderBackgroundAsync(RenderRequest request, string fontFilePath, string? titleFilePath, string backgroundImagePath, CancellationToken cancellationToken)
     {
-        var filterGraph = VinylFilterGraphBuilder.BuildBackgroundGraph(request.Preset);
+        var filterGraph = VinylFilterGraphBuilder.BuildBackgroundGraph(request.Preset, titleFilePath, fontFilePath);
         var arguments = FfmpegArgumentsBuilder.BuildBackgroundArguments(filterGraph, backgroundImagePath);
         await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: false), cancellationToken, onOutputLine: null);
     }
 
     private async Task RenderLoopSegmentAsync(
         RenderRequest request,
-        string fontFilePath,
-        string? titleFilePath,
         string vinylImagePath,
         string backgroundImagePath,
         string loopSegmentPath,
@@ -123,7 +121,7 @@ public sealed class FfmpegVideoRenderer(
         CancellationToken cancellationToken)
     {
         var loopDurationSeconds = FfmpegArgumentsBuilder.SnapRotationPeriodToFrames(request.RotationPeriodSeconds, FfmpegArgumentsBuilder.FrameRate);
-        var filterGraph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(request.Preset, titleFilePath, fontFilePath, loopDurationSeconds);
+        var filterGraph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(request.Preset, loopDurationSeconds);
         var arguments = FfmpegArgumentsBuilder.BuildLoopSegmentArguments(
             vinylImagePath, backgroundImagePath, filterGraph, videoCodec, x264Preset, loopDurationSeconds, loopSegmentPath);
         var loopDuration = TimeSpan.FromSeconds(loopDurationSeconds);

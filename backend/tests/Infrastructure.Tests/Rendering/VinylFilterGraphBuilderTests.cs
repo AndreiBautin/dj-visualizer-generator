@@ -91,7 +91,7 @@ public class VinylFilterGraphBuilderTests
     [Fact]
     public void BuildRotatingCompositeGraph_Rotates_At_One_Full_Turn_Per_The_Given_Period()
     {
-        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.FullHd1080p, "Title", FontFilePath, rotationPeriodSeconds: 2.0);
+        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.FullHd1080p, rotationPeriodSeconds: 2.0);
 
         // 2*pi radians / 2 seconds = pi radians/second.
         graph.Should().Contain("rotate=3.14159");
@@ -100,28 +100,42 @@ public class VinylFilterGraphBuilderTests
     [Fact]
     public void BuildRotatingCompositeGraph_Uses_A_Slower_Angular_Velocity_For_A_Longer_Period()
     {
-        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.FullHd1080p, "Title", FontFilePath, rotationPeriodSeconds: 4.0);
+        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.FullHd1080p, rotationPeriodSeconds: 4.0);
 
         // 2*pi radians / 4 seconds = pi/2 rad/second.
         graph.Should().Contain("rotate=1.5707963267948966");
     }
 
     [Fact]
-    public void BuildRotatingCompositeGraph_Sizes_The_Rotation_Canvas_And_Text_For_1080p()
+    public void BuildRotatingCompositeGraph_Sizes_The_Rotation_Canvas_For_1080p()
     {
-        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.FullHd1080p, "Title", FontFilePath, rotationPeriodSeconds: 2.0);
+        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.FullHd1080p, rotationPeriodSeconds: 2.0);
 
         graph.Should().Contain("ow=799:oh=799"); // rotate canvas matches the record
+    }
+
+    [Fact]
+    public void BuildBackgroundGraph_Sizes_The_Caption_For_1080p()
+    {
+        var graph = VinylFilterGraphBuilder.BuildBackgroundGraph(VideoPreset.FullHd1080p, "Title", FontFilePath);
+
         graph.Should().Contain("fontsize=48");
         graph.Should().Contain("y=h-97");
     }
 
     [Fact]
-    public void BuildRotatingCompositeGraph_Sizes_The_Rotation_Canvas_And_Text_For_720p()
+    public void BuildRotatingCompositeGraph_Sizes_The_Rotation_Canvas_For_720p()
     {
-        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.Hd720p, "Title", FontFilePath, rotationPeriodSeconds: 2.0);
+        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.Hd720p, rotationPeriodSeconds: 2.0);
 
-        graph.Should().Contain("ow=533:oh=533");
+        graph.Should().Contain("ow=533:oh=533"); // rotate canvas matches the record
+    }
+
+    [Fact]
+    public void BuildBackgroundGraph_Sizes_The_Caption_For_720p()
+    {
+        var graph = VinylFilterGraphBuilder.BuildBackgroundGraph(VideoPreset.Hd720p, "Title", FontFilePath);
+
         graph.Should().Contain("fontsize=32");
         graph.Should().Contain("y=h-65");
     }
@@ -129,7 +143,7 @@ public class VinylFilterGraphBuilderTests
     [Fact]
     public void BuildRotatingCompositeGraph_Composites_Onto_The_Second_Input_As_The_Background()
     {
-        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.Hd720p, "Title", FontFilePath, rotationPeriodSeconds: 2.0);
+        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.Hd720p, rotationPeriodSeconds: 2.0);
 
         // Input 1 is the pre-rendered backdrop (see BuildBackgroundGraph) - no live generator
         // here, and no per-frame background computation.
@@ -140,7 +154,7 @@ public class VinylFilterGraphBuilderTests
     [Fact]
     public void BuildBackgroundGraph_Fills_The_Frame_For_1080p()
     {
-        var graph = VinylFilterGraphBuilder.BuildBackgroundGraph(VideoPreset.FullHd1080p);
+        var graph = VinylFilterGraphBuilder.BuildBackgroundGraph(VideoPreset.FullHd1080p, "Title", FontFilePath);
 
         graph.Should().StartWith("color=c=black:s=1920x1080");
         graph.Should().EndWith("[background]");
@@ -149,7 +163,7 @@ public class VinylFilterGraphBuilderTests
     [Fact]
     public void BuildBackgroundGraph_Fills_The_Frame_For_720p()
     {
-        var graph = VinylFilterGraphBuilder.BuildBackgroundGraph(VideoPreset.Hd720p);
+        var graph = VinylFilterGraphBuilder.BuildBackgroundGraph(VideoPreset.Hd720p, "Title", FontFilePath);
 
         graph.Should().StartWith("color=c=black:s=1280x720");
         graph.Should().EndWith("[background]");
@@ -162,25 +176,34 @@ public class VinylFilterGraphBuilderTests
     [Fact]
     public void BuildBackgroundGraph_Is_The_Page_Glow_Rather_Than_The_Artwork()
     {
-        var graph = VinylFilterGraphBuilder.BuildBackgroundGraph(VideoPreset.FullHd1080p);
+        var graph = VinylFilterGraphBuilder.BuildBackgroundGraph(VideoPreset.FullHd1080p, "Title", FontFilePath);
 
         graph.Should().NotContain("[0:v]");
         graph.Should().Contain("hypot(X-384,Y-216)");
     }
 
     [Fact]
-    public void BuildRotatingCompositeGraph_Draws_No_Caption_Without_A_Title()
+    public void BuildBackgroundGraph_Draws_No_Caption_Without_A_Title()
     {
-        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.FullHd1080p, titleFilePath: null, FontFilePath, rotationPeriodSeconds: 2.0);
+        var graph = VinylFilterGraphBuilder.BuildBackgroundGraph(VideoPreset.FullHd1080p, titleFilePath: null, FontFilePath);
 
         graph.Should().NotContain("drawtext=");
-        graph.Should().EndWith("[with_vinyl]null[final]");
+        graph.Should().EndWith("[background]");
+    }
+
+    [Fact]
+    public void BuildRotatingCompositeGraph_Draws_No_Caption_Per_Frame()
+    {
+        // The caption is constant, so it is baked into the backdrop still rather than redrawn on every frame.
+        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.FullHd1080p, rotationPeriodSeconds: 2.0);
+
+        graph.Should().NotContain("drawtext=");
     }
 
     [Fact]
     public void BuildRotatingCompositeGraph_Starts_From_Input_Zero_And_Ends_With_The_Final_Pad()
     {
-        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.FullHd1080p, "Title", FontFilePath, rotationPeriodSeconds: 2.0);
+        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(VideoPreset.FullHd1080p, rotationPeriodSeconds: 2.0);
 
         graph.Should().StartWith("[0:v]rotate=");
         graph.Should().EndWith("[final]");
@@ -195,10 +218,9 @@ public class VinylFilterGraphBuilderTests
     /// FfmpegVideoRendererTests proves the behaviour against real ffmpeg.
     /// </summary>
     [Fact]
-    public void BuildRotatingCompositeGraph_Passes_The_Caption_By_File_Rather_Than_Inline_Text()
+    public void BuildBackgroundGraph_Passes_The_Caption_By_File_Rather_Than_Inline_Text()
     {
-        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(
-            VideoPreset.FullHd1080p, "/tmp/jobs/title.txt", FontFilePath, rotationPeriodSeconds: 2.0);
+        var graph = VinylFilterGraphBuilder.BuildBackgroundGraph(VideoPreset.FullHd1080p, "/tmp/jobs/title.txt", FontFilePath);
 
         graph.Should().Contain("textfile='/tmp/jobs/title.txt'");
         graph.Should().Contain("expansion=none");
@@ -208,10 +230,9 @@ public class VinylFilterGraphBuilderTests
     }
 
     [Fact]
-    public void BuildRotatingCompositeGraph_Escapes_Windows_Style_Paths_Backslashes_First()
+    public void BuildBackgroundGraph_Escapes_Windows_Style_Paths_Backslashes_First()
     {
-        var graph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(
-            VideoPreset.FullHd1080p, @"C:\jobs\title.txt", @"C:\Windows\Fonts\arialbd.ttf", rotationPeriodSeconds: 2.0);
+        var graph = VinylFilterGraphBuilder.BuildBackgroundGraph(VideoPreset.FullHd1080p, @"C:\jobs\title.txt", @"C:\Windows\Fonts\arialbd.ttf");
 
         graph.Should().Contain(@"textfile='C\:\\jobs\\title.txt'");
         graph.Should().Contain(@"fontfile='C\:\\Windows\\Fonts\\arialbd.ttf'");

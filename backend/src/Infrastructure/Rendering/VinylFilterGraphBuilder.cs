@@ -11,11 +11,11 @@ namespace DjVisualizer.Infrastructure.Rendering;
 /// soft highlight, the artwork as its centre label, and the spindle hole - as one static image.
 ///
 /// Pass 2 (<see cref="BuildBackgroundGraph"/>): the backdrop, also a single static image - black
-/// with a faint accent glow toward the top-left, the same as the app's own page.
+/// with a faint accent glow toward the top-left, the same as the app's own page - with the title
+/// drawn bottom-center, since it never changes and the record never passes over it.
 ///
 /// Pass 3 (<see cref="BuildRotatingCompositeGraph"/>): loops the record image, applying only the
-/// (much cheaper) continuous rotation, composites it over the backdrop (input 1), and overlays
-/// the title bottom-center.
+/// (much cheaper) continuous rotation, and composites it over the backdrop (input 1).
 ///
 /// <para><b>The record is the homepage's record.</b> The video used to crop the artwork to a
 /// full disc with a white border over a blurred full-frame copy of it. Asked for as "make the
@@ -47,17 +47,34 @@ internal static class VinylFilterGraphBuilder
     private readonly record struct Geometry(int Diameter, int FontSize, int BottomMargin);
 
     /// <summary>
-    /// The backdrop: black with the accent glow the app's page has, rendered once as a still. It
-    /// reads no input - it used to be the artwork blurred to fill the frame.
+    /// The backdrop: black with the accent glow the app's page has, plus the caption, rendered
+    /// once as a still. It reads no input - it used to be the artwork blurred to fill the frame.
+    /// The caption is drawn here rather than per frame because its text never changes and it sits
+    /// below the record (top at <c>1 - BottomMarginRatio</c> of the height, the disc ending at
+    /// <c>(1 + DiameterRatio) / 2</c>), so nothing rotating ever passes over it.
     /// </summary>
-    public static string BuildBackgroundGraph(VideoPreset preset)
+    /// <param name="titleFilePath">Path to a UTF-8 file holding the caption text. The title is
+    /// passed to drawtext by <c>textfile=</c> rather than inlined with <c>text=</c> because a
+    /// title is caller-controlled and ffmpeg's filtergraph parser re-parses option values: inside
+    /// a single-quoted option, ffmpeg does <em>not</em> honour <c>\'</c> as an escaped quote, so
+    /// any title containing an apostrophe terminated the option early and injected the remainder
+    /// into the graph. Reading the text from a file keeps caller-controlled bytes out of the
+    /// graph string entirely, so there is no escaping rule left to get wrong. Null when the video
+    /// has no title: the frame then passes straight through with no caption drawn.</param>
+    public static string BuildBackgroundGraph(VideoPreset preset, string? titleFilePath, string fontFilePath)
     {
         var w = preset.Width;
         var h = preset.Height;
+        var g = ComputeGeometry(preset);
         var reach = Format(Math.Sqrt((0.8 * w * 0.8 * w) + (0.8 * h * 0.8 * h)) * 0.55);
         var falloff = $"max(0,1-hypot(X-{Format(0.2 * w)},Y-{Format(0.2 * h)})/{reach})";
+        var glow = $"color=c=black:s={w}x{h},format=rgb24,geq=r='0':g='{GlowGreen}*{falloff}':b='{GlowBlue}*{falloff}'";
 
-        return $"color=c=black:s={w}x{h},format=rgb24,geq=r='0':g='{GlowGreen}*{falloff}':b='{GlowBlue}*{falloff}'[background]";
+        // expansion=none disables drawtext's %{...} text-expansion pass, so a title is drawn
+        // literally instead of being interpreted (e.g. "%{gmtime}" stays as typed).
+        return titleFilePath is null
+            ? $"{glow}[background]"
+            : $"{glow},drawtext=fontfile='{EscapeFilterPath(fontFilePath)}':textfile='{EscapeFilterPath(titleFilePath)}':expansion=none:fontcolor=white:fontsize={g.FontSize}:x=(w-text_w)/2:y=h-{g.BottomMargin}:shadowcolor=black@0.5:shadowx=2:shadowy=2[background]";
     }
 
     public static string BuildStaticVinylGraph(VideoPreset preset, LabelCrop labelCrop)
@@ -117,33 +134,20 @@ internal static class VinylFilterGraphBuilder
     /// for passing a value already snapped to a whole number of output frames (see
     /// <see cref="FfmpegArgumentsBuilder.SnapRotationPeriodToFrames"/>) - otherwise the looped
     /// render will have a visible jump where it wraps back to frame 0.</param>
-    /// <param name="titleFilePath">Path to a UTF-8 file holding the caption text. The title is
-    /// passed to drawtext by <c>textfile=</c> rather than inlined with <c>text=</c> because a
-    /// title is caller-controlled and ffmpeg's filtergraph parser re-parses option values: inside
-    /// a single-quoted option, ffmpeg does <em>not</em> honour <c>\'</c> as an escaped quote, so
-    /// any title containing an apostrophe terminated the option early and injected the remainder
-    /// into the graph. Reading the text from a file keeps caller-controlled bytes out of the
-    /// graph string entirely, so there is no escaping rule left to get wrong. Null when the video
-    /// has no title: the frame then passes straight through with no caption drawn.</param>
-    public static string BuildRotatingCompositeGraph(VideoPreset preset, string? titleFilePath, string fontFilePath, double rotationPeriodSeconds)
+    public static string BuildRotatingCompositeGraph(VideoPreset preset, double rotationPeriodSeconds)
     {
         var g = ComputeGeometry(preset);
         var angularVelocity = (2 * Math.PI / rotationPeriodSeconds).ToString("G17", CultureInfo.InvariantCulture);
-        var escapedFontFile = EscapeFilterPath(fontFilePath);
 
         var stages = new[]
         {
             // Positive angles turn clockwise, as the homepage's CSS spin does.
             $"[0:v]rotate={angularVelocity}*t:c=black@0.0:ow={g.Diameter}:oh={g.Diameter}[vinyl_rotating]",
             // Input 1 is the pre-rendered backdrop (see BuildBackgroundGraph) - already sized to
-            // the full frame, so this is a cheap overlay, not a live generator. There is no drop
-            // shadow: the homepage's is black on black and the record reads the same without one.
-            "[1:v][vinyl_rotating]overlay=(W-w)/2:(H-h)/2:shortest=1[with_vinyl]",
-            // expansion=none disables drawtext's %{...} text-expansion pass, so a title is drawn
-            // literally instead of being interpreted (e.g. "%{gmtime}" stays as typed).
-            titleFilePath is null
-                ? "[with_vinyl]null[final]"
-                : $"[with_vinyl]drawtext=fontfile='{escapedFontFile}':textfile='{EscapeFilterPath(titleFilePath)}':expansion=none:fontcolor=white:fontsize={g.FontSize}:x=(w-text_w)/2:y=h-{g.BottomMargin}:shadowcolor=black@0.5:shadowx=2:shadowy=2[final]",
+            // the full frame and already carrying the caption, so this is a cheap overlay, not a
+            // live generator. There is no drop shadow: the homepage's is black on black and the
+            // record reads the same without one.
+            "[1:v][vinyl_rotating]overlay=(W-w)/2:(H-h)/2:shortest=1[final]",
         };
 
         return string.Join(";", stages);
