@@ -74,12 +74,16 @@ services:
         value: "24"
 
       # --- Render worker ---------------------------------------------------------------------
-      # ultrafast, not the self-hosted veryfast: at roughly a tenth of a core, encode speed
-      # matters more than the bitrate it costs. Only ~60 frames are ever encoded (the rest of the
-      # video is a stream-copy of that loop), so the quality difference is confined to one
-      # rotation period.
+      # superfast on one thread. The rotation loop is stream-copied for the whole mix, so its
+      # bitrate is paid once per loop in every download: live, ultrafast made a 40-minute mix
+      # 719 MB, past the 3 GB window at five saves. veryfast on all cores lost a render to an
+      # instance restart (memory suspected). Measured locally, one 18 s 1080p loop on one thread:
+      # ultrafast 7.4 MB / 233 MB peak, superfast 3.1 MB / 302 MB, veryfast 1.2 MB / 352 MB.
+      # superfast roughly doubles the rotation pass's CPU time.
       - key: Worker__X264Preset
-        value: ultrafast
+        value: superfast
+      - key: Worker__EncoderThreads
+        value: "1"
       - key: Worker__PollingIntervalSeconds
         value: "2"
       # Shorter than the 60-minute default: the disk is ephemeral and small, and a demo visitor
