@@ -16,7 +16,7 @@ public sealed class GetJobDownloadUseCase(
         await gate.Semaphore.WaitAsync(cancellationToken);
         try
         {
-            return await ResolveAsync(jobId, true, size => size, cancellationToken);
+            return await ResolveAsync(jobId, recordDownload: true, bytesToServe: size => size, cancellationToken);
         }
         finally
         {
@@ -25,7 +25,7 @@ public sealed class GetJobDownloadUseCase(
     }
 
     public Task<Result<JobDownloadResult>> ExecutePreviewAsync(string jobId, Func<long, long> bytesToServe, CancellationToken cancellationToken) =>
-        ResolveAsync(jobId, false, bytesToServe, cancellationToken);
+        ResolveAsync(jobId, recordDownload: false, bytesToServe, cancellationToken);
 
     private async Task<Result<JobDownloadResult>> ResolveAsync(string jobId, bool recordDownload, Func<long, long> bytesToServe, CancellationToken cancellationToken)
     {
