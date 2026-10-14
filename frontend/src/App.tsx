@@ -1,7 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { flushSync } from 'react-dom'
 import { FormProvider, useForm, useWatch } from 'react-hook-form'
 import {
   ApiError,
@@ -26,17 +25,12 @@ import { CAPTION_FONT_OPTIONS } from './lib/captionFonts'
 import { UploadCard } from './components/UploadCard'
 import { VinylRecord } from './components/VinylRecord'
 import { useJobStatus } from './hooks/useJobStatus'
+import { useJobIdRoute } from './hooks/useJobIdRoute'
+import { useRecentJobs } from './hooks/useRecentJobs'
 import { usePageFileDrop } from './hooks/usePageFileDrop'
 import { DEFAULT_LABEL_CROP, type LabelCrop } from './lib/labelCrop'
 import { LabelCropEditor } from './components/LabelCropEditor'
 import { RecentRenders } from './components/RecentRenders'
-import {
-  addRecentJob,
-  loadRecentJobs,
-  saveRecentJobs,
-  type RecentJob,
-} from './lib/recentJobs'
-import { jobIdFromSearch, withJobId } from './lib/jobUrl'
 import { useArtworkColor } from './hooks/useArtworkColor'
 import { useUploadLimits } from './hooks/useUploadLimits'
 import {
@@ -154,65 +148,12 @@ function App({ now = Date.now }: { now?: () => number } = {}) {
   const [artworkFile, setArtworkFile] = useState<File | null>(null)
   const [audioError, setAudioError] = useState<string | null>(null)
   const [artworkError, setArtworkError] = useState<string | null>(null)
-  // The job lives in the address too, so a reload returns to the render and the link can be
-  // shared. Possession of that link is the only access control - see AGENTS.md.
-  const [recentJobs, setRecentJobs] = useState<RecentJob[]>(loadRecentJobs)
-  function rememberJob(jobId: string, title: string) {
-    const next = addRecentJob(recentJobs, { jobId, title, createdAt: now() })
-    setRecentJobs(next)
-    saveRecentJobs(next)
-  }
-  /** Drops a job the server no longer has, so the list does not keep offering dead links. */
-  function forgetJob(jobId: string): string | null {
-    if (!recentJobs.some((job) => job.jobId === jobId)) return null
-    const next = recentJobs.filter((job) => job.jobId !== jobId)
-    setRecentJobs(next)
-    saveRecentJobs(next)
-    return 'Removed it from your recent renders.'
-  }
+  const { recentJobs, rememberJob, forgetJob } = useRecentJobs(now)
   // Reset with the artwork: a crop chosen for one image means nothing for the next.
   const [labelCrop, setLabelCrop] = useState<LabelCrop>(DEFAULT_LABEL_CROP)
-  const [jobId, setJobIdState] = useState<string | null>(() =>
-    jobIdFromSearch(window.location.search),
-  )
-  function setJobId(next: string | null) {
-    window.history.replaceState(null, '', withJobId(window.location.href, next))
-    // Form and job screens are different layouts; a view transition cross-fades them and
-    // moves the record (view-transition-name: vinyl) from one position to the other instead
-    // of the page jumping. Skipped where unsupported or when the visitor asked for less motion.
-    const reduceMotion = window.matchMedia?.(
-      '(prefers-reduced-motion: reduce)',
-    ).matches
-    if (
-      typeof document.startViewTransition === 'function' &&
-      !reduceMotion &&
-      document.visibilityState === 'visible'
-    ) {
-      let applied = false
-      const apply = () => {
-        if (applied) return
-        applied = true
-        flushSync(() => setJobIdState(next))
-      }
-      const transition = document.startViewTransition(apply)
-      // The screen change must never depend on the animation. A transition waits for a frame
-      // to capture the old view, and a page that is not producing frames (a backgrounded or
-      // occluded window when a long upload finishes) never gives it one - the URL had updated
-      // while the form stayed on screen. If it has not run promptly, skip it and switch anyway.
-      const fallback = window.setTimeout(() => {
-        if (!applied) {
-          transition.skipTransition()
-          apply()
-        }
-      }, 400)
-      const clear = () => window.clearTimeout(fallback)
-      transition.updateCallbackDone.then(clear, clear)
-      // A skipped or aborted animation rejects these; that is expected, not an error.
-      transition.ready.catch(() => {})
-    } else {
-      setJobIdState(next)
-    }
-  }
+  // The job lives in the address too, so a reload returns to the render and the link can be
+  // shared. Possession of that link is the only access control - see AGENTS.md.
+  const [jobId, setJobId] = useJobIdRoute()
   const limits = useUploadLimits()
   const online = useOnline()
   const artworkColor = useArtworkColor(artworkError ? null : artworkFile)
