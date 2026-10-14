@@ -4,7 +4,7 @@
 
 ```
                      ┌───────────────────────────────────────────┐
-                     │  React SPA (Vite, TanStack Query, RHF+zod/mini)│
+                     │  React SPA (Vite, TanStack Query, RHF+Zod) │
                      └──────────────────┬────────────────────────┘
                                         │ HTTP (multipart upload, JSON polling)
                      ┌──────────────────▼────────────────────────┐

@@ -18,4 +18,8 @@ Keep the existing .NET/React product scope. AI critique is a separate, unverifie
 - Browser tests: `E2E_BROWSERS=all` adds Firefox and WebKit (CI runs all three). Click visible options, never force-check the sr-only radios.
 - The service worker's `navigateFallbackDenylist` must cover every API path under both prefixes (`/api/...` and bare `/jobs/...`); a missing one turns downloads into `index.html`.
 - Caption fonts: Poppins and Space Mono ship Latin WOFF2 subsets from `scripts/subset-caption-fonts.sh`. Never subset Abril Fatface - its OFL reserves the name.
+- Every read of an uploaded file goes through `FfmpegInputFormat` (forced demuxer, file protocol only). Without it ffmpeg sniffs contents, and a `.wav` holding a concat script was probed as concat.
+- `Hosting__TrustForwardedFor` is for a proxy that appends the hop (Render) and nothing else; rate limits partition IPv6 by /64. Uploads must be deleted on every path that does not enqueue - cleanup cannot see a folder without `status.json` until the stale threshold.
+- Actions and base images are pinned by SHA/digest; change them through Dependabot, not by editing tags. The entry bundle budget (110 KB gzipped) only goes down without a stated reason.
+- On the free host only `ultrafast` has completed a 40-minute render; veryfast and superfast/1-thread each lost one to a restart. Measure live before changing the preset.
 - Preserve uncommitted work. Describe actual test/deployment evidence, with remaining unchecked areas explicit.
