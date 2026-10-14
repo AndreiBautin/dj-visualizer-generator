@@ -74,12 +74,13 @@ services:
         value: "24"
 
       # --- Render worker ---------------------------------------------------------------------
-      # ultrafast, not the self-hosted veryfast: at roughly a tenth of a core, encode speed
-      # matters more than the bitrate it costs. Only ~60 frames are ever encoded (the rest of the
-      # video is a stream-copy of that loop), so the quality difference is confined to one
-      # rotation period.
+      # veryfast, as self-hosted. ultrafast was chosen on the reasoning that its bitrate only
+      # cost one rotation period, but that period is stream-copied for the whole mix, so its
+      # bytes are paid once per loop in every download. Locally an 18 s 1080p loop was 7.3 MB at
+      # ultrafast and 1.2 MB at veryfast, for about 30% more time in that one pass - and
+      # egress, not CPU, is what this host meters.
       - key: Worker__X264Preset
-        value: ultrafast
+        value: veryfast
       - key: Worker__PollingIntervalSeconds
         value: "2"
       # Shorter than the 60-minute default: the disk is ephemeral and small, and a demo visitor
