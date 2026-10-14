@@ -1,3 +1,11 @@
+import type { z } from 'zod/mini'
+import {
+  createJobResponse,
+  jobStatusResponse,
+  uploadLimits,
+  versionResponse,
+} from './responses'
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
 export class ApiError extends Error {
@@ -24,27 +32,31 @@ interface CreateJobRequest {
   labelCrop?: { focusX: number; focusY: number; zoom: number }
 }
 
-interface CreateJobResponse {
-  jobId: string
-}
+type CreateJobResponse = z.output<typeof createJobResponse>
 
-type JobStatusValue = 'Queued' | 'Processing' | 'Completed' | 'Failed'
+export type JobStatusResponse = z.output<typeof jobStatusResponse>
 
-export interface JobStatusResponse {
-  jobId: string
-  status: JobStatusValue
-  progress: number
-  errorMessage: string | null
-  /** Saves left of the job's five; previewing does not spend them. */
-  downloadsRemaining: number
-  preset: VideoPreset
-  captionFont: CaptionFont
-  rotationSpeedSeconds: number
-  labelFocusX: number
-  labelFocusY: number
-  labelZoom: number
-  /** Empty when the job has no caption. */
-  title: string
+/** Reads a successful response as `unknown` and accepts it only if it has the expected shape. */
+async function parseBody<T>(
+  response: Response,
+  schema: {
+    safeParse(value: unknown): { success: true; data: T } | { success: false }
+  },
+): Promise<T> {
+  let body: unknown
+  try {
+    body = await response.json()
+  } catch {
+    body = undefined
+  }
+  const parsed = schema.safeParse(body)
+  if (!parsed.success) {
+    throw new ApiError(
+      'The server sent a response this page does not understand.',
+      response.status,
+    )
+  }
+  return parsed.data
 }
 
 async function parseErrorDetail(response: Response): Promise<string> {
@@ -90,7 +102,7 @@ export async function createJob(
     throw new ApiError(await parseErrorDetail(response), response.status)
   }
 
-  return (await response.json()) as CreateJobResponse
+  return parseBody(response, createJobResponse)
 }
 
 function postWithUploadProgress(
@@ -127,7 +139,7 @@ export async function getJobStatus(jobId: string): Promise<JobStatusResponse> {
     throw new ApiError(await parseErrorDetail(response), response.status)
   }
 
-  return (await response.json()) as JobStatusResponse
+  return parseBody(response, jobStatusResponse)
 }
 
 export function downloadUrl(jobId: string): string {
@@ -158,7 +170,7 @@ export async function createSampleJob(
     throw new ApiError(await parseErrorDetail(response), response.status)
   }
 
-  return (await response.json()) as CreateJobResponse
+  return parseBody(response, createJobResponse)
 }
 
 /**
@@ -179,11 +191,7 @@ export function buildSha(): string | null {
   return sha && sha !== 'unknown' ? sha : null
 }
 
-export interface UploadLimits {
-  maxAudioBytes: number
-  maxImageBytes: number
-  maxDurationSeconds: number
-}
+export type UploadLimits = z.output<typeof uploadLimits>
 
 /**
  * The instance's effective upload limits. Fetched rather than hardcoded because they differ by
@@ -196,7 +204,7 @@ export async function getLimits(): Promise<UploadLimits> {
     throw new ApiError(await parseErrorDetail(response), response.status)
   }
 
-  return (await response.json()) as UploadLimits
+  return parseBody(response, uploadLimits)
 }
 
 /**
@@ -209,7 +217,7 @@ export async function getVersion(): Promise<{ commit: string | null }> {
     throw new ApiError(await parseErrorDetail(response), response.status)
   }
 
-  return (await response.json()) as { commit: string | null }
+  return parseBody(response, versionResponse)
 }
 
 export const previewUrl = (jobId: string) =>

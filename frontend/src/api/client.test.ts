@@ -70,6 +70,14 @@ describe('getJobStatus', () => {
       status: 'Processing',
       progress: 42,
       errorMessage: null,
+      downloadsRemaining: 5,
+      preset: '1080p',
+      captionFont: 'sans-bold',
+      rotationSpeedSeconds: 18,
+      labelFocusX: 0.5,
+      labelFocusY: 0.5,
+      labelZoom: 1,
+      title: 'Set',
     }
     vi.stubGlobal(
       'fetch',
@@ -81,6 +89,24 @@ describe('getJobStatus', () => {
     const result = await getJobStatus('abc-123')
 
     expect(result).toEqual(body)
+  })
+
+  // The status drives which screen is shown; one the page does not know must not be trusted.
+  it.each([
+    ['an unknown status', { ...STATUS, status: 'Exploded' }],
+    ['a missing field', { jobId: 'abc-123', status: 'Processing' }],
+    ['a body that is not JSON', 'oops'],
+  ])('rejects %s instead of passing it on', async (_, body) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(typeof body === 'string' ? body : JSON.stringify(body), {
+          status: 200,
+        }),
+      ),
+    )
+
+    await expect(getJobStatus('abc-123')).rejects.toBeInstanceOf(ApiError)
   })
 
   it('throws an ApiError when the job is not found', async () => {
@@ -102,3 +128,18 @@ describe('downloadUrl', () => {
     expect(downloadUrl('abc-123')).toBe('/api/jobs/abc-123/download')
   })
 })
+
+const STATUS = {
+  jobId: 'abc-123',
+  status: 'Processing',
+  progress: 42,
+  errorMessage: null,
+  downloadsRemaining: 5,
+  preset: '1080p',
+  captionFont: 'sans-bold',
+  rotationSpeedSeconds: 18,
+  labelFocusX: 0.5,
+  labelFocusY: 0.5,
+  labelZoom: 1,
+  title: 'Set',
+}

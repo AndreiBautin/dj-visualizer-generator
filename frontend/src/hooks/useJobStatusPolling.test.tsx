@@ -6,6 +6,20 @@ import { useJobStatus } from './useJobStatus'
 
 // Polling runs in background tabs too, so a stop condition that silently stopped stopping would
 // poll forever with nothing on screen to show it.
+const JOB = {
+  jobId: 'a',
+  progress: 0,
+  errorMessage: null,
+  downloadsRemaining: 5,
+  preset: '1080p',
+  captionFont: 'sans-bold',
+  rotationSpeedSeconds: 18,
+  labelFocusX: 0.5,
+  labelFocusY: 0.5,
+  labelZoom: 1,
+  title: '',
+}
+
 function respondWith(status: number, body: unknown) {
   const fetchMock = vi.fn(
     async () =>
@@ -40,7 +54,7 @@ describe('useJobStatus polling', () => {
 
   it('stops once the job is finished', async () => {
     const fetchMock = respondWith(200, {
-      jobId: 'a',
+      ...JOB,
       status: 'Completed',
       progress: 100,
     })
@@ -67,7 +81,7 @@ describe('useJobStatus polling', () => {
 
   it('keeps polling while the job is still running', async () => {
     const fetchMock = respondWith(200, {
-      jobId: 'a',
+      ...JOB,
       status: 'Processing',
       progress: 40,
     })
