@@ -85,6 +85,11 @@ services:
       # read), so ultrafast stays as the only setting with a completed long render.
       - key: Worker__X264Preset
         value: ultrafast
+      # CRF 28 rather than x264's 23: same preset, same memory and encode time, about 36% fewer
+      # bytes per loop - and so per download - at an SSIM of 0.996 against veryfast (measured
+      # locally on one 18 s 1080p loop). Unmeasured live: Render had stopped deploying.
+      - key: Worker__X264Crf
+        value: "28"
       - key: Worker__PollingIntervalSeconds
         value: "2"
       # Shorter than the 60-minute default: the disk is ephemeral and small, and a demo visitor

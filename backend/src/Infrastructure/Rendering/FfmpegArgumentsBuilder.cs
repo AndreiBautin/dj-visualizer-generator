@@ -69,7 +69,8 @@ internal static class FfmpegArgumentsBuilder
         string x264Preset,
         double loopDurationSeconds,
         string loopSegmentPath,
-        int encoderThreads = 0)
+        int encoderThreads = 0,
+        int x264Crf = 0)
     {
         // 0 leaves both thread counts to ffmpeg; see WorkerOptions.EncoderThreads.
         var threads = encoderThreads.ToString(CultureInfo.InvariantCulture);
@@ -78,7 +79,9 @@ internal static class FfmpegArgumentsBuilder
 
         var encoderArgs = videoCodec == "h264_nvenc"
             ? new[] { "-c:v", "h264_nvenc", "-preset", "p4", "-rc", "vbr", "-cq", "23" }
-            : new[] { "-c:v", "libx264", "-preset", x264Preset };
+            : x264Crf > 0
+                ? new[] { "-c:v", "libx264", "-preset", x264Preset, "-crf", x264Crf.ToString(CultureInfo.InvariantCulture) }
+                : new[] { "-c:v", "libx264", "-preset", x264Preset };
 
         return
         [

@@ -59,7 +59,7 @@ public static class WorkerServiceRegistration
                 [CaptionFont.SerifBold] = workerOptions.FontFilePathSerifBold,
                 [CaptionFont.MonoBold] = workerOptions.FontFilePathMonoBold,
             };
-            return new FfmpegVideoRenderer(fontFilePaths, workerOptions.VideoCodec, workerOptions.X264Preset, workerOptions.EncoderThreads);
+            return new FfmpegVideoRenderer(fontFilePaths, workerOptions.VideoCodec, workerOptions.X264Preset, workerOptions.EncoderThreads, x264Crf: workerOptions.X264Crf);
         });
 
         // Singleton, not scoped: JobPollingService is itself a singleton hosted service and

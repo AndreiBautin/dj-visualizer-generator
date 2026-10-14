@@ -188,4 +188,13 @@ public class FfmpegArgumentsBuilderTests
         var artworkInput = vinyl.IndexOf("-i");
         vinyl.Skip(artworkInput - 4).Take(4).Should().Equal("-protocol_whitelist", "file", "-f", "png_pipe");
     }
+
+    [Fact]
+    public void BuildLoopSegmentArguments_Sets_The_Crf_Only_When_One_Is_Configured()
+    {
+        FfmpegArgumentsBuilder.BuildLoopSegmentArguments("v.png", "b.png", "graph", "libx264", "ultrafast", 18, "loop.mp4", x264Crf: 28)
+            .Should().ContainInConsecutiveOrder("-preset", "ultrafast", "-crf", "28");
+        FfmpegArgumentsBuilder.BuildLoopSegmentArguments("v.png", "b.png", "graph", "libx264", "ultrafast", 18, "loop.mp4")
+            .Should().NotContain("-crf");
+    }
 }

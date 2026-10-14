@@ -32,6 +32,7 @@ public static class WorkerOptionsFactory
             FontFilePathMonoBold = Text(section["FontFilePathMonoBold"], defaults.FontFilePathMonoBold),
             X264Preset = OneOf(section["X264Preset"], X264Presets, defaults.X264Preset, "Worker:X264Preset", collected),
             VideoCodec = OneOf(section["VideoCodec"], VideoCodecs, defaults.VideoCodec, "Worker:VideoCodec", collected),
+            X264Crf = Crf(section["X264Crf"], defaults.X264Crf, "Worker:X264Crf", collected),
             EncoderThreads = Int(section["EncoderThreads"], defaults.EncoderThreads, minimum: 0, "Worker:EncoderThreads", collected),
             PollingIntervalSeconds = Int(section["PollingIntervalSeconds"], defaults.PollingIntervalSeconds, minimum: 1, "Worker:PollingIntervalSeconds", collected),
             CleanupIntervalSeconds = Int(section["CleanupIntervalSeconds"], defaults.CleanupIntervalSeconds, minimum: 1, "Worker:CleanupIntervalSeconds", collected),
@@ -62,6 +63,18 @@ public static class WorkerOptionsFactory
         }
 
         return match;
+    }
+
+    private static int Crf(string? raw, int fallback, string key, List<string> warnings)
+    {
+        var value = Int(raw, fallback, minimum: 0, key, warnings);
+        if (value > 51)
+        {
+            warnings.Add($"{key}: '{raw}' is above x264's maximum of 51; using {fallback}.");
+            return fallback;
+        }
+
+        return value;
     }
 
     private static int Int(string? raw, int fallback, int minimum, string key, List<string> warnings)

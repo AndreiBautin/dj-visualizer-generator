@@ -29,6 +29,12 @@ public sealed class WorkerOptions
     /// zero are treated as 0.</summary>
     public int EncoderThreads { get; set; }
 
+    /// <summary>x264 constant rate factor for the rotation loop; 0 keeps x264's own default (23).
+    /// The loop is stream-copied for the whole mix, so this sets the bitrate of every download:
+    /// measured locally on one 18 s 1080p loop at ultrafast, 23 → 7.4 MB and 28 → 4.7 MB at an
+    /// SSIM of 0.996 against veryfast, with no extra encode time and the same memory. 0 or 1..51.</summary>
+    public int X264Crf { get; set; }
+
     public int PollingIntervalSeconds { get; set; } = 3;
     public int CleanupIntervalSeconds { get; set; } = 300;
     public int RetentionMinutes { get; set; } = 60;

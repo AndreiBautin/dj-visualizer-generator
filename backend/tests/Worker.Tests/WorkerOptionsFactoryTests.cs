@@ -32,6 +32,8 @@ public class WorkerOptionsFactoryTests
     [InlineData("Worker:EncoderThreads", "-2")]
     [InlineData("Worker:X264Preset", "turbo")]
     [InlineData("Worker:VideoCodec", "h265")]
+    [InlineData("Worker:X264Crf", "60")]
+    [InlineData("Worker:X264Crf", "-1")]
     public void A_Bad_Value_Falls_Back_To_Its_Default_With_A_Warning_Naming_The_Key(string key, string value)
     {
         var options = Create(new() { [key] = value }, out var warnings);
