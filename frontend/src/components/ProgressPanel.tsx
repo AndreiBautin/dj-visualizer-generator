@@ -45,13 +45,22 @@ function StageTrack({ current }: { current: number }) {
   )
 }
 
+// Owns the one-second tick, so the clock re-renders this line rather than the whole panel.
 function TimingLine({
-  elapsedMs,
+  startedAt,
   progress,
+  now,
 }: {
-  elapsedMs: number
+  startedAt: number
   progress: number
+  now: () => number
 }) {
+  const [clock, setClock] = useState(now)
+  useEffect(() => {
+    const timer = setInterval(() => setClock(now()), 1000)
+    return () => clearInterval(timer)
+  }, [now])
+  const elapsedMs = Math.max(0, clock - startedAt)
   const remaining = estimateRemainingMs(elapsedMs, progress)
   return (
     <p className="text-xs text-ink-faint tabular-nums">
@@ -131,7 +140,6 @@ export function ProgressPanel({
   // Measured from when this page first saw the job rendering - the server sends no start
   // time, and a page reopened mid-render honestly does not know more than that.
   const renderStartedAt = useRef<number | null>(null)
-  const [clock, setClock] = useState(() => now())
   const isExpired = error instanceof ApiError && error.status === 404
   const [expiredNote, setExpiredNote] = useState<string | null>(null)
   useEffect(() => {
@@ -142,12 +150,6 @@ export function ProgressPanel({
   if (isRendering && renderStartedAt.current === null) {
     renderStartedAt.current = now()
   }
-  useEffect(() => {
-    if (!isRendering) return
-    const timer = setInterval(() => setClock(now()), 1000)
-    return () => clearInterval(timer)
-  }, [isRendering, now])
-
   // Lets a backgrounded tab communicate status without being watched - the alternative is a
   // visitor tabbing away during a multi-minute render and having no way to tell it apart from a
   // frozen one without switching back.
@@ -281,8 +283,9 @@ export function ProgressPanel({
       ) : (
         renderStartedAt.current !== null && (
           <TimingLine
-            elapsedMs={Math.max(0, clock - renderStartedAt.current)}
+            startedAt={renderStartedAt.current}
             progress={data.progress}
+            now={now}
           />
         )
       )}
