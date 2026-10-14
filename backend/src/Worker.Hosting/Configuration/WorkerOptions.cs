@@ -22,6 +22,13 @@ public sealed class WorkerOptions
     /// NVIDIA GPU and driver on the machine actually running the Worker).</summary>
     public string VideoCodec { get; set; } = "libx264";
 
+    /// <summary>Caps the threads ffmpeg uses for the rotation pass (encoder and filters). 0, the
+    /// default, leaves it to ffmpeg, which sizes by visible cores. On a small memory-limited host
+    /// that oversubscribes memory: x264's per-thread lookahead grows peak use with the thread
+    /// count, and a 1080p veryfast render was lost mid-pass to an instance restart. Values below
+    /// zero are treated as 0.</summary>
+    public int EncoderThreads { get; set; }
+
     public int PollingIntervalSeconds { get; set; } = 3;
     public int CleanupIntervalSeconds { get; set; } = 300;
     public int RetentionMinutes { get; set; } = 60;

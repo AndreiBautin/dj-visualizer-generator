@@ -64,8 +64,14 @@ internal static class FfmpegArgumentsBuilder
         string videoCodec,
         string x264Preset,
         double loopDurationSeconds,
-        string loopSegmentPath)
+        string loopSegmentPath,
+        int encoderThreads = 0)
     {
+        // 0 leaves both thread counts to ffmpeg; see WorkerOptions.EncoderThreads.
+        var threads = encoderThreads.ToString(CultureInfo.InvariantCulture);
+        var filterThreadArgs = encoderThreads > 0 ? new[] { "-filter_threads", threads } : [];
+        var encoderThreadArgs = encoderThreads > 0 ? new[] { "-threads", threads } : [];
+
         var encoderArgs = videoCodec == "h264_nvenc"
             ? new[] { "-c:v", "h264_nvenc", "-preset", "p4", "-rc", "vbr", "-cq", "23" }
             : new[] { "-c:v", "libx264", "-preset", x264Preset };
@@ -73,6 +79,7 @@ internal static class FfmpegArgumentsBuilder
         return
         [
             "-y",
+            .. filterThreadArgs,
             "-loop", "1",
             "-i", vinylImagePath,
             "-loop", "1",
@@ -81,6 +88,7 @@ internal static class FfmpegArgumentsBuilder
             "-map", "[final]",
             "-t", loopDurationSeconds.ToString(CultureInfo.InvariantCulture),
             .. encoderArgs,
+            .. encoderThreadArgs,
             "-pix_fmt", "yuv420p",
             "-r", FrameRate.ToString(CultureInfo.InvariantCulture),
             // This pass encodes a known duration, so it can report real progress rather than only

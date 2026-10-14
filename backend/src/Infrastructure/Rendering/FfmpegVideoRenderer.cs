@@ -29,6 +29,7 @@ public sealed class FfmpegVideoRenderer(
     IReadOnlyDictionary<CaptionFont, string> fontFilePaths,
     string videoCodec = "libx264",
     string x264Preset = "veryfast",
+    int encoderThreads = 0,
     string ffmpegPath = "ffmpeg",
     string ffprobePath = "ffprobe") : IVideoRenderer
 {
@@ -128,7 +129,7 @@ public sealed class FfmpegVideoRenderer(
         var loopDurationSeconds = FfmpegArgumentsBuilder.SnapRotationPeriodToFrames(request.RotationPeriodSeconds, FfmpegArgumentsBuilder.FrameRate);
         var filterGraph = VinylFilterGraphBuilder.BuildRotatingCompositeGraph(request.Preset, loopDurationSeconds);
         var arguments = FfmpegArgumentsBuilder.BuildLoopSegmentArguments(
-            vinylImagePath, backgroundImagePath, filterGraph, videoCodec, x264Preset, loopDurationSeconds, loopSegmentPath);
+            vinylImagePath, backgroundImagePath, filterGraph, videoCodec, x264Preset, loopDurationSeconds, loopSegmentPath, encoderThreads);
         var loopDuration = TimeSpan.FromSeconds(loopDurationSeconds);
 
         await RunFfmpegAsync(BuildStartInfo(arguments, redirectStandardOutput: true), cancellationToken, onOutputLine: async (line, ct) =>

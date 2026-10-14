@@ -46,7 +46,7 @@ public static class WorkerServiceRegistration
                 [CaptionFont.SerifBold] = workerOptions.FontFilePathSerifBold,
                 [CaptionFont.MonoBold] = workerOptions.FontFilePathMonoBold,
             };
-            return new FfmpegVideoRenderer(fontFilePaths, workerOptions.VideoCodec, workerOptions.X264Preset);
+            return new FfmpegVideoRenderer(fontFilePaths, workerOptions.VideoCodec, workerOptions.X264Preset, Math.Max(0, workerOptions.EncoderThreads));
         });
 
 

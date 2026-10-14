@@ -158,4 +158,22 @@ public class FfmpegArgumentsBuilderTests
     [InlineData(null, false)]
     public void CanCopyAudioCodec_Only_Accepts_Aac(string? codec, bool expected) =>
         FfmpegArgumentsBuilder.CanCopyAudioCodec(codec).Should().Be(expected);
+
+    [Fact]
+    public void BuildLoopSegmentArguments_Caps_Encoder_And_Filter_Threads_When_Asked()
+    {
+        var args = FfmpegArgumentsBuilder.BuildLoopSegmentArguments("v.png", "b.png", "graph", "libx264", "superfast", 18, "loop.mp4", encoderThreads: 1);
+
+        args.Should().ContainInConsecutiveOrder("-filter_threads", "1");
+        args.Should().ContainInConsecutiveOrder("-threads", "1");
+        args.ToList().IndexOf("-filter_threads").Should().BeLessThan(args.ToList().IndexOf("-i"), "it is a global option");
+    }
+
+    [Fact]
+    public void BuildLoopSegmentArguments_Leaves_Threads_To_Ffmpeg_By_Default()
+    {
+        var args = FfmpegArgumentsBuilder.BuildLoopSegmentArguments("v.png", "b.png", "graph", "libx264", "veryfast", 18, "loop.mp4");
+
+        args.Should().NotContain("-threads").And.NotContain("-filter_threads");
+    }
 }
