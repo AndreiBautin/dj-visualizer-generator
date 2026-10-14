@@ -6,7 +6,7 @@
 # See docs/DEPLOYMENT.md.
 
 # --- Stage 1: the SPA ------------------------------------------------------------------------
-FROM node:24-alpine AS frontend
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS frontend
 WORKDIR /src
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
@@ -22,7 +22,7 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
 RUN npm run build
 
 # --- Stage 2: the .NET publish ---------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS backend
+FROM mcr.microsoft.com/dotnet/sdk:9.0@sha256:2f5eb32870b4c0074a3d5b5191a03553bcab7b74463a76a7c0a5f3ef65c90fe5 AS backend
 WORKDIR /src
 COPY backend/ .
 # Publishing the Api brings the Worker assembly with it - the Api references it so that
@@ -30,7 +30,7 @@ COPY backend/ .
 RUN dotnet publish src/Api/DjVisualizer.Api.csproj -c Release -o /app --no-self-contained
 
 # --- Stage 3: runtime ------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/aspnet:9.0
+FROM mcr.microsoft.com/dotnet/aspnet:9.0@sha256:4d94cf3204df98d321e8dbf8d6d06e0b34fd136aa75c945abf4390ee07eb30dd
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg curl \
     && rm -rf /var/lib/apt/lists/*
