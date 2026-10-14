@@ -36,55 +36,26 @@ public sealed class CreateJobUseCase(
                 "The server is low on disk space and cannot accept new uploads right now. Please try again shortly."));
         }
 
+        // Every value object validates itself and throws a DomainException naming the problem;
+        // any of them becomes a validation error with that message. Input validation lives in
+        // Domain, not here.
         JobTitle title;
-        try
-        {
-            title = JobTitle.Create(request.Title);
-        }
-        catch (InvalidJobTitleException ex)
-        {
-            return Result<CreateJobResult>.Failure(Error.Validation(ex.Message));
-        }
-
         VideoPreset preset;
-        try
-        {
-            preset = VideoPreset.FromName(request.PresetName);
-        }
-        catch (InvalidVideoPresetException ex)
-        {
-            return Result<CreateJobResult>.Failure(Error.Validation(ex.Message));
-        }
-
         RotationSpeed rotationSpeed;
-        try
-        {
-            rotationSpeed = request.RotationSpeedSeconds.HasValue
-                ? RotationSpeed.Create(request.RotationSpeedSeconds.Value)
-                : RotationSpeed.Default;
-        }
-        catch (InvalidRotationSpeedException ex)
-        {
-            return Result<CreateJobResult>.Failure(Error.Validation(ex.Message));
-        }
-
         CaptionFont captionFont;
-        try
-        {
-            captionFont = string.IsNullOrWhiteSpace(request.CaptionFontName)
-                ? CaptionFont.Default
-                : CaptionFont.FromName(request.CaptionFontName);
-        }
-        catch (InvalidCaptionFontException ex)
-        {
-            return Result<CreateJobResult>.Failure(Error.Validation(ex.Message));
-        }
-
         LabelCrop labelCrop;
         try
         {
-            // Each field is optional on its own: an omitted one keeps its default, so a caller can
-            // send only a zoom, or only a horizontal focus.
+            title = JobTitle.Create(request.Title);
+            preset = VideoPreset.FromName(request.PresetName);
+            rotationSpeed = request.RotationSpeedSeconds.HasValue
+                ? RotationSpeed.Create(request.RotationSpeedSeconds.Value)
+                : RotationSpeed.Default;
+            captionFont = string.IsNullOrWhiteSpace(request.CaptionFontName)
+                ? CaptionFont.Default
+                : CaptionFont.FromName(request.CaptionFontName);
+            // Each crop field is optional on its own: an omitted one keeps its default, so a
+            // caller can send only a zoom, or only a horizontal focus.
             labelCrop = request.LabelFocusX is null && request.LabelFocusY is null && request.LabelZoom is null
                 ? LabelCrop.Default
                 : LabelCrop.Create(
@@ -92,7 +63,7 @@ public sealed class CreateJobUseCase(
                     request.LabelFocusY ?? LabelCrop.Default.FocusY,
                     request.LabelZoom ?? LabelCrop.Default.Zoom);
         }
-        catch (InvalidLabelCropException ex)
+        catch (DomainException ex)
         {
             return Result<CreateJobResult>.Failure(Error.Validation(ex.Message));
         }
