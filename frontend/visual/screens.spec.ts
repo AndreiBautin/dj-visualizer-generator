@@ -10,6 +10,10 @@ const BASE = {
   preset: '1080p',
   captionFont: 'serif-bold',
   rotationSpeedSeconds: 18,
+  labelFocusX: 0.5,
+  labelFocusY: 0.5,
+  labelZoom: 1,
+  title: '',
 }
 
 async function mockApi(page: Page, status: Record<string, unknown>) {
