@@ -92,7 +92,7 @@ reason: referencing the executable made both entry points' `appsettings.json` co
 
 1. **[`JobsController.Create`](../backend/src/Api/Controllers/JobsController.cs)**
    Model-bound to `Contracts/CreateJobFormRequest`. Rate-limited by the `job-creation` policy
-   (10/minute per IP, configured in `Api/Program.cs`). Opens both `IFormFile` streams and passes
+   (per client, configured in `Api/Program.cs`; numbers and rationale in [SECURITY.md](SECURITY.md)). Opens both `IFormFile` streams and passes
    them to the use case. It never touches the filesystem itself.
 
 2. **[`CreateJobUseCase.ExecuteAsync`](../backend/src/Application/Jobs/CreateJobUseCase.cs)**
