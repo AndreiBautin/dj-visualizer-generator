@@ -16,7 +16,7 @@ public sealed class GetJobDownloadUseCase(
         await gate.Semaphore.WaitAsync(cancellationToken);
         try
         {
-            return await ResolveAsync(jobId, true, cancellationToken);
+            return await ResolveAsync(jobId, true, size => size, cancellationToken);
         }
         finally
         {
@@ -24,10 +24,10 @@ public sealed class GetJobDownloadUseCase(
         }
     }
 
-    public Task<Result<JobDownloadResult>> ExecutePreviewAsync(string jobId, CancellationToken cancellationToken) =>
-        ResolveAsync(jobId, false, cancellationToken);
+    public Task<Result<JobDownloadResult>> ExecutePreviewAsync(string jobId, Func<long, long> bytesToServe, CancellationToken cancellationToken) =>
+        ResolveAsync(jobId, false, bytesToServe, cancellationToken);
 
-    private async Task<Result<JobDownloadResult>> ResolveAsync(string jobId, bool recordDownload, CancellationToken cancellationToken)
+    private async Task<Result<JobDownloadResult>> ResolveAsync(string jobId, bool recordDownload, Func<long, long> bytesToServe, CancellationToken cancellationToken)
     {
         JobId id;
         try
@@ -65,8 +65,9 @@ public sealed class GetJobDownloadUseCase(
 
         // Charged before the file is handed to the caller, and only once the job is known to be
         // downloadable - so a 404 or a not-ready poll costs nothing against the budget, and a
-        // response that is about to be streamed cannot overshoot it.
-        if (!egressBudget.TryReserve(video.SizeBytes))
+        // response that is about to be streamed cannot overshoot it. A preview reserves what its
+        // range will send; a download always sends, and reserves, the whole file.
+        if (!egressBudget.TryReserve(Math.Clamp(bytesToServe(video.SizeBytes), 0, video.SizeBytes)))
         {
             return Result<JobDownloadResult>.Failure(new Error(
                 ErrorCodes.Unavailable,

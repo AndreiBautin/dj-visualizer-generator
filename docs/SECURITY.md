@@ -289,7 +289,7 @@ resolving something that was never tested.
 
 ## Portfolio hardening (2026-09-21)
 
-Preview supports ranges without consuming saved downloads; both endpoints are rate/budget limited. Each preview reserves a whole file conservatively, not exact transferred bytes. Download admission is serialized through persistence. OS leases reject additional API/worker processes sharing a jobs root; unique temp files prevent write collisions.
+Preview supports ranges without consuming saved downloads; both endpoints are rate/budget limited. Each preview reserves the bytes its range will send, before sending; until 2026-10-14 it reserved the whole file, which let a few one-byte range requests spend the instance's window and turn every download into a 503. Download admission is serialized through persistence. OS leases reject additional API/worker processes sharing a jobs root; unique temp files prevent write collisions.
 
 The process-local budget resets on restart and is not a monthly billing guarantee. Provider controls and monitoring are separate. Random job URLs grant access without ownership checks; do not use public fixtures for private media.
 

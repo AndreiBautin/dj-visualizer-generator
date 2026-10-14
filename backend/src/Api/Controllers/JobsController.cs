@@ -1,3 +1,4 @@
+using DjVisualizer.Api.Downloads;
 using DjVisualizer.Api.Configuration;
 using DjVisualizer.Api.Contracts;
 using DjVisualizer.Application.Common;
@@ -158,13 +159,13 @@ public sealed class JobsController(
         return File(stream, "video/mp4", result.Value.FileName);
     }
 
-    // Preview requests never spend the saved-file allowance. Range requests are supported;
-    // each request conservatively reserves a whole file against the instance egress budget.
+    // Preview requests never spend the saved-file allowance. Range requests are supported; each
+    // reserves the bytes its range will send (see PreviewRange) against the instance egress budget.
     [HttpGet("{jobId}/preview")]
     [EnableRateLimiting("job-download")]
     public async Task<IActionResult> Preview(string jobId, CancellationToken cancellationToken)
     {
-        var result = await getJobDownloadUseCase.ExecutePreviewAsync(jobId, cancellationToken);
+        var result = await getJobDownloadUseCase.ExecutePreviewAsync(jobId, size => PreviewRange.BytesToServe(Request.Headers, size), cancellationToken);
         if (!result.IsSuccess)
         {
             return MapError(result.Error!);

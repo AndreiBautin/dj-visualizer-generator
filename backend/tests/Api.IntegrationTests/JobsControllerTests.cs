@@ -415,6 +415,29 @@ public class JobsControllerTests : IDisposable
         (await client.GetAsync($"/jobs/{id}/preview")).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
     }
 
+    /// <summary>
+    /// A preview used to reserve the whole file per request, so a few one-byte range requests
+    /// spent the instance's window and every visitor's download answered 503 until it reset.
+    /// </summary>
+    [Fact]
+    public async Task Small_Preview_Ranges_Do_Not_Spend_The_Whole_Egress_Budget()
+    {
+        // The fake video is 10 bytes; the window holds two whole files.
+        using var factory = new JobsApiFactory { ExtraConfiguration = { ["Jobs:MaxEgressBytesPerWindow"] = "20" } };
+        using var client = factory.CreateClient();
+        var id = await CreateAndCompleteJobAsync(factory, client);
+
+        for (var i = 0; i < 5; i++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"/jobs/{id}/preview");
+            request.Headers.Range = new RangeHeaderValue(0, 0);
+            using var response = await client.SendAsync(request);
+            response.StatusCode.Should().Be(HttpStatusCode.PartialContent);
+        }
+
+        (await client.GetAsync($"/jobs/{id}/download")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     private static async Task<string> CreateAndCompleteJobAsync(JobsApiFactory factory, HttpClient client)
     {
         var createResponse = await client.PostAsync("/jobs", BuildValidForm());
