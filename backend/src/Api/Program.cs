@@ -189,12 +189,12 @@ foreach (var warning in configurationWarnings)
 // Behind a reverse proxy (Render's edge terminates TLS), every request arrives from the proxy's
 // address, so per-IP rate limits would become one limit shared by every visitor. When the host
 // says it sits behind exactly one proxy, take the client from the last X-Forwarded-For hop - the
-// one that proxy appended. ForwardLimit = 1 ignores anything a client wrote into the header
+// one that proxy appended, and the scheme it was reached on (for HSTS). ForwardLimit = 1 ignores anything a client wrote into the header
 // itself. Off by default: exposed directly, trusting the header would let any caller choose its
 // own partition.
 if (string.Equals(app.Configuration["Hosting:TrustForwardedFor"], "true", StringComparison.OrdinalIgnoreCase))
 {
-    var forwarded = new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor, ForwardLimit = 1 };
+    var forwarded = new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto, ForwardLimit = 1 };
     // The proxy's own address is not known in advance on this host.
     forwarded.KnownNetworks.Clear();
     forwarded.KnownProxies.Clear();

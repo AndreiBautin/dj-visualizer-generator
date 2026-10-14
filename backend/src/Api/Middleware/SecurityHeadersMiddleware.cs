@@ -50,6 +50,14 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
             headers["X-Frame-Options"] = "DENY";
             headers["Referrer-Policy"] = "no-referrer";
 
+            // Only over HTTPS (RFC 6797 has browsers ignore it on plain HTTP, and sending it
+            // there would claim something the connection did not do). Behind Render's edge the
+            // scheme comes from X-Forwarded-Proto; see Hosting:TrustForwardedFor.
+            if (context.Request.IsHttps)
+            {
+                headers["Strict-Transport-Security"] = "max-age=31536000";
+            }
+
             var isHtmlDocument = context.Response.ContentType?
                 .StartsWith("text/html", StringComparison.OrdinalIgnoreCase) ?? false;
             headers["Content-Security-Policy"] = isHtmlDocument ? AppContentSecurityPolicy : ApiContentSecurityPolicy;
