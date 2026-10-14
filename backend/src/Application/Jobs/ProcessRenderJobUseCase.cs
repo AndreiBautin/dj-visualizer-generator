@@ -17,8 +17,8 @@ public sealed class ProcessRenderJobUseCase(
     // free of diagnostic detail: ffmpeg and ffprobe report failures with the full command line,
     // which embeds absolute server paths and the internal filter graph. The underlying exception
     // is logged instead, where operators can see it and end users cannot.
-    public const string AudioUnreadableMessage =
-        "The audio file could not be read. It may be corrupt or in an unsupported format.";
+    // The same words the upload path uses, so a visitor sees one message for one problem.
+    public const string AudioUnreadableMessage = CreateJobUseCase.AudioUnreadableMessage;
 
     public const string RenderFailedMessage =
         "Rendering failed. The uploaded audio or artwork may be corrupt or in an unsupported format.";
