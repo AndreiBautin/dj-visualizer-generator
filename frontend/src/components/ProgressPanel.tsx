@@ -142,9 +142,15 @@ export function ProgressPanel({
   const renderStartedAt = useRef<number | null>(null)
   const isExpired = error instanceof ApiError && error.status === 404
   const [expiredNote, setExpiredNote] = useState<string | null>(null)
+  // The latest callback, read through a ref so the effect runs once per expiry - not again
+  // whenever the parent passes a new function identity.
+  const onExpiredRef = useRef(onExpired)
   useEffect(() => {
-    if (isExpired && onExpired) setExpiredNote(onExpired())
-    // Once per expiry, not on every render of the expired state.
+    onExpiredRef.current = onExpired
+  })
+  useEffect(() => {
+    const handler = onExpiredRef.current
+    if (isExpired && handler) setExpiredNote(handler())
   }, [isExpired])
   const isRendering = data?.status === 'Processing'
   if (isRendering && renderStartedAt.current === null) {
