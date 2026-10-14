@@ -1,6 +1,6 @@
 # Productionization assessment
 
-Historical assessments follow. For the current verified release, resolved gaps and remaining limits, see [portfolio demo readiness](PORTFOLIO_DEMO_READINESS.md). As of 2026-09-26 the repository is public and the live sample has been rendered, played, sought and downloaded successfully.
+Historical assessments follow; finding IDs match SECURITY.md. For the current verified release, resolved gaps and remaining limits, see [portfolio demo readiness](PORTFOLIO_DEMO_READINESS.md). As of 2026-09-26 the repository is public and the live sample has been rendered, played, sought and downloaded successfully.
 
 ## Historical portfolio walker status (2026-09-04)
 
@@ -100,8 +100,8 @@ Full detail, including the threat model and what is structurally absent, is in
 |----|----------|---------|--------|
 | F-1 | **High** | drawtext filter-graph injection via job title | Fixed, caption now passed by `textfile=` with `expansion=none` |
 | F-2 | Medium | ffmpeg diagnostics leaked to the client via `job.errorMessage` | Fixed, safe message to caller, detail to logs |
-| F-3 | Low | `AllowedHosts: "*"` | Accepted; documented |
-| F-4 | Low | No CSP on SPA responses | Fixed as part of single-container serving |
+| F-6 | Low | `AllowedHosts: "*"` | Accepted; documented |
+| F-3 | Low | No CSP on SPA responses | Fixed as part of single-container serving |
 
 No secrets were found in the working tree or in the full git history (`git grep` over
 `git rev-list --all`: every hit was the word `CancellationToken`). `jobs-data/` is empty and
@@ -111,7 +111,7 @@ means the app's logging was already safe to leave on.
 ## Data and privacy
 
 The app stores no personal data of the operator's: a job is an uploaded file pair plus a
-`status.json`, deleted 60 minutes after completion by `CleanupService`. The privacy risk is not
+`status.json`, deleted after the retention window by `CleanupService` (60 minutes by default, 30 on the demo). The privacy risk is not
 leakage of existing data but **the demo becoming a free public transcoder**. That shapes the demo
 design: small limits, short retention, and a rate limiter that is already present.
 
@@ -128,7 +128,8 @@ Docker Spaces all now require either a credit card or a paid plan, verified 2026
 The three-container `docker-compose.yml` stays exactly as it is, it remains the honest
 architecture. The single-container image is an additional composition root wiring, not a fork:
 the Worker's hosted services are registered inside the API process when
-`Worker__RunInProcess=true`.
+`Jobs__SingleContainer=true` (this assessment originally named it `Worker__RunInProcess`, which
+never existed).
 
 ## Major risks
 
