@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DjVisualizer.Application.Abstractions;
+using DjVisualizer.Domain.Exceptions;
 using DjVisualizer.Domain.Jobs;
 
 namespace DjVisualizer.Infrastructure.Jobs;
@@ -47,32 +48,9 @@ public sealed class FileSystemJobStore : IJobRepository, IJobQueue
     {
         Job? oldestQueued = null;
 
-        foreach (var jobDirectory in Directory.EnumerateDirectories(_rootPath))
+        await foreach (var candidate in ReadAllReadableAsync(cancellationToken))
         {
-            var statusFilePath = Path.Combine(jobDirectory, "status.json");
-            if (!File.Exists(statusFilePath))
-            {
-                continue;
-            }
-
-            JobDto? dto;
-            try
-            {
-                await using var stream = new FileStream(statusFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-                dto = await JsonSerializer.DeserializeAsync<JobDto>(stream, SerializerOptions, cancellationToken);
-            }
-            catch (JsonException)
-            {
-                continue; // a corrupt/partially-written status file shouldn't halt the whole poll
-            }
-
-            if (dto is null || !string.Equals(dto.Status, JobStatus.Queued.ToString(), StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            var candidate = ToDomain(dto);
-            if (oldestQueued is null || candidate.CreatedAt < oldestQueued.CreatedAt)
+            if (candidate.Status == JobStatus.Queued && (oldestQueued is null || candidate.CreatedAt < oldestQueued.CreatedAt))
             {
                 oldestQueued = candidate;
             }
@@ -88,34 +66,76 @@ public sealed class FileSystemJobStore : IJobRepository, IJobQueue
         return oldestQueued;
     }
 
-    public async IAsyncEnumerable<Job> GetAllAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    public IAsyncEnumerable<Job> GetAllAsync(CancellationToken cancellationToken) => ReadAllReadableAsync(cancellationToken);
+
+    /// <summary>
+    /// Every job whose status.json can be read as a valid job. A file that cannot - missing,
+    /// half-written, valid JSON carrying a value the domain rejects, or deleted mid-read - is
+    /// skipped rather than thrown: both the queue and cleanup scan the whole root, so one bad file
+    /// throwing here stopped every job from ever rendering and every sweep at that folder.
+    /// <see cref="DeleteUnreadableFoldersAsync"/> is what eventually removes such folders.
+    /// </summary>
+    private async IAsyncEnumerable<Job> ReadAllReadableAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         foreach (var jobDirectory in Directory.EnumerateDirectories(_rootPath))
         {
-            var statusFilePath = Path.Combine(jobDirectory, "status.json");
-            if (!File.Exists(statusFilePath))
+            var job = await TryReadAsync(Path.Combine(jobDirectory, "status.json"), cancellationToken);
+            if (job is not null)
             {
-                continue;
+                yield return job;
             }
-
-            JobDto? dto;
-            try
-            {
-                await using var stream = new FileStream(statusFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-                dto = await JsonSerializer.DeserializeAsync<JobDto>(stream, SerializerOptions, cancellationToken);
-            }
-            catch (JsonException)
-            {
-                continue;
-            }
-
-            if (dto is null)
-            {
-                continue;
-            }
-
-            yield return ToDomain(dto);
         }
+    }
+
+    private static async Task<Job?> TryReadAsync(string statusFilePath, CancellationToken cancellationToken)
+    {
+        if (!File.Exists(statusFilePath))
+        {
+            return null;
+        }
+
+        try
+        {
+            await using var stream = new FileStream(statusFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            var dto = await JsonSerializer.DeserializeAsync<JobDto>(stream, SerializerOptions, cancellationToken);
+            return dto is null ? null : ToDomain(dto);
+        }
+        catch (Exception ex) when (ex is JsonException or DomainException or ArgumentException or FormatException or FileNotFoundException or DirectoryNotFoundException)
+        {
+            return null;
+        }
+    }
+
+    public async Task<int> DeleteUnreadableFoldersAsync(TimeSpan untouchedFor, CancellationToken cancellationToken)
+    {
+        var deleted = 0;
+        var cutoff = _clock.UtcNow - untouchedFor;
+        foreach (var jobDirectory in Directory.EnumerateDirectories(_rootPath))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (await TryReadAsync(Path.Combine(jobDirectory, "status.json"), cancellationToken) is not null)
+            {
+                continue;
+            }
+
+            // The newest write anywhere inside, not the folder's own timestamp: a folder's time
+            // changes when an entry is added, not while a file in it grows, so a long upload
+            // would otherwise look abandoned partway through.
+            var lastWrite = new DirectoryInfo(jobDirectory)
+                .EnumerateFileSystemInfos("*", SearchOption.AllDirectories)
+                .Select(entry => entry.LastWriteTimeUtc)
+                .Append(Directory.GetLastWriteTimeUtc(jobDirectory))
+                .Max();
+            if (lastWrite > cutoff.UtcDateTime)
+            {
+                continue;
+            }
+
+            Directory.Delete(jobDirectory, recursive: true);
+            deleted++;
+        }
+
+        return deleted;
     }
 
     public Task DeleteAsync(JobId id, CancellationToken cancellationToken)

@@ -365,4 +365,74 @@ public class FileSystemJobStoreTests : IDisposable
         found.Should().NotBeNull();
         found!.DownloadCount.Should().Be(0);
     }
+
+    /// <summary>
+    /// Valid JSON with a value the domain rejects used to throw out of the scan, so a single bad
+    /// status.json stopped every job from ever being dequeued again.
+    /// </summary>
+    [Theory]
+    [InlineData("{\"Id\":\"not-a-guid\",\"Title\":\"x\",\"Preset\":\"1080p\",\"Status\":\"Queued\"}")]
+    [InlineData("{\"Id\":\"0b5b8a8e-6f0e-4d4a-9a39-5b6c2b1d9f10\",\"Title\":\"x\",\"Preset\":\"8k\",\"Status\":\"Queued\"}")]
+    [InlineData("{\"Id\":\"0b5b8a8e-6f0e-4d4a-9a39-5b6c2b1d9f10\",\"Title\":\"x\",\"Preset\":\"1080p\",\"Status\":\"Exploded\"}")]
+    [InlineData("{ not json")]
+    public async Task TryDequeueNextAsync_Skips_An_Unreadable_Status_File_And_Still_Dequeues_The_Rest(string badStatus)
+    {
+        var sut = CreateSut();
+        var bad = Path.Combine(_rootPath, "0b5b8a8e6f0e4d4a9a395b6c2b1d9f10");
+        Directory.CreateDirectory(bad);
+        await File.WriteAllTextAsync(Path.Combine(bad, "status.json"), badStatus);
+        var good = CreateJob();
+        await sut.EnqueueAsync(good, CancellationToken.None);
+
+        var dequeued = await sut.TryDequeueNextAsync(CancellationToken.None);
+        var all = new List<Job>();
+        await foreach (var job in sut.GetAllAsync(CancellationToken.None))
+        {
+            all.Add(job);
+        }
+
+        dequeued!.Id.Should().Be(good.Id);
+        all.Select(j => j.Id).Should().Equal(good.Id);
+    }
+
+    [Fact]
+    public async Task DeleteUnreadableFoldersAsync_Removes_Only_Old_Folders_Without_A_Readable_Job()
+    {
+        var sut = CreateSut();
+        var readable = CreateJob();
+        await sut.SaveAsync(readable, CancellationToken.None);
+
+        var abandoned = Path.Combine(_rootPath, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(abandoned, "input"));
+        var partial = Path.Combine(abandoned, "input", "audio.mp3");
+        await File.WriteAllBytesAsync(partial, [1, 2, 3]);
+        SetWriteTimes(abandoned, Now.AddHours(-2));
+
+        // Still being written: an old folder holding a file written just now.
+        var inFlight = Path.Combine(_rootPath, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(inFlight);
+        await File.WriteAllBytesAsync(Path.Combine(inFlight, "audio.wav"), [1]);
+        Directory.SetLastWriteTimeUtc(inFlight, Now.AddHours(-2).UtcDateTime);
+        File.SetLastWriteTimeUtc(Path.Combine(inFlight, "audio.wav"), Now.UtcDateTime);
+
+        var deleted = await sut.DeleteUnreadableFoldersAsync(TimeSpan.FromMinutes(15), CancellationToken.None);
+
+        deleted.Should().Be(1);
+        Directory.Exists(abandoned).Should().BeFalse();
+        Directory.Exists(inFlight).Should().BeTrue();
+        (await sut.FindAsync(readable.Id, CancellationToken.None)).Should().NotBeNull();
+    }
+
+    private static void SetWriteTimes(string directory, DateTimeOffset time)
+    {
+        foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+        {
+            File.SetLastWriteTimeUtc(file, time.UtcDateTime);
+        }
+
+        foreach (var dir in Directory.EnumerateDirectories(directory, "*", SearchOption.AllDirectories).Append(directory))
+        {
+            Directory.SetLastWriteTimeUtc(dir, time.UtcDateTime);
+        }
+    }
 }

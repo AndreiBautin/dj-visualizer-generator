@@ -52,23 +52,45 @@ public sealed class CleanupService(
 
         await foreach (var job in jobRepository.GetAllAsync(cancellationToken))
         {
-            if (job.Status == JobStatus.Processing && now - job.UpdatedAt > staleThreshold)
+            // One job failing - on Windows, a video still open for a download cannot be deleted -
+            // must not stop the sweep for every job after it.
+            try
             {
-                job.Fail("Worker stopped responding while processing this job.", now);
-                await jobRepository.SaveAsync(job, cancellationToken);
-                logger.LogWarning(
-                    "Marked stale job {JobId} as Failed after {Minutes} minutes without progress.",
-                    job.Id,
-                    staleThreshold.TotalMinutes);
-                continue;
+                await SweepJobAsync(job, now, staleThreshold, retention, cancellationToken);
             }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "Cleanup skipped job {JobId} this sweep.", job.Id);
+            }
+        }
 
-            var isTerminal = job.Status is JobStatus.Completed or JobStatus.Failed;
-            if (isTerminal && now - job.UpdatedAt > retention)
-            {
-                await jobRepository.DeleteAsync(job.Id, cancellationToken);
-                logger.LogInformation("Deleted {Status} job {JobId} after its retention period.", job.Status, job.Id);
-            }
+        // Folders no job record describes. The stale threshold doubles as "long enough that no
+        // upload is still writing here".
+        var orphans = await jobRepository.DeleteUnreadableFoldersAsync(staleThreshold, cancellationToken);
+        if (orphans > 0)
+        {
+            logger.LogInformation("Deleted {Count} job folders with no readable status.", orphans);
+        }
+    }
+
+    private async Task SweepJobAsync(Job job, DateTimeOffset now, TimeSpan staleThreshold, TimeSpan retention, CancellationToken cancellationToken)
+    {
+        if (job.Status == JobStatus.Processing && now - job.UpdatedAt > staleThreshold)
+        {
+            job.Fail("Worker stopped responding while processing this job.", now);
+            await jobRepository.SaveAsync(job, cancellationToken);
+            logger.LogWarning(
+                "Marked stale job {JobId} as Failed after {Minutes} minutes without progress.",
+                job.Id,
+                staleThreshold.TotalMinutes);
+            return;
+        }
+
+        var isTerminal = job.Status is JobStatus.Completed or JobStatus.Failed;
+        if (isTerminal && now - job.UpdatedAt > retention)
+        {
+            await jobRepository.DeleteAsync(job.Id, cancellationToken);
+            logger.LogInformation("Deleted {Status} job {JobId} after its retention period.", job.Status, job.Id);
         }
     }
 }

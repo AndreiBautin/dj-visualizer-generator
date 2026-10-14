@@ -130,4 +130,29 @@ public class CleanupServiceTests
         await _jobRepository.DidNotReceiveWithAnyArgs().SaveAsync(default!, default);
         await _jobRepository.DidNotReceiveWithAnyArgs().DeleteAsync(default, default);
     }
+
+    /// <summary>On Windows a video still open for a download cannot be deleted; that one failure
+    /// used to end the sweep, so every job after it was never cleaned up while the file stayed open.</summary>
+    [Fact]
+    public async Task RunSweepAsync_Keeps_Going_When_One_Job_Cannot_Be_Deleted()
+    {
+        var locked = CompletedJob(Now.AddHours(-2));
+        var next = FailedJob(Now.AddHours(-2));
+        GivenJobs(locked, next);
+        _jobRepository.DeleteAsync(locked.Id, Arg.Any<CancellationToken>()).Returns(Task.FromException(new IOException("in use")));
+
+        await CreateSut().RunSweepAsync(CancellationToken.None);
+
+        await _jobRepository.Received(1).DeleteAsync(next.Id, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RunSweepAsync_Removes_Folders_No_Job_Record_Describes_Once_Untouched_For_The_Stale_Threshold()
+    {
+        GivenJobs();
+
+        await CreateSut().RunSweepAsync(CancellationToken.None);
+
+        await _jobRepository.Received(1).DeleteUnreadableFoldersAsync(TimeSpan.FromMinutes(_options.StaleProcessingMinutes), Arg.Any<CancellationToken>());
+    }
 }
