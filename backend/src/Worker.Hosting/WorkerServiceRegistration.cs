@@ -6,6 +6,7 @@ using DjVisualizer.Infrastructure.Uploads;
 using DjVisualizer.Worker.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace DjVisualizer.Worker;
@@ -34,7 +35,19 @@ public static class WorkerServiceRegistration
         IConfiguration configuration,
         Func<string> resolveJobsRootPath)
     {
-        services.Configure<WorkerOptions>(configuration.GetSection(WorkerOptions.SectionName));
+        // Parsed totally rather than bound, so a bad value degrades to its default with a logged
+        // warning instead of crashing the host or breaking the loops; see WorkerOptionsFactory.
+        services.AddSingleton<IOptions<WorkerOptions>>(sp =>
+        {
+            var parsed = WorkerOptionsFactory.Create(configuration, out var warnings);
+            var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(WorkerOptionsFactory));
+            foreach (var warning in warnings)
+            {
+                logger.LogWarning("Ignoring malformed configuration value. {Warning}", warning);
+            }
+
+            return Options.Create(parsed);
+        });
 
         services.AddSingleton<IJobInputFileLocator>(_ => new FileSystemJobInputFileLocator(resolveJobsRootPath()));
         services.AddSingleton<IVideoRenderer>(sp =>
@@ -46,9 +59,8 @@ public static class WorkerServiceRegistration
                 [CaptionFont.SerifBold] = workerOptions.FontFilePathSerifBold,
                 [CaptionFont.MonoBold] = workerOptions.FontFilePathMonoBold,
             };
-            return new FfmpegVideoRenderer(fontFilePaths, workerOptions.VideoCodec, workerOptions.X264Preset, Math.Max(0, workerOptions.EncoderThreads));
+            return new FfmpegVideoRenderer(fontFilePaths, workerOptions.VideoCodec, workerOptions.X264Preset, workerOptions.EncoderThreads);
         });
-
 
         // Singleton, not scoped: JobPollingService is itself a singleton hosted service and
         // consumes this directly (no per-request scope exists in a Worker), and all of its own
