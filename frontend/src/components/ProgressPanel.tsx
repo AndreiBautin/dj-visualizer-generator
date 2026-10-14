@@ -1,6 +1,6 @@
 import { ApiError } from '../api/client'
 import { useEffect, useRef, useState } from 'react'
-import { setFaviconProgress } from '../lib/faviconProgress'
+import { useTabStatus } from '../hooks/useTabStatus'
 import { estimateRemainingMs, formatClock } from '../lib/renderTiming'
 import { useJobStatus } from '../hooks/useJobStatus'
 import { BUTTON_SECONDARY } from '../lib/buttons'
@@ -126,8 +126,6 @@ const STATUS_LABEL: Record<string, string> = {
   Processing: 'Rendering your video',
 }
 
-const DEFAULT_TITLE = 'DJ Visualizer Generator'
-
 export function ProgressPanel({
   jobId,
   onReset,
@@ -156,33 +154,7 @@ export function ProgressPanel({
   if (isRendering && renderStartedAt.current === null) {
     renderStartedAt.current = now()
   }
-  // Lets a backgrounded tab communicate status without being watched - the alternative is a
-  // visitor tabbing away during a multi-minute render and having no way to tell it apart from a
-  // frozen one without switching back.
-  useEffect(() => {
-    setFaviconProgress(data?.status === 'Processing' ? data.progress : null)
-    // A titled job names itself in the tab - several renders in several tabs, or a shared
-    // link, are otherwise indistinguishable.
-    const base = data?.title
-      ? `${data.title} · ${DEFAULT_TITLE}`
-      : DEFAULT_TITLE
-    if (data?.status === 'Processing') {
-      document.title = `${data.progress}% · ${base}`
-    } else if (data?.status === 'Queued') {
-      document.title = `Queued · ${base}`
-    } else {
-      // Completed, Failed, or no data yet - none of these should leave the last render
-      // percentage sitting in the tab title after the job has moved past rendering.
-      document.title = base
-    }
-  }, [data?.status, data?.progress, data?.title])
-
-  useEffect(() => {
-    return () => {
-      document.title = DEFAULT_TITLE
-      setFaviconProgress(null)
-    }
-  }, [])
+  useTabStatus(data)
 
   if (isPending) {
     return (
