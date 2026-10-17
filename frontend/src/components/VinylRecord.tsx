@@ -93,6 +93,12 @@ export function VinylRecord({
           } as React.CSSProperties
         }
       >
+        {/*
+          Concentric grooves look identical at every angle, so without this only the label
+          visibly turned. Two sheen lobes, 180deg apart, ride the disc so the whole record spins.
+          The render draws the same lobes (VinylFilterGraphBuilder's sheen).
+        */}
+        <div className="absolute inset-0 rounded-full bg-[repeating-conic-gradient(transparent_0deg,rgb(255_255_255/0.08)_30deg,transparent_60deg,transparent_180deg)]" />
         <div className="absolute inset-[6%] rounded-full bg-[radial-gradient(circle_at_35%_30%,rgba(255,255,255,0.06),transparent_60%)]" />
         <div className="absolute inset-[30%] flex items-center justify-center overflow-hidden rounded-full bg-accent shadow-[inset_0_0_0_1px_rgba(0,0,0,0.3)]">
           {labelUrl ? (

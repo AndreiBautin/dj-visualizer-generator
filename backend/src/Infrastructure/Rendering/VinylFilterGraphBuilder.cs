@@ -97,7 +97,12 @@ internal static class VinylFilterGraphBuilder
         var hy = Format(offset + (0.30 * inner));
         var reach = Format(0.6 * Math.Sqrt((0.65 * 0.65) + (0.70 * 0.70)) * inner);
         var light = $"if(lte({r},{Format(inner / 2)}),max(0,1-hypot(X-{hx},Y-{hy})/{reach}),0)+if(gt({r},{radius}-{step}),1,0)";
-        var shade = $"({groove})+(255-({groove}))*0.06*min(1,{light})";
+        // The page's repeating-conic-gradient sheen: white at 8% peaking 30deg into every 180deg,
+        // gone by 60deg. CSS conic angles run clockwise from the top. Without it the disc is
+        // symmetric under rotation and only the label visibly turns.
+        var conic = $"mod(atan2(X-{radius},{radius}-Y)*180/PI+360,180)";
+        var sheen = $"if(lt({conic},60),1-abs({conic}-30)/30,0)";
+        var shade = $"({groove})+(255-({groove}))*min(1,0.06*min(1,{light})+0.08*{sheen})";
         var discAlpha = $"clip(255*({radius}-{r}+0.5),0,255)";
 
         var label = (int)Math.Round(d * LabelRatio);
