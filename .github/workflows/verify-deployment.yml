@@ -15,7 +15,10 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.sha }}
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      # Reuses working preinstalled tools; otherwise bounded apt attempts (scripts/ensure-ffmpeg.mjs).
+      - name: Ensure ffmpeg and ffprobe
+        timeout-minutes: 15
+        run: node scripts/ensure-ffmpeg.mjs
       - name: Verify expected revision and real media output
         env:
           PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
